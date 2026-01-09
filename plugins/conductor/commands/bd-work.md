@@ -32,12 +32,20 @@ Spawn a visible worker to tackle one beads issue. Unlike bd-swarm, no worktree i
 
 ## Phase 1: Select Issue
 
-```bash
-# If no ID provided, get top ready issue
-bd ready --json | jq -r '.[0]'
+If no issue ID was provided as an argument, present the ready issues to the user:
 
-# Get full issue details
-bd show <id>
+```bash
+# Get ready issues
+bd ready
+```
+
+Then use AskUserQuestion with the question: **"Here are the unblocked issues:"**
+
+Present each ready issue as an option with format: `<id> (<priority>)` as label, description from issue title.
+
+After user selects, get full details:
+```bash
+bd show <selected-id>
 ```
 
 ---
