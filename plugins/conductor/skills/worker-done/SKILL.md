@@ -18,18 +18,20 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 
 ## Pipeline Overview
 
-| Step | Command | Blocking? | Skip if DOCS_ONLY? |
-|------|---------|-----------|-------------------|
-| 0 | Detect change types | No | - |
-| 1 | `/conductor:verify-build` | Yes - stop on failure | Yes |
+| Step | Command | Blocking? | Mode-specific |
+|------|---------|-----------|---------------|
+| 0 | Detect execution mode | No | Sets EXECUTION_MODE |
+| 0.5 | Detect change types | No | Sets DOCS_ONLY |
+| 1 | `/conductor:verify-build` | Yes - stop on failure | Skip if DOCS_ONLY |
 | 1a | `plugin-validator` agent | Yes - stop on failure | ONLY if DOCS_ONLY |
-| 2 | `/conductor:run-tests` | Yes - stop on failure | Yes |
-| 3 | `/conductor:commit-changes` | Yes - stop on failure | No |
-| 4 | `/conductor:create-followups` | No - log and continue | No |
-| 5 | `/conductor:update-docs` | No - log and continue | No |
-| 5.5 | Record completion info | No - best effort | No |
-| 6 | `/conductor:close-issue` | Yes - report result | No |
-| 7 | Notify conductor | No - best effort | No |
+| 2 | `/conductor:run-tests` | Yes - stop on failure | Skip if DOCS_ONLY |
+| 3 | `/conductor:commit-changes` | Yes - stop on failure | Always run |
+| 4 | `/conductor:create-followups` | No - log and continue | Always run |
+| 5 | `/conductor:update-docs` | No - log and continue | Always run |
+| 5.5 | Record completion info | No - best effort | Always run |
+| 6 | `/conductor:close-issue` | Yes - report result | Always run |
+| 7 | Notify conductor | No - best effort | **Worker mode only** |
+| 8 | Standalone next steps | No - informational | **Standalone mode only** |
 
 **CRITICAL: You MUST execute Step 7 after Step 6.** Workers that skip Step 7 force the conductor to poll, wasting resources.
 
@@ -41,9 +43,59 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 
 ## Execute Pipeline
 
-### Step 0: Detect Change Types
+### Step 0: Detect Execution Mode
+
+**CRITICAL: Run this FIRST before any other steps.**
+
 ```bash
-echo "=== Step 0: Detecting Change Types ==="
+echo "=== Step 0: Detecting Execution Mode ==="
+
+# Detection function
+is_worker_mode() {
+  # Method 1: CONDUCTOR_SESSION env var (set by bd-work/bd-swarm)
+  [ -n "$CONDUCTOR_SESSION" ] && return 0
+
+  # Method 2: Inside git worktree (bd-swarm creates these)
+  COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+  GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
+  [ "$COMMON_DIR" != "$GIT_DIR" ] && return 0
+
+  return 1  # Standalone mode
+}
+
+# Run detection
+if is_worker_mode; then
+  EXECUTION_MODE="worker"
+  echo "╔══════════════════════════════════════════════════════════════╗"
+  echo "║  WORKER MODE DETECTED                                        ║"
+  echo "║  • Skipping code review (conductor handles after merge)      ║"
+  echo "║  • Skipping push (conductor handles after merge)             ║"
+  echo "║  • Will notify conductor on completion                       ║"
+  echo "╚══════════════════════════════════════════════════════════════╝"
+else
+  EXECUTION_MODE="standalone"
+  echo "╔══════════════════════════════════════════════════════════════╗"
+  echo "║  STANDALONE MODE DETECTED                                    ║"
+  echo "║  • Full pipeline with optional code review                   ║"
+  echo "║  • You should push changes when done                         ║"
+  echo "║  • No conductor to notify                                    ║"
+  echo "╚══════════════════════════════════════════════════════════════╝"
+fi
+```
+
+**Mode determines pipeline behavior:**
+
+| Aspect | Worker Mode | Standalone Mode |
+|--------|-------------|-----------------|
+| Code review | Skip (conductor handles) | Optional (user choice) |
+| Push | Skip (conductor handles) | User should push |
+| Notify conductor | Yes (Step 7) | No |
+
+---
+
+### Step 0.5: Detect Change Types
+```bash
+echo "=== Step 0.5: Detecting Change Types ==="
 # Check if only markdown files changed (staged + unstaged)
 git diff --cached --name-only
 git diff --name-only
@@ -147,9 +199,11 @@ echo "=== Step 6: Close Issue ==="
 ```
 Run `/conductor:close-issue <issue-id>`. Reports final status.
 
-### Step 7: Notify Conductor (REQUIRED)
+### Step 7: Notify Conductor (WORKER MODE ONLY)
 
-**DO NOT SKIP THIS STEP.** After closing the issue, notify the conductor:
+**Skip this step if EXECUTION_MODE=standalone.**
+
+**DO NOT SKIP THIS STEP in worker mode.** After closing the issue, notify the conductor:
 
 ```bash
 echo "=== Step 7: Notify Conductor ==="
@@ -177,6 +231,29 @@ fi
 ```
 
 **Why tmux is primary:** Claude Code queues incoming messages even during output, so tmux send-keys is safe. The API broadcasts via WebSocket which browser UIs can receive, but tmux-based Claude sessions cannot.
+
+### Step 8: Standalone Next Steps (STANDALONE MODE ONLY)
+
+**Skip this step if EXECUTION_MODE=worker.**
+
+When running in standalone mode, display guidance for completing the workflow:
+
+```bash
+if [ "$EXECUTION_MODE" = "standalone" ]; then
+  echo ""
+  echo "╔══════════════════════════════════════════════════════════════╗"
+  echo "║  STANDALONE COMPLETION - Next Steps                          ║"
+  echo "╠══════════════════════════════════════════════════════════════╣"
+  echo "║  Issue closed. Your changes are committed but NOT pushed.    ║"
+  echo "║                                                              ║"
+  echo "║  Recommended next steps:                                     ║"
+  echo "║  1. [Optional] Run code review: /conductor:code-review       ║"
+  echo "║  2. Sync and push: bd sync && git push                       ║"
+  echo "╚══════════════════════════════════════════════════════════════╝"
+fi
+```
+
+**Why standalone doesn't auto-push:** In standalone mode, you may want to run code review or make additional changes before pushing. The conductor handles push automatically for workers, but standalone users have full control.
 
 ---
 
@@ -240,12 +317,14 @@ The pipeline is idempotent - safe to re-run.
 
 ---
 
-## After Notification
+## After Completion
 
-When `/conductor:worker-done` succeeds:
+### Worker Mode
+
+When `/conductor:worker-done` succeeds in worker mode:
 - Issue is closed in beads
 - Commit is on the feature branch
-- Conductor notified (if CONDUCTOR_SESSION set)
+- Conductor notified via tmux
 - Worker's job is done
 
 **The conductor then:**
@@ -255,6 +334,17 @@ When `/conductor:worker-done` succeeds:
 - Deletes the feature branch
 
 Workers do NOT kill their own session - the conductor handles cleanup after receiving the notification.
+
+### Standalone Mode
+
+When `/conductor:worker-done` succeeds in standalone mode:
+- Issue is closed in beads
+- Commit is on current branch (not pushed)
+- No conductor to notify
+
+**User should then:**
+- Optionally run `/conductor:code-review` for code review
+- Run `bd sync && git push` to push changes
 
 ---
 
