@@ -13,9 +13,9 @@ echo "=== Beads Status ==="
 echo ""
 
 echo "📊 Summary:"
-bd count --status open 2>/dev/null | xargs -I{} echo "  Open: {}"
-bd count --status in_progress 2>/dev/null | xargs -I{} echo "  In Progress: {}"
-bd count --status closed 2>/dev/null | xargs -I{} echo "  Closed: {}"
+echo "  Open: $(bd list --status=open --json | jq length)"
+echo "  In Progress: $(bd list --status=in_progress --json | jq length)"
+echo "  Closed: $(bd list --status=closed --json | jq length)"
 
 echo ""
 echo "📋 Ready to Work (no blockers):"
@@ -23,11 +23,11 @@ bd ready 2>/dev/null || echo "  (no beads database found)"
 
 echo ""
 echo "🔧 In Progress:"
-bd list --status in_progress 2>/dev/null || echo "  (none)"
+bd list --status=in_progress 2>/dev/null || echo "  (none)"
 
 echo ""
 echo "⏰ Recently Closed:"
-bd list --status closed --limit 5 2>/dev/null || echo "  (none)"
+bd list --status=closed --json | jq -r '.[] | "\(.id): \(.title)"' | tail -5 || echo "  (none)"
 ```
 
 ## After Running
@@ -47,7 +47,7 @@ Then list ready work and in-progress items.
 ```
 bd ready              # What to work on next
 bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim issue
+bd update <id> --status=in_progress  # Claim issue
 bd close <id>         # Mark complete
 perles                # Visual kanban board
 ```
