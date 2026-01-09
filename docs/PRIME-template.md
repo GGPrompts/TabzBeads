@@ -36,9 +36,9 @@ bd sync && git push
 bd sync && git push
 ```
 
-## BD-Swarm Worker (spawned by conductor)
+## BD-Swarm Worker (spawned by /conductor:bd-swarm)
 
-If you were spawned by bd-swarm, use worker-done and DO NOT push:
+If you were spawned by `/conductor:bd-swarm`, use worker-done and DO NOT push:
 ```bash
 /conductor:worker-done <id>  # Runs: verify → test → commit → close → NOTIFY
 # STOP HERE - conductor handles merge, review, and push
@@ -116,3 +116,31 @@ bd create --title="Implement feature X" --type=feature
 bd create --title="Write tests for X" --type=task
 bd dep add beads-yyy beads-xxx  # Tests depend on Feature (Feature blocks tests)
 ```
+
+## Unified Conductor Commands
+
+These skills provide high-level orchestration for development workflows:
+
+### Entry Points
+| Command | Purpose |
+|---------|---------|
+| `/conductor:work` | Unified entry point - interactive prompts guide you through issue selection, worker count, and completion steps |
+| `/conductor:bd-work` | Pick the top ready issue and spawn a visible worker |
+| `/conductor:bd-swarm` | Spawn multiple workers in parallel to tackle issues |
+| `/conductor:bd-swarm-auto` | Fully autonomous backlog completion - runs waves until `bd ready` is empty |
+
+### Planning & Preparation
+| Command | Purpose |
+|---------|---------|
+| `/conductor:plan-backlog` | Groom and organize issues into parallelizable waves for efficient multi-worker execution |
+
+### Atomic Commands (used by completion pipelines)
+| Command | Purpose |
+|---------|---------|
+| `/conductor:verify-build` | Run build and report errors |
+| `/conductor:run-tests` | Run tests if available |
+| `/conductor:code-review` | Opus code review with auto-fix for high confidence issues |
+| `/conductor:codex-review` | Cost-effective read-only review via OpenAI Codex |
+| `/conductor:commit-changes` | Stage + commit with conventional format |
+| `/conductor:close-issue` | Close a beads issue with completion reason |
+| `/conductor:worker-done` | Full completion pipeline: verify → test → commit → close → notify |
