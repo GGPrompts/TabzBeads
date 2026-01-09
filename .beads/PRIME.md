@@ -1,0 +1,1 @@
+/home/marci/.beads/PRIME.md
