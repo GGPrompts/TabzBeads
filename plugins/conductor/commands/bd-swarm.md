@@ -2,6 +2,9 @@
 description: "Spawn multiple Claude workers with skill-aware prompts to tackle beads issues in parallel"
 ---
 
+> **⚠️ DEPRECATED:** This command is deprecated. Use `/conductor:work` instead.
+> This command will be removed in a future version.
+
 # Beads Swarm - Parallel Issue Processing
 
 Spawn multiple Claude workers to tackle beads issues in parallel, with skill-aware prompting and environment preparation.
