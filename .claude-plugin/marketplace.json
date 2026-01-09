@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "tabz-beads",
+  "version": "1.0.0",
+  "description": "TabzBeads plugins - multi-session orchestration with beads issue tracking",
+  "owner": {
+    "name": "GGPrompts",
+    "url": "https://github.com/GGPrompts/TabzBeads"
+  },
+  "plugins": [
+    {
+      "name": "conductor",
+      "description": "Orchestrate multi-session Claude workflows with beads issue tracking, parallel workers, and completion pipelines",
+      "source": "./plugins/conductor",
+      "category": "agents",
+      "keywords": ["conductor", "orchestrate", "workflow", "multi-session", "parallel", "worker", "spawn", "swarm", "beads", "issues"]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "plugins": [
+    {
+      "name": "conductor",
+      "description": "Multi-session orchestration, parallel workers, code review, and beads issue management. For complex multi-step workflows.",
+      "path": "plugins/conductor",
+      "keywords": ["orchestration", "workers", "review", "automation", "beads"]
+    }
+  ]
+}
