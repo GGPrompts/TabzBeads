@@ -29,6 +29,7 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 | 4 | `/conductor:create-followups` | No - log and continue | Always run |
 | 5 | `/conductor:update-docs` | No - log and continue | Always run |
 | 5.5 | Record completion info | No - best effort | Always run |
+| 5.6 | Update agent bead state | No - best effort | **Worker mode only** |
 | 6 | `/conductor:close-issue` | Yes - report result | Always run |
 | 7 | Notify conductor | No - best effort | **Worker mode only** |
 | 8 | Standalone next steps | No - informational | **Standalone mode only** |
@@ -192,6 +193,33 @@ bd update "$ISSUE_ID" --notes "$NEW_NOTES"
 ```
 
 This creates an audit trail with start time (from spawn) and completion time + commit.
+
+### Step 5.6: Update Agent Bead (WORKER MODE ONLY)
+
+**Skip this step if EXECUTION_MODE=standalone.**
+
+If this worker has an associated agent bead, update its state:
+
+```bash
+echo "=== Step 5.6: Update Agent Bead ==="
+
+# Get agent ID from issue notes (set by bd-swarm-auto)
+AGENT_ID=$(bd show "$ISSUE_ID" --json 2>/dev/null | grep -oP 'agent_id:\s*\K[^\s"]+' || echo "")
+
+if [ -n "$AGENT_ID" ]; then
+  # Set agent state to done
+  bd agent state "$AGENT_ID" done
+
+  # Clear the hook slot (detach from issue)
+  bd slot clear "$AGENT_ID" hook
+
+  echo "Agent $AGENT_ID marked as done"
+else
+  echo "No agent bead associated with this worker (standalone or legacy)"
+fi
+```
+
+This enables monitoring workers via `bd list --type=agent` and dead detection via heartbeat.
 
 ### Step 6: Close Issue
 ```bash
