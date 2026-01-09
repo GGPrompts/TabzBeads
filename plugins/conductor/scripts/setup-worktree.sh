@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Setup a worktree with dependencies for a beads issue
 # Usage: setup-worktree.sh <ISSUE_ID> [PROJECT_DIR]
+#
+# Uses `bd worktree create` which automatically:
+# - Creates the worktree with a feature branch
+# - Sets up beads database redirect
+# - Configures proper gitignore
 
 set -e
 
 ISSUE="$1"
 PROJECT_DIR="${2:-$(pwd)}"
-WORKTREE_DIR="${PROJECT_DIR}-worktrees"
-WORKTREE="${WORKTREE_DIR}/${ISSUE}"
 
 # Validate issue ID format (alphanumeric with dash only)
 if [[ ! "$ISSUE" =~ ^[a-zA-Z0-9_-]+$ ]]; then
@@ -15,10 +18,11 @@ if [[ ! "$ISSUE" =~ ^[a-zA-Z0-9_-]+$ ]]; then
   exit 1
 fi
 
-mkdir -p "$WORKTREE_DIR"
+# bd worktree creates worktrees at ../<name> relative to project
+WORKTREE="$(dirname "$PROJECT_DIR")/${ISSUE}"
 
 # Lockfile for worktree creation (prevents race conditions with parallel workers)
-WORKTREE_LOCK="/tmp/git-worktree-$(basename "$PROJECT_DIR").lock"
+WORKTREE_LOCK="/tmp/bd-worktree-$(basename "$PROJECT_DIR").lock"
 
 # Use flock to serialize worktree creation across parallel workers
 # Lock is automatically released when subshell exits (success or error)
@@ -31,8 +35,10 @@ WORKTREE_LOCK="/tmp/git-worktree-$(basename "$PROJECT_DIR").lock"
     exit 0
   fi
 
-  git -C "$PROJECT_DIR" worktree add "$WORKTREE" -b "feature/${ISSUE}" 2>/dev/null || \
-  git -C "$PROJECT_DIR" worktree add "$WORKTREE" HEAD
+  # Use bd worktree create - handles beads redirect automatically
+  cd "$PROJECT_DIR"
+  bd worktree create "$ISSUE" --branch "feature/${ISSUE}" 2>/dev/null || \
+  bd worktree create "$ISSUE"  # Fallback: create without new branch if it exists
 ) 200>"$WORKTREE_LOCK"
 
 # Install deps based on lockfile type (outside lock - can run in parallel)
