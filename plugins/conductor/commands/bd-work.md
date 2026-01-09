@@ -2,6 +2,9 @@
 description: "Pick the top ready beads issue and spawn a visible worker to complete it"
 ---
 
+> **⚠️ DEPRECATED:** This command is deprecated. Use `/conductor:work` instead.
+> This command will be removed in a future version.
+
 # Beads Work - Single Issue Worker
 
 Spawn a visible worker to tackle one beads issue. Unlike bd-swarm, no worktree is created since there's only one worker.

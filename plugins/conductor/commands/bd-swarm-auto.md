@@ -2,6 +2,9 @@
 description: "Fully autonomous backlog completion. Runs waves until `bd ready` is empty. Self-resumable after /wipe. Use when you want hands-off parallel issue processing."
 ---
 
+> **⚠️ DEPRECATED:** This command is deprecated. Use `/conductor:work` instead.
+> This command will be removed in a future version.
+
 # BD Swarm Auto - Autonomous Backlog Completion
 
 **YOU are the conductor. Execute this workflow autonomously. Do NOT ask the user for input.**
