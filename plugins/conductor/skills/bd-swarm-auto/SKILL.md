@@ -51,8 +51,19 @@ for ISSUE_ID in $READY; do
 done
 wait
 
+# Create agent beads for tracking (parallel)
+for ISSUE_ID in $READY; do
+  AGENT_ID=$(bd create --type=agent --title="Worker: $ISSUE_ID" --labels="conductor:worker" --json | jq -r ".id")
+  bd agent state "$AGENT_ID" spawning
+  bd slot set "$AGENT_ID" hook "$ISSUE_ID"
+  bd update "$ISSUE_ID" --notes "agent_id: $AGENT_ID"
+done
+
 # Spawn workers, send prompts, monitor
 # ... see references/wave-execution.md
+
+# After worker init completes, update agent state to running
+# (Workers should call: bd agent state $AGENT_ID running)
 
 # FULL CLOSEOUT: Use wave-done skill (recommended)
 /conductor:wave-done $READY
