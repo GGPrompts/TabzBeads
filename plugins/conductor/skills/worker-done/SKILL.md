@@ -205,6 +205,8 @@ Run `/conductor:close-issue <issue-id>`. Reports final status.
 
 **DO NOT SKIP THIS STEP in worker mode.** After closing the issue, notify the conductor:
 
+**IMPORTANT:** Do not use `#` or other special shell characters at the START of notification messages. Shell interprets `#` as a comment, causing the message to not be submitted properly via tmux send-keys.
+
 ```bash
 echo "=== Step 7: Notify Conductor ==="
 
