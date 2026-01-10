@@ -1,5 +1,5 @@
 ---
-description: "Prepare beads backlog before work: refine priorities, enhance prompts with skill hints, match skills to issues, review ready tasks. Optional preparation phase before /conductor:work or /conductor:bd-swarm-auto."
+description: "Prepare beads backlog before work: refine priorities, enhance prompts with skill hints, match skills to issues, review ready tasks. Optional preparation phase before /conductor:bd-work or /conductor:bdc-swarm-auto."
 ---
 
 # Plan - Backlog Preparation
@@ -9,7 +9,7 @@ Prepare the beads backlog before spawning workers. This is an **optional** phase
 ## Usage
 
 ```bash
-/conductor:plan
+/conductor:bd-plan
 ```
 
 ## Step 1: Select Planning Activity
@@ -150,7 +150,7 @@ $DESC
 $KEY_FILES
 
 ## When Done
-Run: /conductor:worker-done $ISSUE_ID"
+Run: /conductor:bdw-worker-done $ISSUE_ID"
 
   # Store prepared data in issue notes (YAML-like format)
   NOTES="prepared.skills: $SKILL_NAMES
@@ -243,9 +243,9 @@ bd ready --json | jq -r '.[] | "[\(.priority)] \(.id): \(.title)"' | sort -n
 ### Next Steps
 
 After reviewing:
-- Run `/conductor:work <issue-id>` for single issue (YOU do the work)
-- Run `/conductor:bd-swarm-auto` for autonomous parallel work
-- Run `/conductor:plan` again with "Enhance Prompts" to prepare prompts
+- Run `/conductor:bd-work <issue-id>` for single issue (YOU do the work)
+- Run `/conductor:bdc-swarm-auto` for autonomous parallel work
+- Run `/conductor:bd-plan` again with "Enhance Prompts" to prepare prompts
 
 ---
 
@@ -275,8 +275,8 @@ After reviewing:
 
 | Resource | Purpose |
 |----------|---------|
-| `/conductor:work` | Single-session workflow (YOU do the work) |
-| `/conductor:bd-swarm-auto` | Autonomous parallel execution |
+| `/conductor:bd-work` | Single-session workflow (YOU do the work) |
+| `/conductor:bdc-swarm-auto` | Autonomous parallel execution |
 | `bd ready` | List issues ready to work |
 | `bd blocked` | List blocked issues |
 

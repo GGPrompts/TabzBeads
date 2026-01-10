@@ -14,9 +14,10 @@ Vanilla Claude Session (you)
 ├── Task tool -> can spawn subagents
 │   ├── conductor:code-reviewer (sonnet) - review changes
 │   ├── conductor:skill-picker (haiku) - find/install skills
-│   └── conductor:tui-expert (opus) - spawn TUI tools
+│   ├── conductor:prompt-enhancer (haiku) - enhance prompts for workers
+│   └── conductor:docs-updater (opus) - update docs after merges
 ├── Worktree setup via scripts/setup-worktree.sh
-├── Monitoring via tmuxplexer (background window)
+├── Monitoring via beads agent tracking (bd list --type=agent)
 └── Terminal Workers via TabzChrome spawn API
     └── Each has full Task tool, can spawn own subagents
 ```
@@ -67,7 +68,7 @@ tmux kill-session -t "ctt-worker-xxx"
 |----------|-------|---------|
 | `conductor:code-reviewer` | sonnet | Autonomous review, quality gate |
 | `conductor:skill-picker` | haiku | Search/install skills |
-| `conductor:tui-expert` | opus | Spawn btop, lazygit, lnav |
+| `conductor:prompt-enhancer` | haiku | Enhance prompts for workers |
 | `conductor:docs-updater` | opus | Update docs after merges |
 
 ```markdown

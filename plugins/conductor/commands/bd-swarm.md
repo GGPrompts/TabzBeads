@@ -134,14 +134,14 @@ tmux send-keys -t "$SESSION" C-m
 Workers notify the conductor when done via API (push-based, no polling, no session corruption):
 
 ```
-Worker completes → /conductor:worker-done
+Worker completes → /conductor:bdw-worker-done
                  → POST /api/notify with worker-complete type
                  → WebSocket broadcasts to conductor
                  → Conductor receives and cleans up immediately
 ```
 
 **How it works:**
-1. Worker completes task and runs `/conductor:worker-done`
+1. Worker completes task and runs `/conductor:bdw-worker-done`
 2. Worker calls `POST /api/notify` with completion details
 3. Backend broadcasts via WebSocket to all connected clients
 4. Conductor receives notification and can cleanup immediately
@@ -231,7 +231,7 @@ Use the wave-done skill for comprehensive closeout with code review:
 
 ```bash
 # Full pipeline: verify -> merge -> build -> review -> cleanup -> push -> summary
-/conductor:wave-done $ISSUES
+/conductor:bdc-wave-done $ISSUES
 ```
 
 This runs all 9 steps: verify workers closed, kill sessions, merge branches, build verification, unified code review, cleanup worktrees, visual QA (if UI changes), sync & push, comprehensive summary.
@@ -249,7 +249,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/completion-pipeline.sh "$ISSUES"
 
 | Scenario | Use |
 |----------|-----|
-| Production work, multiple workers | `/conductor:wave-done` (full) |
+| Production work, multiple workers | `/conductor:bdc-wave-done` (full) |
 | Trivial changes, single worker | `completion-pipeline.sh` (quick) |
 | Need to review manually | `completion-pipeline.sh` then manual review |
 
@@ -266,7 +266,7 @@ Each worker will:
 1. Read issue: `bd show <id>`
 2. Implement feature/fix
 3. Build and test
-4. Complete: `/conductor:worker-done <issue-id>`
+4. Complete: `/conductor:bdw-worker-done <issue-id>`
 
 **Workers do NOT do visual review.** Visual review (browser-based UI verification) happens at the conductor level after merge. This prevents parallel workers from fighting over browser tabs.
 
@@ -276,7 +276,7 @@ Workers can self-optimize before starting real work:
 
 ```
 1. Worker receives basic prompt from conductor
-2. Worker runs /conductor:worker-init (or spawns prompt-enhancer agent)
+2. Worker runs /conductor:bdw-worker-init (or spawns prompt-enhancer agent)
 3. Issue is analyzed, skills identified, enhanced prompt crafted
 4. Context reset (/clear) and enhanced prompt auto-submitted
 5. Worker now has full context budget for implementation
@@ -297,7 +297,7 @@ Worker (vanilla Claude via tmux/TabzChrome)
   ├─> Gets context from `bd show <issue-id>`
   ├─> Receives skill hint in prompt (e.g., "use /xterm-js:xterm-js skill")
   ├─> Invokes skill directly when needed
-  └─> Completes with /conductor:worker-done
+  └─> Completes with /conductor:bdw-worker-done
 ```
 
 Workers share the same plugin context as the conductor, so all skills are available.
@@ -372,7 +372,7 @@ CONDUCTOR_SESSION=<conductor-tmux-session>
 (Worker needs this to notify conductor on completion)
 
 ## When Done
-Run: /conductor:worker-done ISSUE-ID
+Run: /conductor:bdw-worker-done ISSUE-ID
 
 This command will: build, run code review, commit changes, and close the issue.
 ```
@@ -394,7 +394,7 @@ This discovers real skills from the API and filesystem - don't use shorthand nam
 
 **Exception:** Project-level skills (in `.claude/skills/`) can use shorthand: `/tabz-guide`
 
-**The `/conductor:worker-done` instruction is mandatory** - without it, workers don't know how to signal completion and the conductor can't clean up.
+**The `/conductor:bdw-worker-done` instruction is mandatory** - without it, workers don't know how to signal completion and the conductor can't clean up.
 
 **The conductor session is in the prompt text** (not just env var) so workers can reliably notify completion even if CONDUCTOR_SESSION env var is lost.
 

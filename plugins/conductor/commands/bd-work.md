@@ -129,12 +129,12 @@ CONDUCTOR_SESSION=<conductor-tmux-session>
 (Worker needs this to notify conductor on completion)
 
 ## When Done
-Run: /conductor:worker-done ISSUE-ID
+Run: /conductor:bdw-worker-done ISSUE-ID
 
 This command will: build, run code review, commit changes, and close the issue.
 ```
 
-**The `/conductor:worker-done` instruction is mandatory** - without it, workers don't know how to signal completion.
+**The `/conductor:bdw-worker-done` instruction is mandatory** - without it, workers don't know how to signal completion.
 
 ---
 
@@ -166,7 +166,7 @@ worker_session: $SESSION
 started_at: $(date -Iseconds)"
 ```
 
-**Why CONDUCTOR_SESSION?** When worker runs `/conductor:worker-done`, it sends a completion notification back to the conductor via tmux. No polling needed - push-based.
+**Why CONDUCTOR_SESSION?** When worker runs `/conductor:bdw-worker-done`, it sends a completion notification back to the conductor via tmux. No polling needed - push-based.
 
 **Why record session IDs?** Enables later audit of which Claude session worked on which issue. Can review chat histories to improve prompts/workflows.
 
@@ -193,7 +193,7 @@ User watches worker progress in TabzChrome sidebar. Worker will:
 1. Read issue details
 2. Explore codebase as needed
 3. Implement the fix/feature
-4. Run `/conductor:worker-done <issue-id>`
+4. Run `/conductor:bdw-worker-done <issue-id>`
 
 ---
 
@@ -225,6 +225,6 @@ tmux kill-session -t "$SESSION"
 - Conductor crafts the prompt, worker executes
 - Worker is visible in TabzChrome sidebar
 - No worktree = simpler cleanup
-- Worker completes with `/conductor:worker-done`
+- Worker completes with `/conductor:bdw-worker-done`
 
 Execute this workflow now.

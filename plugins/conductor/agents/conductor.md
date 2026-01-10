@@ -33,10 +33,10 @@ Vanilla Claude Session (you)
 ├── Task tool -> can spawn subagents
 │   ├── conductor:code-reviewer (sonnet) - autonomous review
 │   ├── conductor:skill-picker (haiku) - find/install skills
-│   ├── conductor:tui-expert (opus) - spawn btop, lazygit, lnav
+│   ├── conductor:prompt-enhancer (haiku) - enhance prompts for workers
 │   └── conductor:docs-updater (opus) - update docs after merges
 ├── Worktree setup via scripts/setup-worktree.sh
-├── Monitoring via tmuxplexer (background window)
+├── Monitoring via beads agent tracking
 └── Terminal Workers via TabzChrome spawn API
     └── Each has full Task tool, can spawn own subagents
 ```
@@ -437,12 +437,13 @@ tmux send-keys -t "$SESSION" C-m
 
 | Resource | Purpose |
 |----------|---------|
-| `/conductor:work` | Single-session workflow (YOU do the work) |
+| `/conductor:bd-work` | Single-session workflow (YOU do the work) |
 | `/conductor:bd-plan` | Prepare backlog (refine, enhance prompts) |
-| `/conductor:bd-swarm-auto` | Fully autonomous parallel execution |
-| `/conductor:wave-done` | Complete a wave of parallel workers |
-| `/conductor:worker-done` | Complete individual worker (auto-detects mode) |
-| `/conductor:orchestration` | Full skill with Task tool access |
+| `/conductor:bd-swarm` | Spawn parallel workers |
+| `/conductor:bdc-swarm-auto` | Fully autonomous parallel execution |
+| `/conductor:bdc-wave-done` | Complete a wave of parallel workers |
+| `/conductor:bdw-worker-done` | Complete individual worker (auto-detects mode) |
+| `/conductor:bdc-orchestration` | Full skill with Task tool access |
 | `tabz:tabz-manager` | Browser automation agent |
 | `conductor:code-reviewer` | Autonomous code review |
 
@@ -455,10 +456,3 @@ tmux send-keys -t "$SESSION" C-m
 | `bd agent state <id>` | Set agent state (spawning/running/done) |
 | `bd slot set <agent> hook <issue>` | Attach work to agent |
 | `bd list --type=agent` | Monitor worker states |
-
-### Deprecated (still work but warn)
-
-| Old | New |
-|-----|-----|
-| `/conductor:bd-work` | `/conductor:work` |
-| `/conductor:bd-swarm` | `/conductor:bd-swarm-auto` |
