@@ -1,4 +1,5 @@
 ---
+name: skill-commands
 description: Create a new agent skill
 argument-hint: [prompt]
 ---

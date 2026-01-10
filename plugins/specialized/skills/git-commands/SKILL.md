@@ -1,4 +1,5 @@
 ---
+name: git-commands
 description: Stage all files and create a commit.
 ---
 

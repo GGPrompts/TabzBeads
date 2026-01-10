@@ -1,4 +1,5 @@
 ---
+name: restart
 description: Exit and restart Claude Code with plugins reloaded
 ---
 

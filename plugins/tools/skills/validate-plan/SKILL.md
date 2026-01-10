@@ -1,4 +1,5 @@
 ---
+name: validate-plan
 description: Validate and enrich a project plan through multiple analysis perspectives
 ---
 
