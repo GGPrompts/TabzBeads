@@ -240,14 +240,26 @@ curl -s -X POST http://localhost:8129/api/spawn \
 
 ### Monitor Workers
 
-```bash
-# Use monitor script
-${CLAUDE_PLUGIN_ROOT}/scripts/monitor-workers.sh --spawn   # Start monitor
-${CLAUDE_PLUGIN_ROOT}/scripts/monitor-workers.sh --summary # Poll status
+Use native beads agent tracking for worker monitoring:
 
-# Or poll manually
+```bash
+# List running workers (created with --type=agent and conductor:worker label)
+bd list --type=agent --label="conductor:worker" --status=open
+
+# Watch agents in real-time (auto-refreshes)
+bd list --type=agent --watch
+
+# Show specific agent details
+bd agent show <agent-id>
+
+# Check/update agent state
+bd agent state <agent-id>              # View current state
+bd agent state <agent-id> running      # Set to running
+bd agent state <agent-id> stalled      # Mark as stalled
+bd agent state <agent-id> failed --reason="error details"
+
+# Fallback: Direct tmux inspection for debugging
 tmux capture-pane -t "$SESSION" -p -S -50 | tail -20
-tmux capture-pane -t "$SESSION" -p | grep -E "(completed|done|error)"
 ```
 
 ---
