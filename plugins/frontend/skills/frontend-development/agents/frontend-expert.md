@@ -1,8 +1,6 @@
 ---
 name: frontend-expert
 description: "Frontend development expert that orchestrates React/TypeScript, styling, and design skills"
-model: sonnet
-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
 # Frontend Expert Agent
