@@ -596,6 +596,74 @@ bd show <id> --json | jq -r '.[0].notes'
 
 ---
 
+## Skill Visibility & Taxonomy
+
+### User-Invocable Frontmatter
+
+Skills in `/skills/` directories are visible in the slash command menu by default (since Claude Code 2.1.0). To hide internal pipeline skills, add `user-invocable: false` to frontmatter:
+
+```yaml
+---
+name: wave-done
+description: "Conductor-only: merge branches and run unified review"
+user-invocable: false
+---
+```
+
+### Three-Tier Taxonomy
+
+| Prefix | Purpose | User-Invocable |
+|--------|---------|----------------|
+| `bd:` | Human entry points | ✅ Yes |
+| `conductor:` | Orchestration steps | ❌ No (internal) |
+| `worker:` | Execution steps | ❌ No (internal) |
+
+### Entry Points (bd:)
+
+Users invoke these directly. Each uses `AskUserQuestion` for interactive configuration:
+
+| Skill | Purpose |
+|-------|---------|
+| `bd:status` | View open, blocked, ready, in-progress issues |
+| `bd:plan` | Prepare backlog: refine, enhance prompts, match skills |
+| `bd:work` | Single-session: you implement an issue |
+| `bd:conduct` | Multi-session: spawn parallel workers |
+
+### Conductor Skills (conductor:)
+
+Internal orchestration logic called by `bd:conduct`. Mark with `user-invocable: false`:
+
+| Skill | Called By |
+|-------|-----------|
+| `conductor:spawn-workers` | bd:conduct |
+| `conductor:monitor-wave` | bd:conduct |
+| `conductor:wave-done` | bd:conduct (after workers finish) |
+| `conductor:merge-branches` | wave-done |
+| `conductor:unified-review` | wave-done |
+
+### Worker Skills (worker:)
+
+Internal execution steps for individual workers. Mark with `user-invocable: false`:
+
+| Skill | Purpose |
+|-------|---------|
+| `worker:verify-build` | Run build, check for errors |
+| `worker:run-tests` | Run test suite |
+| `worker:code-review` | Opus review with auto-fix |
+| `worker:commit-changes` | Stage + conventional commit |
+| `worker:close-issue` | Close beads issue |
+| `worker:notify-conductor` | Signal completion to conductor |
+
+### Decision Framework
+
+| If the step... | It belongs in... |
+|----------------|------------------|
+| Is a human choice/entry point | `bd:` |
+| Manages multiple workers/sessions | `conductor:` |
+| Is done by a single worker on one issue | `worker:` |
+
+---
+
 ## Implementation Status
 
 ### Completed (v2)
@@ -615,6 +683,26 @@ bd show <id> --json | jq -r '.[0].notes'
 | frontend-expert agent | ✅ |
 | backend-expert agent | ✅ |
 
+### In Progress (v3 - Taxonomy Consolidation)
+
+| Feature | Status | Issue |
+|---------|--------|-------|
+| Document user-invocable pattern | 🔄 | TabzBeads-gok |
+| bd:/conductor:/worker: taxonomy | 🔄 | TabzBeads-yy6 |
+| Fix broken skill nesting | 🔄 | TabzBeads-gok |
+| Sync TabzChrome skills | 🔄 | TabzBeads-gok |
+
+### Known Issues
+
+**Double-nested skill structure (BROKEN):**
+Many skills have incorrect structure that prevents discovery:
+```
+WRONG:  skills/name/skills/name/SKILL.md
+RIGHT:  skills/name/SKILL.md
+```
+
+Affected: frontend, backend, tools, specialized, visual, meta, docs categories.
+
 ### Future (Proposed)
 
 | Feature | Status |
@@ -623,3 +711,4 @@ bd show <id> --json | jq -r '.[0].notes'
 | `/conductor:refine` with Haiku | 🔮 |
 | Cross-project deps (bd ship) | 🔮 |
 | Visual QA automation | 🔮 |
+| Complexity-aware worker pipeline | 🔮 (TabzBeads-32q) |
