@@ -1,0 +1,9 @@
+{
+  "name": "codexforclaude",
+  "version": "1.0.0",
+  "description": "OpenAI Codex CLI configuration guide for Claude",
+  "author": {
+    "name": "GGPrompts"
+  },
+  "keywords": ["codex", "openai", "configuration", "skills", "mcp"]
+}
