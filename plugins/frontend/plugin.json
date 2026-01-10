@@ -1,5 +1,12 @@
 {
   "name": "frontend",
   "version": "1.0.0",
-  "description": "Frontend development skills - React, TypeScript, Tailwind, shadcn/ui, Next.js, design systems"
+  "description": "Frontend development skills - React, TypeScript, Tailwind, shadcn/ui, Next.js, design systems",
+  "skills": [
+    "./skills/aesthetic",
+    "./skills/frontend-design",
+    "./skills/frontend-development",
+    "./skills/ui-styling",
+    "./skills/web-frameworks"
+  ]
 }

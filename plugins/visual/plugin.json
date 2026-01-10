@@ -1,5 +1,10 @@
 {
   "name": "visual",
   "version": "1.0.0",
-  "description": "Visual and media skills - Canvas, Gemini multimodal, FFmpeg, ImageMagick"
+  "description": "Visual and media skills - Canvas, Gemini multimodal, FFmpeg, ImageMagick",
+  "skills": [
+    "./skills/ai-multimodal",
+    "./skills/canvas-design",
+    "./skills/media-processing"
+  ]
 }

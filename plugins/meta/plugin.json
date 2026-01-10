@@ -1,5 +1,14 @@
 {
   "name": "meta",
   "version": "1.0.0",
-  "description": "Meta development skills - plugin creation, skill scaffolding, MCP servers, context engineering"
+  "description": "Meta development skills - plugin creation, skill scaffolding, MCP servers, context engineering",
+  "skills": [
+    "./skills/agent-creator",
+    "./skills/claude-code",
+    "./skills/context-engineering",
+    "./skills/mcp-builder",
+    "./skills/plugin-development",
+    "./skills/skill-commands",
+    "./skills/skill-creator"
+  ]
 }

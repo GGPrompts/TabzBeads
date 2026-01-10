@@ -1,5 +1,26 @@
 {
   "name": "tools",
   "version": "1.0.0",
-  "description": "Development tools - debugging, code review, sequential thinking, documentation search"
+  "description": "Development tools - debugging, code review, sequential thinking, documentation search",
+  "skills": [
+    "./skills/codexforclaude",
+    "./skills/collision-zone-thinking",
+    "./skills/defense-in-depth",
+    "./skills/docs-seeker",
+    "./skills/inversion-exercise",
+    "./skills/meta-pattern-recognition",
+    "./skills/repomix",
+    "./skills/review",
+    "./skills/review-practices",
+    "./skills/root-cause-tracing",
+    "./skills/scale-game",
+    "./skills/security",
+    "./skills/sequential-thinking",
+    "./skills/silent-failures",
+    "./skills/simplification-cascades",
+    "./skills/systematic-debugging",
+    "./skills/validate-plan",
+    "./skills/verification-before-completion",
+    "./skills/when-stuck"
+  ]
 }
