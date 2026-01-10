@@ -1,5 +1,0 @@
-{
-  "name": "databases",
-  "version": "1.0.0",
-  "description": "MongoDB and PostgreSQL - schemas, queries, aggregations, optimization, migrations"
-}
