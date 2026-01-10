@@ -2,42 +2,122 @@
 
 ## Overview
 
-TabzBeads is a **Claude Code plugin collection** for orchestrating multi-session development workflows using beads issue tracking.
+TabzBeads is a **Claude Code plugin marketplace** - a collection of plugins for development workflows, browser automation, and multi-session orchestration.
 
 | | |
 |--|--|
-| **Purpose** | Conductor plugin for parallel Claude worker orchestration |
+| **Type** | Plugin Marketplace (multiple plugins) |
 | **Core Tool** | beads (bd) - AI-native issue tracking |
 | **Key Command** | `/conductor:work` - unified workflow entry point |
 
 ---
 
-## Architecture
+## Plugin Structure (IMPORTANT)
+
+This repo uses the **marketplace pattern** - one marketplace containing multiple plugins.
+
+### Directory Layout
 
 ```
-plugins/
-├── conductor/                   # Main orchestration plugin
-│   ├── agents/                  # Spawnable subagents
-│   │   ├── code-reviewer.md
-│   │   ├── conductor.md
-│   │   ├── tabz-manager.md
-│   │   └── ...
-│   ├── skills/
-│   │   ├── work/                # Unified entry point (NEW)
-│   │   ├── refine/              # Backlog refinement (NEW)
-│   │   ├── complete/            # Task completion
-│   │   └── ...
-│   ├── commands/                # Atomic slash commands
-│   │   ├── verify-build.md
-│   │   ├── run-tests.md
-│   │   ├── code-review.md
-│   │   └── ...
-│   └── scripts/                 # Shell automation
-│       ├── setup-worktree.sh
-│       ├── monitor-workers.sh
-│       └── ...
-├── ctthandoff/                  # Handoff summary generator
-└── page-reader/                 # Page capture + TTS
+TabzBeads/
+├── .claude-plugin/
+│   └── marketplace.json         # Lists all plugins (ONLY file here)
+├── plugins/
+│   ├── conductor/               # Plugin: orchestration
+│   │   ├── plugin.json          # Plugin manifest (at plugin root, NOT in .claude-plugin/)
+│   │   ├── commands/            # Slash commands (.md files)
+│   │   ├── agents/              # Subagents (.md files)
+│   │   ├── skills/              # Skills (dirs with SKILL.md)
+│   │   │   └── bd-conduct/
+│   │   │       └── SKILL.md
+│   │   └── scripts/             # Shell automation
+│   ├── frontend/                # Plugin: frontend dev
+│   │   ├── plugin.json
+│   │   └── skills/
+│   │       ├── ui-styling/
+│   │       │   └── SKILL.md
+│   │       └── web-frameworks/
+│   │           └── SKILL.md
+│   └── ...
+└── CLAUDE.md
+```
+
+### Critical Rules
+
+1. **Marketplace root has `.claude-plugin/marketplace.json`** - Lists all available plugins
+2. **Each plugin has `plugin.json` at its root** - NOT in `.claude-plugin/` subfolder
+3. **Skills are `skills/<name>/SKILL.md`** - One level deep, NOT nested skills inside skills
+4. **Commands are `commands/<name>.md`** - Markdown files with optional frontmatter
+5. **Agents are `agents/<name>.md`** - Markdown files with frontmatter
+
+### marketplace.json Format
+
+```json
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "tabz-beads",
+  "plugins": [
+    {
+      "name": "frontend",
+      "description": "Frontend development skills",
+      "source": "./plugins/frontend",
+      "skills": ["./skills/ui-styling", "./skills/web-frameworks"]  // Explicit skill paths
+    }
+  ]
+}
+```
+
+### Common Mistakes
+
+| Mistake | Correct |
+|---------|---------|
+| `plugins/X/.claude-plugin/plugin.json` | `plugins/X/plugin.json` |
+| `skills/parent/skills/child/SKILL.md` | `skills/child/SKILL.md` (flatten) |
+| Missing `skills` array in marketplace.json | Add explicit skill paths |
+| Individual `plugin.json` per skill | Only one `plugin.json` per plugin |
+
+---
+
+## Plugin Categories
+
+| Plugin | Purpose |
+|--------|---------|
+| `conductor` | Multi-session orchestration, beads workflows |
+| `tabz` | Browser automation (71 MCP tools) |
+| `frontend` | React, TypeScript, Tailwind, shadcn/ui |
+| `backend` | Node.js, Python, databases, DevOps |
+| `visual` | Canvas, Gemini multimodal, FFmpeg |
+| `docs` | PDF, Word, PowerPoint, Excel |
+| `meta` | Plugin/skill creation, MCP builders |
+| `tools` | Debugging, code review, problem solving |
+| `tmux` | Terminal session management |
+| `specialized` | Shopify, Bubble Tea, xterm.js |
+
+---
+
+## Conductor Plugin Architecture
+
+The conductor plugin orchestrates multi-session Claude workflows:
+
+```
+plugins/conductor/
+├── plugin.json
+├── commands/                    # Atomic slash commands
+│   ├── verify-build.md
+│   ├── run-tests.md
+│   ├── code-review.md
+│   ├── commit-changes.md
+│   ├── close-issue.md
+│   └── worker-done.md
+├── agents/                      # Spawnable subagents
+│   ├── conductor.md             # Main orchestrator
+│   ├── code-reviewer.md
+│   └── ...
+├── skills/
+│   └── bd-conduct/              # Interactive orchestration
+│       └── SKILL.md
+└── scripts/                     # Shell automation
+    └── setup-worktree.sh
 ```
 
 ---

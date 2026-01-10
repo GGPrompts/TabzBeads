@@ -89,6 +89,35 @@ my-marketplace/
 | `plugins[].category` | string | Category for organization |
 | `plugins[].author` | object | Plugin-specific author |
 | `plugins[].tags` | array | Discovery keywords |
+| `plugins[].skills` | array | **Explicit skill paths** (recommended) |
+| `plugins[].strict` | boolean | Enable strict validation |
+
+## Skills Array (Recommended)
+
+Anthropic's official marketplace explicitly lists skills for each plugin:
+
+```json
+{
+  "plugins": [
+    {
+      "name": "document-skills",
+      "description": "Document processing suite",
+      "source": "./",
+      "skills": [
+        "./skills/xlsx",
+        "./skills/docx",
+        "./skills/pptx",
+        "./skills/pdf"
+      ]
+    }
+  ]
+}
+```
+
+**Why use explicit skills array?**
+- Ensures skills are discovered correctly
+- Avoids relying on auto-discovery which may miss nested paths
+- Documents exactly which skills a plugin provides
 
 ## Categories
 

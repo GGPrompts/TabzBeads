@@ -180,7 +180,7 @@ After completing a wave with UI changes, spawn tabz-manager in a **separate term
 # Via TabzChrome API
 curl -X POST http://localhost:8129/api/spawn \
   -H "X-Auth-Token: $(cat /tmp/tabz-auth-token)" \
-  -d '{"name": "Visual QA", "command": "claude --agent conductor:tabz-manager --dangerously-skip-permissions"}'
+  -d '{"name": "Visual QA", "command": "claude --agent tabz:tabz-manager --dangerously-skip-permissions"}'
 ```
 
 tabz-manager can take screenshots, click elements, and verify UI changes work correctly.

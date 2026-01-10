@@ -279,7 +279,7 @@ echo "=== Step 7: Visual QA ==="
 Spawn tabz-manager subagent for visual verification:
 
 ```
-Task(subagent_type="conductor:tabz-manager",
+Task(subagent_type="tabz:tabz-manager",
      prompt="Visual QA after wave merge.
        1. Start dev server if needed
        2. Screenshot key UI areas at 1920x1080

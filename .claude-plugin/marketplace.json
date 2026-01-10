@@ -16,6 +16,13 @@
       "keywords": ["conductor", "orchestrate", "workflow", "multi-session", "parallel", "worker", "spawn", "swarm", "beads", "issues"]
     },
     {
+      "name": "tabz",
+      "description": "Browser automation via TabzChrome - 71 MCP tools for screenshots, clicks, forms, downloads, TTS, network capture",
+      "source": "./plugins/tabz",
+      "category": "browser",
+      "keywords": ["tabz", "browser", "chrome", "mcp", "screenshot", "automation", "tts", "download", "network", "tabs"]
+    },
+    {
       "name": "frontend",
       "description": "Frontend development - React, TypeScript, Tailwind, shadcn/ui, Next.js, Remix, design systems",
       "source": "./plugins/frontend",

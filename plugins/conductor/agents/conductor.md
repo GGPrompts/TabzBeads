@@ -311,7 +311,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/completion-pipeline.sh "ISSUE1 ISSUE2 ISSUE3"
 curl -s -X POST http://localhost:8129/api/spawn \
   -H "Content-Type: application/json" \
   -H "X-Auth-Token: $TOKEN" \
-  -d '{"name": "Claude: Browser Bot", "workingDir": "'$(pwd)'", "command": "claude --agent conductor:tabz-manager --dangerously-skip-permissions"}'
+  -d '{"name": "Claude: Browser Bot", "workingDir": "'$(pwd)'", "command": "claude --agent tabz:tabz-manager --dangerously-skip-permissions"}'
 ```
 
 **Simple tab queries** (list tabs, get page info) can be done directly:
@@ -443,7 +443,7 @@ tmux send-keys -t "$SESSION" C-m
 | `/conductor:wave-done` | Complete a wave of parallel workers |
 | `/conductor:worker-done` | Complete individual worker (auto-detects mode) |
 | `/conductor:orchestration` | Full skill with Task tool access |
-| `conductor:tabz-manager` | Browser automation agent |
+| `tabz:tabz-manager` | Browser automation agent |
 | `conductor:code-reviewer` | Autonomous code review |
 
 ### Beads Commands Used
