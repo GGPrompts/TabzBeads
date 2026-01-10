@@ -1,6 +1,8 @@
 ---
+name: close-issue
 description: "Close a beads issue with completion reason."
 ---
+name: close-issue
 
 # Close Issue
 

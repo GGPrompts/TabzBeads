@@ -1,6 +1,8 @@
 ---
+name: worker-init
 description: "Self-optimize worker context by analyzing issue, identifying skills, and restarting with enhanced prompt"
 ---
+name: worker-init
 
 # Worker Init - Self-Service Context Optimization
 

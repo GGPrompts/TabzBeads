@@ -1,6 +1,8 @@
 ---
+name: commit-changes
 description: "Stage and commit changes with conventional commit format."
 ---
+name: commit-changes
 
 # Commit Changes
 

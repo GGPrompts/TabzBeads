@@ -1,6 +1,8 @@
 ---
+name: bd-status
 description: "Show beads issue tracker status overview"
 ---
+name: bd-status
 
 # Beads Status - Quick Overview
 

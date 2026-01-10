@@ -1,6 +1,8 @@
 ---
+name: analyze-transcripts
 description: "Analyze worker session transcripts to find patterns, missed opportunities, and improvement areas"
 ---
+name: analyze-transcripts
 
 # Analyze Transcripts
 

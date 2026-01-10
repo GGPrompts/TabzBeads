@@ -1,6 +1,8 @@
 ---
+name: bd-swarm
 description: "Spawn multiple Claude workers with skill-aware prompts to tackle beads issues in parallel"
 ---
+name: bd-swarm
 
 > **⚠️ DEPRECATED:** This command is deprecated. Use `/conductor:bd-swarm-auto` instead.
 > This command will be removed in a future version.
@@ -36,6 +38,7 @@ Spawn multiple Claude workers to tackle beads issues in parallel, with skill-awa
 **Key insight:** TabzChrome spawn creates tmux sessions with `ctt-*` prefix. Cleanup is via `tmux kill-session`.
 
 ---
+name: bd-swarm
 
 ## MANDATORY: Verify Skills Before Spawning
 
@@ -56,6 +59,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/match-skills.sh --verify "terminal ui api"
 - MCP tools (like shadcn/*) are NOT skills - they're called directly via `mcp-cli`
 
 ---
+name: bd-swarm
 
 ## Spawn Workers - Copy-Paste Example
 
@@ -128,6 +132,7 @@ tmux send-keys -t "$SESSION" C-m
 ```
 
 ---
+name: bd-swarm
 
 ## Worker Completion Notifications
 
@@ -164,6 +169,7 @@ curl -s -X POST http://localhost:8129/api/notify \
 ```
 
 ---
+name: bd-swarm
 
 ## Fallback: Polling (if notifications fail)
 
@@ -183,6 +189,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/monitor-workers.sh --summary
 | Issue closed | Ready for cleanup |
 
 ---
+name: bd-swarm
 
 ## Interactive Mode
 
@@ -203,6 +210,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/monitor-workers.sh --summary
 7. Run completion pipeline when all issues closed
 
 ---
+name: bd-swarm
 
 ## Auto Mode (`--auto`)
 
@@ -220,6 +228,7 @@ Fully autonomous backlog completion. Runs waves until `bd ready` is empty.
 | Context | Manual check | Auto /wipe at 75% |
 
 ---
+name: bd-swarm
 
 ## Completion Pipeline
 
@@ -259,6 +268,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/completion-pipeline.sh "$ISSUES"
 - Full context of all merged changes
 
 ---
+name: bd-swarm
 
 ## Worker Expectations
 
@@ -287,6 +297,7 @@ Workers can self-optimize before starting real work:
 See `commands/worker-init.md` and `agents/prompt-enhancer.md`.
 
 ---
+name: bd-swarm
 
 ## Worker Architecture
 
@@ -303,6 +314,7 @@ Worker (vanilla Claude via tmux/TabzChrome)
 Workers share the same plugin context as the conductor, so all skills are available.
 
 ---
+name: bd-swarm
 
 ## Skill Matching & Prompt Enhancement
 
@@ -401,6 +413,7 @@ This discovers real skills from the API and filesystem - don't use shorthand nam
 See `references/bd-swarm/interactive-mode.md` for the `match_skills()` function that auto-generates skill hints.
 
 ---
+name: bd-swarm
 
 ## Scripts
 
@@ -412,6 +425,7 @@ See `references/bd-swarm/interactive-mode.md` for the `match_skills()` function 
 | `scripts/wave-summary.sh` | Comprehensive wave summary with stats |
 
 ---
+name: bd-swarm
 
 ## Reference Files
 
@@ -423,6 +437,7 @@ See `references/bd-swarm/interactive-mode.md` for the `match_skills()` function 
 | `references/bd-swarm/completion-pipeline.md` | Cleanup steps |
 
 ---
+name: bd-swarm
 
 ## Notes
 

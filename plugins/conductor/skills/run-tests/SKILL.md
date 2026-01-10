@@ -1,6 +1,8 @@
 ---
+name: run-tests
 description: "Run tests if available. Standalone command for test verification."
 ---
+name: run-tests
 
 # Run Tests
 

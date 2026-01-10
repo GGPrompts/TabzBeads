@@ -1,6 +1,8 @@
 ---
+name: update-docs
 description: "Check and update documentation for LLM consumption."
 ---
+name: update-docs
 
 # Update Docs
 

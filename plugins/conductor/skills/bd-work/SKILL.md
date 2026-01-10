@@ -1,6 +1,8 @@
 ---
+name: bd-work
 description: "Pick the top ready beads issue and spawn a visible worker to complete it"
 ---
+name: bd-work
 
 > **⚠️ DEPRECATED:** This command is deprecated. Use `/conductor:work` instead.
 > This command will be removed in a future version.
@@ -17,6 +19,7 @@ Spawn a visible worker to tackle one beads issue. Unlike bd-swarm, no worktree i
 ```
 
 ---
+name: bd-work
 
 ## Workflow
 
@@ -32,6 +35,7 @@ Spawn a visible worker to tackle one beads issue. Unlike bd-swarm, no worktree i
 ```
 
 ---
+name: bd-work
 
 ## Phase 1: Select Issue
 
@@ -52,6 +56,7 @@ bd show <selected-id>
 ```
 
 ---
+name: bd-work
 
 ## Phase 2: VERIFY Skills (MANDATORY)
 
@@ -84,6 +89,7 @@ Common verified skill patterns (if installed):
 **CRITICAL:** Use full `plugin:skill` format. "Use the X skill" does NOT trigger invocation.
 
 ---
+name: bd-work
 
 ## Phase 3: Explore Context
 
@@ -99,6 +105,7 @@ Task(
 ```
 
 ---
+name: bd-work
 
 ## Phase 4: Craft Prompt
 
@@ -140,6 +147,7 @@ This command will: build, run code review, commit changes, and close the issue.
 **The `/conductor:worker-done` instruction is mandatory** - without it, workers don't know how to signal completion.
 
 ---
+name: bd-work
 
 ## Phase 5: Spawn Worker
 
@@ -176,6 +184,7 @@ started_at: $(date -Iseconds)"
 **No worktree needed** - single worker, no conflict risk.
 
 ---
+name: bd-work
 
 ## Phase 6: Send Prompt
 
@@ -189,6 +198,7 @@ tmux send-keys -t "$SESSION" C-m
 ```
 
 ---
+name: bd-work
 
 ## Phase 7: Monitor
 
@@ -199,6 +209,7 @@ User watches worker progress in TabzChrome sidebar. Worker will:
 4. Run `/conductor:worker-done <issue-id>`
 
 ---
+name: bd-work
 
 ## Cleanup
 
@@ -210,6 +221,7 @@ tmux kill-session -t "$SESSION"
 ```
 
 ---
+name: bd-work
 
 ## Comparison with bd-swarm
 
@@ -222,6 +234,7 @@ tmux kill-session -t "$SESSION"
 | Cleanup | Just kill session | Merge branches + cleanup |
 
 ---
+name: bd-work
 
 ## Notes
 

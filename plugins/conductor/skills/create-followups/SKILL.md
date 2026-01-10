@@ -1,6 +1,8 @@
 ---
+name: create-followups
 description: "Analyze work and create follow-up beads issues if needed."
 ---
+name: create-followups
 
 # Create Follow-ups
 

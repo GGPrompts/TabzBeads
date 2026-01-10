@@ -1,6 +1,8 @@
 ---
+name: verify-build
 description: "Run build and report errors. Standalone command for build verification."
 ---
+name: verify-build
 
 # Verify Build
 

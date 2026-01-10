@@ -1,6 +1,8 @@
 ---
+name: codex-review
 description: "Run Codex code review (read-only, cheaper). Uses GPT model for analysis."
 ---
+name: codex-review
 
 # Codex Review (Read-Only)
 
