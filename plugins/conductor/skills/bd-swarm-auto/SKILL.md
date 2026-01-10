@@ -179,14 +179,35 @@ At 70% context, run `/wipe:wipe` with handoff:
 
 ---
 
+## Monitoring Workers
+
+Use native beads agent tracking instead of custom scripts:
+
+```bash
+# List all running workers
+bd list --type=agent --label="conductor:worker" --status=open
+
+# Watch agents in real-time
+bd list --type=agent --watch
+
+# Show specific agent details
+bd agent show <agent-id>
+
+# Check agent state
+bd agent state <agent-id>
+```
+
+---
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| Worker not responding | `tmux capture-pane -t SESSION -p -S -50` |
+| Worker not responding | `bd agent show <agent-id>` to check state, then `tmux capture-pane -t SESSION -p -S -50` for details |
+| Worker stuck | `bd agent state <agent-id> stalled`, then nudge via tmux send-keys |
+| Worker failed | `bd agent state <agent-id> failed --reason="..."`, re-spawn or close with 'needs-review' |
 | Merge conflicts | Resolve manually, continue |
-| Worker stuck | Nudge via tmux send-keys |
-| Worker failed | Check logs, re-spawn or close with 'needs-review' |
+| Find all workers | `bd list --type=agent --label="conductor:worker"` |
 
 ---
 
