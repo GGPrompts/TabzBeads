@@ -91,7 +91,39 @@ NEXT=$(bd ready --json | jq 'length')
 
 ---
 
-## Worker Prompt Template
+## Worker Prompts: Prepared vs Dynamic
+
+**Before crafting a prompt, check if the issue has a prepared prompt in notes.**
+
+### Check for Prepared Prompt
+
+```bash
+# Extract prepared.prompt from issue notes
+NOTES=$(bd show "$ISSUE_ID" --json | jq -r '.[0].notes // ""')
+PREPARED_PROMPT=$(echo "$NOTES" | sed -n '/^prepared\.prompt: |/,/^prepared\./{ /^prepared\.prompt: |/d; /^prepared\./d; s/^  //p; }')
+
+if [ -n "$PREPARED_PROMPT" ]; then
+  # Use prepared prompt verbatim - no exploration needed
+  echo "Using prepared prompt from notes"
+  WORKER_PROMPT="$PREPARED_PROMPT"
+else
+  # Craft dynamically (see template below)
+  echo "Crafting prompt dynamically..."
+fi
+```
+
+### When Prepared Prompt Exists
+
+Use it **verbatim**. The prompt was crafted during `/conductor:bd-plan "Enhance Prompts"` with:
+- Skills already matched and verified
+- Key files already identified
+- Context already prepared
+
+This saves tokens and ensures consistency across workers.
+
+### When No Prepared Prompt (Dynamic Crafting)
+
+Fall back to the template below:
 
 ```markdown
 ## Task: ISSUE-ID - Title

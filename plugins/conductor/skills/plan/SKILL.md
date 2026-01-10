@@ -98,14 +98,14 @@ bd update <issue-id> --priority 1
 
 ## Activity: Enhance Prompts
 
-Find relevant files and skills for ready issues to improve worker prompts.
+Find relevant files and skills for ready issues, then **store prepared prompts in notes**.
 
 ### Commands
 
 ```bash
 MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
 
-# For each ready issue, find skills and key files
+# For each ready issue, find skills, key files, and store prepared prompt
 for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
   ISSUE_JSON=$(bd show "$ISSUE_ID" --json)
   TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
@@ -114,28 +114,65 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
 
   echo "=== $ISSUE_ID: $TITLE ==="
 
-  # Match skills
+  # Match skills (verified against available)
   SKILLS=$($MATCH_SCRIPT --verify "$TITLE $DESC $LABELS" 2>/dev/null)
-  if [ -n "$SKILLS" ]; then
-    echo "Skills: $SKILLS"
+  SKILL_NAMES=$(echo "$SKILLS" | grep -oE '/[a-z-]+:[a-z-]+' | sed 's|^/||' | tr '\n' ',' | sed 's/,$//')
+  if [ -n "$SKILL_NAMES" ]; then
+    echo "Skills: $SKILL_NAMES"
   fi
 
-  # Suggest key files to explore (based on keywords)
-  echo "Key files to explore:"
+  # Find key files (based on keywords in title/description)
+  KEY_FILES=""
   for keyword in $(echo "$TITLE $DESC" | tr ' ' '\n' | grep -E '^[a-z]{4,}$' | head -5); do
-    FILES=$(find . -type f -name "*.ts" -o -name "*.tsx" -o -name "*.md" 2>/dev/null | xargs grep -l "$keyword" 2>/dev/null | head -3)
-    [ -n "$FILES" ] && echo "  $keyword: $FILES"
+    FOUND=$(find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.md" \) 2>/dev/null | xargs grep -l "$keyword" 2>/dev/null | head -3)
+    if [ -n "$FOUND" ]; then
+      KEY_FILES="$KEY_FILES $FOUND"
+    fi
   done
+  KEY_FILES=$(echo "$KEY_FILES" | tr ' ' '\n' | sort -u | head -10 | tr '\n' ',' | sed 's/,$//')
+  [ -n "$KEY_FILES" ] && echo "Files: $KEY_FILES"
+
+  # Build skill load instructions (explicit /plugin:skill format)
+  SKILL_LOADS=""
+  for skill in $(echo "$SKILL_NAMES" | tr ',' ' '); do
+    [ -n "$skill" ] && SKILL_LOADS="$SKILL_LOADS
+- /$skill"
+  done
+
+  # Craft prepared prompt
+  PREPARED_PROMPT="Fix beads issue $ISSUE_ID: \"$TITLE\"
+
+## Skills to Load$SKILL_LOADS
+
+## Context
+$DESC
+
+## Key Files
+$KEY_FILES
+
+## When Done
+Run: /conductor:worker-done $ISSUE_ID"
+
+  # Store prepared data in issue notes (YAML-like format)
+  NOTES="prepared.skills: $SKILL_NAMES
+prepared.files: $KEY_FILES
+prepared.prompt: |
+$(echo "$PREPARED_PROMPT" | sed 's/^/  /')"
+
+  bd update "$ISSUE_ID" --notes "$NOTES"
+  echo "Stored prepared prompt in notes"
   echo ""
 done
 ```
 
 ### Output
 
-For each issue, report:
-- Matched skills to load
+For each issue:
+- Matched skills to load (verified available)
 - Key files relevant to the task
-- Suggested context for worker prompt
+- **Stored in notes**: `prepared.skills`, `prepared.files`, `prepared.prompt`
+
+Workers read `prepared.prompt` directly from notes - no exploration needed.
 
 ---
 

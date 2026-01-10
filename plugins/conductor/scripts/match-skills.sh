@@ -306,10 +306,15 @@ match_skills_with_labels() {
 get_issue_skills() {
   local ISSUE_ID="$1"
 
-  # Try to get from notes first (persisted by plan-backlog)
+  # Try to get from notes first (persisted by bd-plan)
   # bd show returns an array, so use .[0] to get the first element
   local NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
-  local PERSISTED_SKILLS=$(echo "$NOTES" | grep -oP 'skills?:\s*\K.*' | head -1)
+
+  # Check new prepared.skills format first, then legacy skills: format
+  local PERSISTED_SKILLS=$(echo "$NOTES" | grep -oP '^prepared\.skills:\s*\K.*' | head -1)
+  if [ -z "$PERSISTED_SKILLS" ]; then
+    PERSISTED_SKILLS=$(echo "$NOTES" | grep -oP '^skills:\s*\K.*' | head -1)
+  fi
 
   if [ -n "$PERSISTED_SKILLS" ]; then
     # Convert comma-separated skill names to explicit invocation commands
@@ -406,11 +411,11 @@ match_skills_verified() {
 # ============================================================================
 # PERSIST SKILLS TO BEADS
 # ============================================================================
-# Used by plan-backlog to save skill hints
+# Used by bd-plan to save skill hints in prepared.* format
 
 persist_skills_to_issue() {
   local ISSUE_ID="$1"
-  local SKILLS="$2"  # Comma-separated skill names (e.g., "xterm-js, ui-styling")
+  local SKILLS="$2"  # Comma-separated skill names (e.g., "ui-styling,backend-development")
 
   if [ -z "$ISSUE_ID" ] || [ -z "$SKILLS" ]; then
     return 1
@@ -419,14 +424,35 @@ persist_skills_to_issue() {
   # Get existing notes (bd show returns an array)
   local EXISTING_NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
 
-  # Remove any existing skills line
-  local CLEAN_NOTES=$(echo "$EXISTING_NOTES" | grep -v '^skills:')
+  # Remove any existing prepared.skills or legacy skills line
+  local CLEAN_NOTES=$(echo "$EXISTING_NOTES" | grep -v '^prepared\.skills:' | grep -v '^skills:')
 
-  # Add new skills line
+  # Add new prepared.skills line (consistent with prepared.* schema)
   local NEW_NOTES="${CLEAN_NOTES}
-skills: ${SKILLS}"
+prepared.skills: ${SKILLS}"
 
   # Update issue
+  bd update "$ISSUE_ID" --notes "$NEW_NOTES" 2>/dev/null
+}
+
+# Persist full prepared prompt (skills + files + prompt)
+persist_prepared_prompt() {
+  local ISSUE_ID="$1"
+  local SKILLS="$2"    # Comma-separated skill names
+  local FILES="$3"     # Comma-separated file paths
+  local PROMPT="$4"    # Full worker prompt text
+
+  if [ -z "$ISSUE_ID" ]; then
+    return 1
+  fi
+
+  # Build notes in prepared.* format
+  local NEW_NOTES="prepared.skills: ${SKILLS:-}
+prepared.files: ${FILES:-}
+prepared.prompt: |
+$(echo "${PROMPT:-}" | sed 's/^/  /')"
+
+  # Update issue (replaces all notes)
   bd update "$ISSUE_ID" --notes "$NEW_NOTES" 2>/dev/null
 }
 
@@ -447,14 +473,20 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       echo "  --available       List all currently available skill IDs"
       echo "  --available-full  List skills with descriptions (for prompt crafting)"
       echo "  --available-json  List skills as JSON array with descriptions"
-      echo "  --persist ID SK   Persist skills to issue: --persist ISSUE-ID 'skill1, skill2'"
+      echo "  --persist ID SK   Store skills in issue notes (prepared.skills format)"
+      echo ""
+      echo "Notes Format (prepared.* schema):"
+      echo "  prepared.skills: ui-styling,backend-development"
+      echo "  prepared.files: src/Button.tsx,src/utils.ts"
+      echo "  prepared.prompt: |"
+      echo "    Full worker prompt here..."
       echo ""
       echo "Examples:"
       echo "  match-skills.sh 'fix terminal resize bug'"
       echo "  match-skills.sh --verify 'add dashboard component'"
       echo "  match-skills.sh --issue TabzChrome-abc"
       echo "  match-skills.sh --available-full"
-      echo "  match-skills.sh --persist TabzChrome-abc 'ui-styling, backend-development'"
+      echo "  match-skills.sh --persist TabzChrome-abc 'ui-styling,backend-development'"
       ;;
     --json)
       shift
