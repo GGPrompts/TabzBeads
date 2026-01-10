@@ -8,7 +8,7 @@ TabzBeads is a **Claude Code plugin marketplace** - a collection of plugins for 
 |--|--|
 | **Type** | Plugin Marketplace (multiple plugins) |
 | **Core Tool** | beads (bd) - AI-native issue tracking |
-| **Key Command** | `/conductor:work` - unified workflow entry point |
+| **Key Command** | `/conductor:bd-work` - single-session workflow entry point |
 
 ---
 
@@ -102,13 +102,10 @@ The conductor plugin orchestrates multi-session Claude workflows:
 ```
 plugins/conductor/
 ├── plugin.json
-├── commands/                    # Atomic slash commands
-│   ├── verify-build.md
-│   ├── run-tests.md
-│   ├── code-review.md
-│   ├── commit-changes.md
-│   ├── close-issue.md
-│   └── worker-done.md
+├── commands/                    # Slash commands with prefix taxonomy
+│   ├── bd-*.md                  # User entry points (bd-work, bd-plan, bd-swarm, bd-status)
+│   ├── bdc-*.md                 # Conductor internal (bdc-swarm-auto, bdc-wave-done)
+│   └── bdw-*.md                 # Worker steps (bdw-verify-build, bdw-commit-changes)
 ├── agents/                      # Spawnable subagents
 │   ├── conductor.md             # Main orchestrator
 │   ├── code-reviewer.md
@@ -124,10 +121,10 @@ plugins/conductor/
 
 ## Development Goals
 
-### Phase 1: Consolidation
-- Merge `bd-work`, `bd-swarm`, `bd-swarm-auto` into unified `/conductor:work`
-- Replace flags with AskUserQuestion interactive prompts
-- Add guardrails for commonly missed steps
+### Phase 1: Consolidation ✅
+- Prefix-based taxonomy: `bd-` (user), `bdc-` (conductor), `bdw-` (worker)
+- User entry points: bd-work, bd-plan, bd-swarm, bd-status
+- Internal steps clearly namespaced (no hiding needed during testing)
 
 ### Phase 2: Beads-Native Integration
 - Use `bd worktree` instead of `git worktree`
@@ -143,22 +140,20 @@ plugins/conductor/
 
 ## Key Patterns
 
-### Unified Work Command
+### Prefix Taxonomy
 ```
-/conductor:work
-  → AskUserQuestion: which issues?
-  → AskUserQuestion: how many workers?
-  → AskUserQuestion: which completion steps?
-  → Execute based on configuration
+bd-*    = User entry points (visible in menu)
+bdc-*   = Conductor internal (orchestration)
+bdw-*   = Worker internal (execution steps)
 ```
 
-### Completion Guardrails
+### Completion Pipeline
 ```
-/conductor:complete <issue-id>
-  1. ALWAYS verify build
-  2. Auto-detect standalone vs parallel mode
-  3. If parallel: notify conductor, DON'T push
-  4. If standalone: prompt for review + push
+/conductor:bdw-worker-done <issue-id>
+  1. bdw-verify-build
+  2. bdw-run-tests (if available)
+  3. bdw-commit-changes
+  4. bdw-close-issue
 ```
 
 ### Beads-Native Features to Use
@@ -171,16 +166,30 @@ plugins/conductor/
 
 ## Commands Reference
 
+### User Entry Points (bd-)
 | Command | Purpose |
 |---------|---------|
-| `/conductor:work` | Unified entry point (interactive) |
-| `/conductor:refine` | Prepare backlog with Haiku explorers |
-| `/conductor:complete` | Task completion with guardrails |
-| `/conductor:verify-build` | Build verification |
-| `/conductor:run-tests` | Test runner |
-| `/conductor:code-review` | Opus code review |
-| `/conductor:commit-changes` | Conventional commit |
-| `/conductor:close-issue` | Close beads issue |
+| `/conductor:bd-work` | Single-session: you implement an issue |
+| `/conductor:bd-plan` | Prepare backlog: refine, enhance, match skills |
+| `/conductor:bd-swarm` | Multi-session: spawn parallel workers |
+| `/conductor:bd-status` | View issue state (open, blocked, ready) |
+
+### Conductor Internal (bdc-)
+| Command | Purpose |
+|---------|---------|
+| `/conductor:bdc-swarm-auto` | Autonomous waves until backlog empty |
+| `/conductor:bdc-wave-done` | Merge branches, unified review, cleanup |
+| `/conductor:bdc-orchestration` | Multi-session coordination |
+
+### Worker Internal (bdw-)
+| Command | Purpose |
+|---------|---------|
+| `/conductor:bdw-verify-build` | Run build, report errors |
+| `/conductor:bdw-run-tests` | Run tests if available |
+| `/conductor:bdw-code-review` | Opus review with auto-fix |
+| `/conductor:bdw-commit-changes` | Stage + commit |
+| `/conductor:bdw-close-issue` | Close beads issue |
+| `/conductor:bdw-worker-done` | Full completion pipeline |
 
 ---
 
