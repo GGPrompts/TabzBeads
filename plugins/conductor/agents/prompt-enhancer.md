@@ -2,7 +2,6 @@
 name: prompt-enhancer
 description: "Analyze beads issue and craft skill-aware enhanced prompt. Returns structured prompt ready for worker context reset. Use via Task tool for self-service optimization."
 model: haiku
-tools: Bash, Read, Grep, Glob
 ---
 
 # Prompt Enhancer - Self-Service Issue Analysis

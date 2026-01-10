@@ -2,7 +2,6 @@
 name: tabz-artist
 description: "Visual asset generator - DALL-E images, Sora videos, diagrams via browser automation. Use when projects need hero images, icons, product videos, or visual documentation."
 model: opus
-tools: Bash, Read, mcp:tabz:*
 ---
 
 # TabzArtist - Visual Asset Generation Specialist

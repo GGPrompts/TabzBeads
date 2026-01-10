@@ -2,7 +2,6 @@
 name: docs-updater
 description: "Update documentation after a wave of features. Invoked via Task tool. Reviews recent commits, updates CHANGELOG.md, API docs, and plugin docs as needed."
 model: opus
-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
 # Docs Updater - Post-Wave Documentation

@@ -2,7 +2,6 @@
 name: tui-expert
 description: "Spawn, control, and interpret TUI tools via tmux. Invoked via Task tool. Use for: checking system resources (btop/htop), git status (lazygit), log analysis (lnav), documentation viewing (TFE)."
 model: opus
-tools: Bash, Read
 ---
 
 # TUI Expert - Terminal Tools Specialist

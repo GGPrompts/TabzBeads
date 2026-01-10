@@ -2,7 +2,6 @@
 name: skill-picker
 description: "Search and install skills from skillsmp.com (28k+ skills). Invoked via Task tool. Use when spawning workers that need specific capabilities, or when user asks to find/install skills."
 model: haiku
-tools: Bash, Read, Write, WebFetch
 ---
 
 # Skill Picker - Search & Install Skills from SkillsMP
