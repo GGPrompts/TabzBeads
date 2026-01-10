@@ -237,14 +237,16 @@ Run `/conductor:close-issue <issue-id>`. Reports final status.
 ```bash
 echo "=== Step 7: Notify Conductor ==="
 
-SUMMARY=$(git log -1 --format='%s' 2>/dev/null || echo 'committed')
+# Get commit subject, strip newlines, truncate to 80 chars (prevents tmux corruption)
+SUMMARY=$(git log -1 --format='%s' 2>/dev/null | tr -d '\n' | head -c 80 || echo 'committed')
 WORKER_SESSION=$(tmux display-message -p '#{session_name}' 2>/dev/null || echo 'unknown')
 
 # Primary method: tmux send-keys (Claude Code queues messages, safe even mid-output)
 CONDUCTOR_SESSION="${CONDUCTOR_SESSION:-}"
 if [ -n "$CONDUCTOR_SESSION" ]; then
+  # CRITICAL: -l for literal, sleep before C-m, no special chars at start
   tmux send-keys -t "$CONDUCTOR_SESSION" -l "WORKER COMPLETE: $ISSUE_ID - $SUMMARY"
-  sleep 0.3
+  sleep 0.5  # Increased delay - prevents race condition
   tmux send-keys -t "$CONDUCTOR_SESSION" C-m
   echo "Notified conductor via tmux"
 fi
@@ -259,7 +261,13 @@ if [ -n "$TOKEN" ]; then
 fi
 ```
 
-**Why tmux is primary:** Claude Code queues incoming messages even during output, so tmux send-keys is safe. The API broadcasts via WebSocket which browser UIs can receive, but tmux-based Claude sessions cannot.
+**Why tmux is primary:** Claude Code in tmux can receive messages via tmux send-keys. The API broadcast is for browser UIs that have WebSocket listeners - tmux-based Claude sessions cannot receive WebSocket messages.
+
+**Avoiding tmux corruption:**
+- Always use `-l` flag (literal mode)
+- Strip newlines from message content
+- Include `sleep 0.5` before C-m
+- Don't start messages with `#` (shell comment)
 
 ### Step 8: Standalone Next Steps (STANDALONE MODE ONLY)
 

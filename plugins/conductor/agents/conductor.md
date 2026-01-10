@@ -99,24 +99,28 @@ SESSION=$(echo "$RESPONSE" | jq -r '.terminal.ptyInfo.tmuxSession')
 
 ### Worker Completion Notifications
 
-Workers notify the conductor when done via API (push-based, no polling, no session corruption):
+Workers notify the conductor via tmux send-keys:
 
 ```
-Worker completes → /conductor:worker-done
-                 → POST /api/notify with worker-complete type
-                 → WebSocket broadcasts to conductor
-                 → Conductor receives and cleans up immediately
+Worker completes → /conductor:bdw-worker-done
+                 → tmux send-keys to CONDUCTOR_SESSION
+                 → Conductor receives message and processes
 ```
 
 **How it works:**
-1. Worker completes task and runs `/conductor:worker-done`
-2. Worker calls `POST /api/notify` with completion details
-3. Backend broadcasts via WebSocket to all connected clients
-4. Conductor receives notification and can cleanup immediately
+1. Worker completes task and runs `/conductor:bdw-worker-done`
+2. Worker sends message via `tmux send-keys -t "$CONDUCTOR_SESSION"`
+3. Conductor receives the message in their Claude session
 
-**Why API over tmux send-keys:** The old tmux-based notification could corrupt the conductor's Claude session if it was mid-output or mid-prompt. The API broadcasts via WebSocket, which the conductor receives cleanly.
+**Avoiding tmux corruption:**
+- Use `-l` flag for literal mode
+- Strip newlines from message content (`tr -d '\n'`)
+- Include `sleep 0.5` before pressing enter (C-m)
+- Don't start messages with `#` (interpreted as shell comment)
 
-**API notification (used by /conductor:worker-done):**
+**Secondary:** API broadcast (`POST /api/notify`) for browser UIs with WebSocket listeners. Tmux-based Claude sessions cannot receive WebSocket messages.
+
+**API notification (used by /conductor:bdw-worker-done for browser UIs):**
 ```bash
 TOKEN=$(cat /tmp/tabz-auth-token)
 curl -s -X POST http://localhost:8129/api/notify \
