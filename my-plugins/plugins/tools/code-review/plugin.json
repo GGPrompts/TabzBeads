@@ -1,5 +1,7 @@
 {
   "name": "code-review",
   "version": "1.0.0",
-  "description": "Code review practices - receiving feedback, verification gates, preventing false claims"
+  "description": "Code review with confidence-based filtering and auto-fix",
+  "skills": ["skills/review", "skills/silent-failures", "skills/security", "skills/review-practices"],
+  "agents": ["agents/reviewer.md"]
 }
