@@ -232,13 +232,19 @@ For distributing multiple plugins:
 ```
 my-marketplace/
 ├── .claude-plugin/
-│   └── marketplace.json    # Lists all plugins
+│   └── marketplace.json    # Lists all plugins (ONLY file here)
 └── plugins/
     ├── plugin-one/
-    │   └── .claude-plugin/plugin.json
+    │   ├── plugin.json     # AT PLUGIN ROOT (not .claude-plugin/)
+    │   └── skills/
+    │       └── skill-a/
+    │           └── SKILL.md
     └── plugin-two/
-        └── .claude-plugin/plugin.json
+        ├── plugin.json     # AT PLUGIN ROOT
+        └── skills/
 ```
+
+**Critical:** Marketplace plugins have `plugin.json` at their root, NOT inside `.claude-plugin/`.
 
 `marketplace.json`:
 ```json
@@ -252,10 +258,46 @@ my-marketplace/
       "name": "plugin-one",
       "description": "First plugin",
       "source": "./plugins/plugin-one",
-      "category": "tools"
+      "category": "tools",
+      "skills": [
+        "./skills/skill-a",
+        "./skills/skill-b"
+      ]
     }
   ]
 }
+```
+
+**Note:** The `skills` array explicitly lists skill paths for reliable discovery.
+
+## Critical Rules
+
+1. **Standalone plugins:** `plugin.json` in `.claude-plugin/`
+2. **Marketplace plugins:** `plugin.json` at plugin root (NOT `.claude-plugin/`)
+3. **Skills ONE level deep:** `skills/name/SKILL.md` - NO nesting
+4. **No plugin.json per skill** - Only one per plugin
+5. **Explicit skills array** in marketplace.json (recommended)
+
+## Common Mistakes
+
+| Mistake | Correct |
+|---------|---------|
+| `plugins/X/.claude-plugin/plugin.json` | `plugins/X/plugin.json` |
+| `skills/parent/skills/child/SKILL.md` | `skills/child/SKILL.md` (flatten) |
+| Missing `skills` array in marketplace.json | Add explicit skill paths |
+| Individual `plugin.json` per skill | Only one `plugin.json` per plugin |
+
+## Auditing Commands
+
+```bash
+# Find nested skills (should return 0)
+find plugins -path "*/skills/*/skills/*" -name "SKILL.md"
+
+# Find orphaned plugin.json in skill dirs (should return 0)
+find plugins -path "*/skills/*/plugin.json" | wc -l
+
+# Verify plugin.json at correct locations
+find plugins -maxdepth 2 -name "plugin.json"
 ```
 
 ## Best Practices
@@ -265,3 +307,4 @@ my-marketplace/
 3. **Make scripts executable** - `chmod +x scripts/*.sh`
 4. **Use relative paths** - All paths relative to plugin root
 5. **Test with --debug** - `claude --debug` shows plugin loading
+6. **Skills flat** - Never nest skills inside skills

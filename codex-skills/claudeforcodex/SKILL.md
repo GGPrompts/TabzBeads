@@ -62,23 +62,44 @@ Claude Code uses explicit tool permissions:
 
 ## Plugin System
 
-Claude Code extends via plugins containing:
+Claude Code has two plugin patterns:
+
+### Standalone Plugin (entire repo = one plugin)
 
 ```
 my-plugin/
 ├── .claude-plugin/
-│   └── plugin.json      # Required manifest
-├── commands/            # Slash commands (/name)
-│   └── my-command.md
-├── agents/              # Subagents (--agent name)
-│   └── my-agent.md
-├── skills/              # Auto-loaded knowledge
+│   └── plugin.json      # Required for standalone
+├── commands/
+├── agents/
+├── skills/
 │   └── my-skill/
-│       └── SKILL.md
-├── hooks/               # Event hooks
-│   └── hooks.json
-└── .mcp.json            # MCP server definitions
+│       └── SKILL.md     # ONE level deep only!
+├── hooks/
+└── .mcp.json
 ```
+
+### Marketplace Plugin (repo contains multiple plugins)
+
+```
+my-marketplace/
+├── .claude-plugin/
+│   └── marketplace.json     # Lists all plugins
+└── plugins/
+    ├── plugin-a/
+    │   ├── plugin.json      # AT ROOT (not .claude-plugin/)
+    │   └── skills/
+    │       └── skill-name/
+    │           └── SKILL.md
+    └── plugin-b/
+        └── plugin.json
+```
+
+**Critical Rules:**
+1. **Marketplace plugins:** `plugin.json` at plugin root, NOT in `.claude-plugin/`
+2. **Skills ONE level deep:** `skills/name/SKILL.md` - NO `skills/a/skills/b/`
+3. **No plugin.json per skill** - only one per plugin
+4. **Explicit skills array** in marketplace.json (recommended)
 
 **Install plugin:**
 ```bash
@@ -139,6 +160,22 @@ description: "When to trigger this skill. Be specific about keywords and context
 # Skill Name
 
 Knowledge and instructions loaded when skill triggers.
+```
+
+**Critical:** Skills must be **ONE level deep**:
+```
+skills/
+├── skill-a/          # ✅ Correct
+│   └── SKILL.md
+└── skill-b/          # ✅ Correct
+    └── SKILL.md
+
+# ❌ WRONG - nested skills won't be discovered:
+skills/
+└── parent/
+    └── skills/       # Nesting breaks discovery!
+        └── child/
+            └── SKILL.md
 ```
 
 **Note:** Skills auto-load based on conversation context matching the description.
@@ -232,9 +269,35 @@ claude plugins add marketplace-name
 claude --debug
 ```
 
+## Auditing Plugin Structure
+
+When auditing a Claude Code plugin/marketplace for issues:
+
+```bash
+# Find all SKILL.md files
+find plugins -name "SKILL.md" | sort
+
+# Find nested skills (WRONG structure)
+find plugins -path "*/skills/*/skills/*" -name "SKILL.md"
+
+# Find all plugin.json files
+find plugins -name "plugin.json" | sort
+
+# Find orphaned plugin.json in skill dirs (should be 0)
+find plugins -path "*/skills/*/plugin.json" | wc -l
+
+# Check marketplace.json has skills arrays
+cat .claude-plugin/marketplace.json | jq '.plugins[].skills'
+```
+
+**Common Issues:**
+| Issue | Symptom | Fix |
+|-------|---------|-----|
+| Nested skills | Skills not loading | Flatten to `skills/name/SKILL.md` |
+| plugin.json in skill dirs | Confusion | Remove, only one per plugin |
+| Missing skills array | Skills not discovered | Add to marketplace.json |
+| Wrong plugin.json location | Plugin not loading | Move to plugin root |
+
 ## Reference Files
 
 - `references/plugin-structure.md` - Complete plugin layout
-- `references/permissions.md` - Permission system deep dive
-- `references/hooks.md` - Hook configuration guide
-- `references/mcp-integration.md` - MCP server setup
