@@ -11,3 +11,6 @@ TabzBeads-070/
 TabzBeads-zlv/
 TabzBeads-clp/
 TabzBeads-zky/
+.beads/*.jsonl
+.beads/config.yaml
+.beads/metadata.json
