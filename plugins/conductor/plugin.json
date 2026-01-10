@@ -3,6 +3,15 @@
   "version": "1.0.0",
   "description": "Orchestrate multi-session Claude workflows - spawn workers, use subagents for monitoring, manage beads issues",
   "skills": [
-    "./skills/bd-conduct"
+    "./skills/bd-conduct",
+    "./skills/bd-swarm-auto",
+    "./skills/code-review",
+    "./skills/new-project",
+    "./skills/orchestration",
+    "./skills/tabz-artist",
+    "./skills/tabz-mcp",
+    "./skills/terminal-tools",
+    "./skills/wave-done",
+    "./skills/worker-done"
   ]
 }
