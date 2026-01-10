@@ -2,23 +2,24 @@
 
 This document maps all conductor plugin workflows, their components, and relationships. Use this to understand how the orchestration system works.
 
-**Last Updated**: 2026-01-09 (v2 implementation complete)
+**Last Updated**: 2026-01-10 (prefix taxonomy implemented)
 
 ---
 
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Entry Points](#entry-points)
-3. [Single-Session Workflow (work)](#single-session-workflow-work)
-4. [Multi-Session Workflow (bd-swarm-auto)](#multi-session-workflow-bd-swarm-auto)
-5. [Worker Pipeline](#worker-pipeline)
-6. [worker-done Pipeline](#worker-done-pipeline)
-7. [wave-done Pipeline](#wave-done-pipeline)
-8. [Atomic Commands](#atomic-commands)
-9. [Agents](#agents)
-10. [Beads Integration](#beads-integration)
-11. [Quick Reference](#quick-reference)
+2. [Prefix Taxonomy](#prefix-taxonomy)
+3. [Entry Points](#entry-points)
+4. [Single-Session Workflow (bd-work)](#single-session-workflow-bd-work)
+5. [Multi-Session Workflow (bdc-swarm-auto)](#multi-session-workflow-bdc-swarm-auto)
+6. [Worker Pipeline](#worker-pipeline)
+7. [bdw-worker-done Pipeline](#bdw-worker-done-pipeline)
+8. [bdc-wave-done Pipeline](#bdc-wave-done-pipeline)
+9. [Atomic Commands](#atomic-commands)
+10. [Agents](#agents)
+11. [Beads Integration](#beads-integration)
+12. [Quick Reference](#quick-reference)
 
 ---
 
@@ -29,10 +30,11 @@ This document maps all conductor plugin workflows, their components, and relatio
 │                         CONDUCTOR                                    │
 │            (orchestrates multi-session Claude work)                  │
 │                                                                      │
-│  Entry Points:                                                       │
-│    /conductor:work       - Single session (YOU do the work)         │
-│    /conductor:bd-plan    - Prepare backlog                          │
-│    /conductor:bd-swarm-auto - Autonomous parallel execution          │
+│  Entry Points (bd-*):                                                │
+│    /conductor:bd-work      - Single session (YOU do the work)       │
+│    /conductor:bd-plan      - Prepare backlog                        │
+│    /conductor:bd-swarm     - Spawn parallel workers                 │
+│    /conductor:bd-status    - View issue state                       │
 └─────────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -46,7 +48,7 @@ This document maps all conductor plugin workflows, their components, and relatio
         └─────────────────────┼─────────────────────┘
                               ▼
                     ┌─────────────────┐
-                    │   wave-done     │
+                    │ bdc-wave-done   │
                     │ (merge+review)  │
                     └─────────────────┘
                               │
@@ -58,13 +60,26 @@ This document maps all conductor plugin workflows, their components, and relatio
 
 | Symbol | Meaning |
 |--------|---------|
-| `/conductor:X` | Slash command (skill) |
+| `bd-*` | User entry point command |
+| `bdc-*` | Conductor internal command |
+| `bdw-*` | Worker step command |
 | `bd X` | Beads CLI command |
 | `{agent}` | Subagent via Task() |
-| `→` | Flow direction |
 | `⛔` | Blocking (stops on failure) |
-| `✅` | Implemented |
-| `🔮` | Proposed/Future |
+
+---
+
+## Prefix Taxonomy
+
+Commands use prefixes to indicate their purpose:
+
+| Prefix | Purpose | Example |
+|--------|---------|---------|
+| `bd-` | User entry points (you invoke these) | bd-work, bd-plan, bd-swarm |
+| `bdc-` | Conductor internal (orchestration) | bdc-swarm-auto, bdc-wave-done |
+| `bdw-` | Worker steps (execution pipeline) | bdw-verify-build, bdw-commit-changes |
+
+This replaces the previous `user-invocable: false` approach, making command purpose obvious from the name.
 
 ---
 
@@ -72,32 +87,23 @@ This document maps all conductor plugin workflows, their components, and relatio
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        USER ENTRY POINTS                            │
+│                        USER ENTRY POINTS (bd-*)                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  ✅ Single Session:   /conductor:work [issue-id]                    │
-│                            ↓                                        │
-│                    YOU do the work (no spawning)                    │
-│                    Full pipeline: build → test → commit → push      │
+│  /conductor:bd-work [issue-id]                                      │
+│       Single session - YOU do the work                              │
+│       Full pipeline: build → test → commit → push                   │
 │                                                                     │
-│  ✅ Plan Backlog:     /conductor:bd-plan                            │
-│                            ↓                                        │
-│                    Refine, enhance prompts, match skills            │
-│                    Stores prepared.* in issue notes                 │
+│  /conductor:bd-plan                                                 │
+│       Prepare backlog: refine, enhance prompts, match skills        │
+│       Stores prepared.* in issue notes                              │
 │                                                                     │
-│  ✅ Auto Parallel:    /conductor:bd-swarm-auto                      │
-│                            ↓                                        │
-│                    Spawns workers, loops until bd ready empty       │
-│                    Agent beads track state                          │
+│  /conductor:bd-swarm                                                │
+│       Multi-session: spawn parallel workers                         │
+│       Interactive issue selection and worker count                  │
 │                                                                     │
-│  ✅ Worker Complete:  /conductor:worker-done <id>                   │
-│                            ↓                                        │
-│                    Detects mode (worker vs standalone)              │
-│                    Adapts pipeline accordingly                      │
-│                                                                     │
-│  ⚠️ DEPRECATED:                                                     │
-│     /conductor:bd-work   → Use /conductor:work                      │
-│     /conductor:bd-swarm  → Use /conductor:bd-swarm-auto             │
+│  /conductor:bd-status                                               │
+│       View issue state (open, blocked, ready, in-progress)          │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -106,20 +112,20 @@ This document maps all conductor plugin workflows, their components, and relatio
 
 | Entry Point | Use Case | Who Works? | Code Review By |
 |-------------|----------|------------|----------------|
-| `work` | Single issue, you working | You | You (optional) |
+| `bd-work` | Single issue, you working | You | You (optional) |
 | `bd-plan` | Prepare before execution | You (prep only) | N/A |
-| `bd-swarm-auto` | Batch autonomous work | Spawned workers | Conductor (unified) |
-| `worker-done` | Complete current task | You (as worker) | Mode-dependent |
+| `bd-swarm` | Parallel worker spawning | Spawned workers | Conductor (unified) |
+| `bd-status` | Check project state | N/A | N/A |
 
 ---
 
-## Single-Session Workflow (work)
+## Single-Session Workflow (bd-work)
 
-**Skill**: `/conductor:work`
+**Command**: `/conductor:bd-work`
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    /conductor:work [issue-id]                        │
+│                    /conductor:bd-work [issue-id]                    │
 │                    (YOU are the worker)                              │
 └─────────────────────────────────────────────────────────────────────┘
                               │
@@ -146,23 +152,26 @@ This document maps all conductor plugin workflows, their components, and relatio
                               │
                               ▼
                     ┌─────────────────┐
-                    │ 4. verify-build │⛔
+                    │ 4. bdw-verify-  │⛔
+                    │    build        │
                     └─────────────────┘
                               │
                               ▼
                     ┌─────────────────┐
-                    │ 5. run-tests    │⛔
+                    │ 5. bdw-run-     │⛔
+                    │    tests        │
                     └─────────────────┘
                               │
                               ▼
                     ┌─────────────────┐
-                    │ 6. commit-      │⛔
+                    │ 6. bdw-commit-  │⛔
                     │    changes      │
                     └─────────────────┘
                               │
                               ▼
                     ┌─────────────────┐
-                    │ 7. close-issue  │⛔
+                    │ 7. bdw-close-   │⛔
+                    │    issue        │
                     └─────────────────┘
                               │
                               ▼
@@ -173,24 +182,15 @@ This document maps all conductor plugin workflows, their components, and relatio
                     └─────────────────┘
 ```
 
-### Key Differences from bd-swarm
-
-| Aspect | /conductor:work | /conductor:bd-swarm-auto |
-|--------|----------------|--------------------------|
-| Who works | You | Spawned workers |
-| Worktrees | No | Yes (per worker) |
-| Code review | Optional (you decide) | Conductor (unified after merge) |
-| Push | You do it | Conductor does it |
-
 ---
 
-## Multi-Session Workflow (bd-swarm-auto)
+## Multi-Session Workflow (bdc-swarm-auto)
 
-**Skill**: `/conductor:bd-swarm-auto`
+**Command**: `/conductor:bdc-swarm-auto`
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    CONDUCTOR (bd-swarm-auto)                        │
+│                    CONDUCTOR (bdc-swarm-auto)                       │
 └─────────────────────────────────────────────────────────────────────┘
                               │
      ┌────────────────────────┼────────────────────────┐
@@ -213,35 +213,26 @@ This document maps all conductor plugin workflows, their components, and relatio
                               ┌─────────────────┐
                               │ 4. Create Agent │
                               │    Beads        │◀──── bd create --type=agent
-                              │ Set: spawning   │      bd agent state <id> spawning
                               └─────────────────┘
                                         │
                                         ▼
                               ┌─────────────────┐
                               │ 5. Spawn        │
                               │    Workers      │◀──── TabzChrome /api/spawn
-                              │ Attach: hook    │      bd slot set <agent> hook <issue>
                               └─────────────────┘
                                         │
                                         ▼
                               ┌─────────────────┐
-                              │ 6. Send Prompts │
-                              │  (skill-aware)  │◀──── tmux send-keys
-                              │ Set: running    │      bd agent state <id> running
-                              └─────────────────┘
-                                        │
-                                        ▼
-                              ┌─────────────────┐
-                              │ 7. Monitor      │◀──── bd list --type=agent
-                              │  Agent States   │      (replaces monitor-workers.sh)
+                              │ 6. Monitor      │◀──── bd list --type=agent
+                              │  Agent States   │
                               └─────────────────┘
                                         │
                     Workers notify via tmux send-keys
                                         │
                                         ▼
                               ┌─────────────────┐
-                              │ 8. wave-done    │◀──── /conductor:wave-done
-                              │  (full cleanup) │
+                              │ 7. bdc-wave-    │◀──── /conductor:bdc-wave-done
+                              │    done         │
                               └─────────────────┘
                                         │
               ┌─────────────────────────┴────────────────┐
@@ -257,17 +248,6 @@ This document maps all conductor plugin workflows, their components, and relatio
                       ▼
                 BACKLOG COMPLETE
 ```
-
-### Beads-Native Features Used
-
-| Feature | Command | Purpose |
-|---------|---------|---------|
-| Worktrees | `bd worktree create` | Auto-configures beads redirect |
-| Agent beads | `bd create --type=agent` | Track worker state |
-| State machine | `bd agent state <id> running` | spawning → running → done |
-| Work attachment | `bd slot set <agent> hook <issue>` | Link worker to issue |
-| Monitoring | `bd list --type=agent` | Query worker states |
-| Prepared prompts | `bd show <id> --json \| jq .notes` | Read pre-crafted prompts |
 
 ---
 
@@ -307,50 +287,22 @@ Each spawned worker follows this flow:
                               │
                               ▼
                     ┌─────────────────────────────────────────┐
-                    │       /conductor:worker-done            │
+                    │       /conductor:bdw-worker-done        │
                     │  (auto-detects worker vs standalone)    │
                     └─────────────────────────────────────────┘
 ```
 
-### Worker Prompt Template
-
-```markdown
-Fix beads issue ISSUE-ID: "Title"
-
-## Skills to Load
-**FIRST**, invoke these skills before starting work:
-- /backend-development:backend-development
-- /conductor:orchestration
-
-## Context
-[WHY this matters]
-
-## Key Files
-- path/to/file.ts
-
-## Approach
-[Implementation guidance]
-
-## Conductor Session
-CONDUCTOR_SESSION=<session-id>
-
-## When Done
-Run: /conductor:worker-done ISSUE-ID
-
-Do NOT use # or special symbols at the START of your notification message.
-```
-
 ---
 
-## worker-done Pipeline
+## bdw-worker-done Pipeline
 
-**Skill**: `/conductor:worker-done`
+**Command**: `/conductor:bdw-worker-done`
 
-The pipeline now **auto-detects execution mode**:
+The pipeline **auto-detects execution mode**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                 /conductor:worker-done <issue-id>                   │
+│                 /conductor:bdw-worker-done <issue-id>               │
 └─────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -378,60 +330,44 @@ The pipeline now **auto-detects execution mode**:
 └──────────────────────┘              └──────────────────────┘
                               │
             ┌─────────────────┴─────────────────┐
-            ▼ (code changes)                   ▼ (DOCS_ONLY)
+            ▼                                   ▼
    ┌─────────────────┐                ┌─────────────────┐
-   │ Step 1: ⛔      │                │ Step 1a: ⛔     │
-   │ verify-build    │                │ plugin-validator│
+   │ bdw-verify-     │⛔              │ bdw-verify-     │⛔
+   │ build           │                │ build           │
    └─────────────────┘                └─────────────────┘
             │                                  │
-            ▼                                  │
-   ┌─────────────────┐                         │
-   │ Step 2: ⛔      │                         │
-   │ run-tests       │                         │
-   └─────────────────┘                         │
+            ▼                                  ▼
+   ┌─────────────────┐                ┌─────────────────┐
+   │ bdw-run-tests   │⛔              │ bdw-run-tests   │⛔
+   └─────────────────┘                └─────────────────┘
             │                                  │
-            └─────────────────┬────────────────┘
-                              ▼
-                    ┌─────────────────┐
-                    │ Step 3: commit  │⛔
-                    └─────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────┐
-                    │ Step 4-5:       │
-                    │ followups, docs │  (non-blocking)
-                    └─────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────┐
-                    │ Step 5.5:       │
-                    │ Update agent    │◀──── bd agent state <id> done
-                    │ bead state      │      bd slot clear <id> hook
-                    └─────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────┐
-                    │ Step 6: close   │⛔
-                    └─────────────────┘
-                              │
-         ┌────────────────────┴────────────────────┐
-         ▼ (worker mode)                          ▼ (standalone)
-┌─────────────────────┐                 ┌─────────────────────┐
-│ Step 7: NOTIFY      │                 │ Step 8: Show next   │
-│ tmux send-keys      │                 │ steps (push, etc.)  │
-│ API broadcast       │                 │                     │
-└─────────────────────┘                 └─────────────────────┘
+            ▼                                  ▼
+   ┌─────────────────┐                ┌─────────────────┐
+   │ bdw-commit-     │⛔              │ bdw-commit-     │⛔
+   │ changes         │                │ changes         │
+   └─────────────────┘                └─────────────────┘
+            │                                  │
+            ▼                                  ▼
+   ┌─────────────────┐                ┌─────────────────┐
+   │ bdw-close-issue │⛔              │ bdw-close-issue │⛔
+   └─────────────────┘                └─────────────────┘
+            │                                  │
+            ▼                                  ▼
+   ┌─────────────────┐                ┌─────────────────┐
+   │ NOTIFY          │                │ Show next steps │
+   │ conductor       │                │ (push, etc.)    │
+   └─────────────────┘                └─────────────────┘
 ```
 
 ---
 
-## wave-done Pipeline
+## bdc-wave-done Pipeline
 
-**Skill**: `/conductor:wave-done`
+**Command**: `/conductor:bdc-wave-done`
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│              /conductor:wave-done <issue-ids>                       │
+│              /conductor:bdc-wave-done <issue-ids>                   │
 └─────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -450,7 +386,8 @@ The pipeline now **auto-detects execution mode**:
                               ▼
                     ┌─────────────────┐
                     │ Step 3:         │⛔
-                    │ verify-build    │◀──── Verify merged code
+                    │ bdw-verify-     │◀──── Verify merged code
+                    │ build           │
                     └─────────────────┘
                               │
                               ▼
@@ -478,30 +415,43 @@ The pipeline now **auto-detects execution mode**:
 
 ## Atomic Commands
 
-| Command | Purpose | Blocking? | Status |
-|---------|---------|-----------|--------|
-| `/conductor:verify-build` | Run build, check errors | ⛔ Yes | ✅ |
-| `/conductor:run-tests` | Run test suite | ⛔ Yes | ✅ |
-| `/conductor:code-review` | Opus review (auto-fix) | ⛔ Yes | ✅ |
-| `/conductor:codex-review` | Cheaper Codex review | ⛔ Yes | ✅ |
-| `/conductor:commit-changes` | Stage + commit | ⛔ Yes | ✅ |
-| `/conductor:create-followups` | Create beads issues | No | ✅ |
-| `/conductor:update-docs` | Check/update docs | No | ✅ |
-| `/conductor:close-issue` | Close beads issue | ⛔ Yes | ✅ |
+### Worker Steps (bdw-*)
+
+| Command | Purpose | Blocking? |
+|---------|---------|-----------|
+| `/conductor:bdw-verify-build` | Run build, check errors | ⛔ Yes |
+| `/conductor:bdw-run-tests` | Run test suite | ⛔ Yes |
+| `/conductor:bdw-code-review` | Opus review (auto-fix) | ⛔ Yes |
+| `/conductor:bdw-codex-review` | Cheaper Codex review | ⛔ Yes |
+| `/conductor:bdw-commit-changes` | Stage + commit | ⛔ Yes |
+| `/conductor:bdw-create-followups` | Create beads issues | No |
+| `/conductor:bdw-update-docs` | Check/update docs | No |
+| `/conductor:bdw-close-issue` | Close beads issue | ⛔ Yes |
+| `/conductor:bdw-worker-done` | Full completion pipeline | ⛔ Yes |
+| `/conductor:bdw-worker-init` | Initialize worker context | No |
+
+### Conductor Steps (bdc-*)
+
+| Command | Purpose | Blocking? |
+|---------|---------|-----------|
+| `/conductor:bdc-swarm-auto` | Autonomous wave execution | ⛔ Yes |
+| `/conductor:bdc-wave-done` | Merge + unified review | ⛔ Yes |
+| `/conductor:bdc-orchestration` | Multi-session coordination | ⛔ Yes |
+| `/conductor:bdc-analyze-transcripts` | Review worker sessions | No |
 
 ---
 
 ## Agents
 
-| Agent | Purpose | Model | Status |
-|-------|---------|-------|--------|
-| `conductor:conductor` | Orchestrate workflows | opus | ✅ |
-| `conductor:tabz-manager` | Browser automation | opus | ✅ |
-| `conductor:code-reviewer` | Autonomous review | opus | ✅ |
-| `conductor:skill-picker` | Find skills | haiku | ✅ |
-| `code-review:reviewer` | Code review (in my-plugins) | opus | ✅ |
-| `frontend-development:frontend-expert` | Frontend guidance | sonnet | ✅ |
-| `backend-development:backend-expert` | Backend guidance | sonnet | ✅ |
+| Agent | Purpose | Model |
+|-------|---------|-------|
+| `conductor:conductor` | Orchestrate workflows | opus |
+| `conductor:code-reviewer` | Autonomous review | opus |
+| `conductor:skill-picker` | Find skills | haiku |
+| `conductor:docs-updater` | Update documentation | opus |
+| `conductor:prompt-enhancer` | Optimize prompts | haiku |
+| `conductor:tui-expert` | TUI tool control | opus |
+| `conductor:tabz-artist` | Visual asset generation | opus |
 
 ---
 
@@ -555,22 +505,30 @@ bd show <id> --json | jq -r '.[0].notes'
 ### For Standalone Work (you're the worker)
 
 ```bash
-/conductor:work [issue-id]
+/conductor:bd-work [issue-id]
 # Does: select → claim → implement → verify → test → commit → close → push
 ```
 
 ### For Parallel Work (spawning workers)
 
 ```bash
-/conductor:bd-swarm-auto
-# Does: loops waves until bd ready empty
+/conductor:bd-swarm
+# Interactive: select issues, worker count
+# Then spawns workers in parallel
+```
+
+### For Autonomous Waves
+
+```bash
+/conductor:bdc-swarm-auto
+# Loops waves until bd ready empty
 # Each wave: worktrees → agents → spawn → monitor → wave-done
 ```
 
 ### For Worker Completion (spawned by conductor)
 
 ```bash
-/conductor:worker-done <id>
+/conductor:bdw-worker-done <id>
 # Auto-detects mode, adapts pipeline
 # Worker mode: NO review, NO push, notifies conductor
 ```
@@ -578,7 +536,7 @@ bd show <id> --json | jq -r '.[0].notes'
 ### For Wave Completion (conductor runs this)
 
 ```bash
-/conductor:wave-done <issue-ids>
+/conductor:bdc-wave-done <issue-ids>
 # Does: verify done → kill → merge → build → review → cleanup → push
 ```
 
@@ -588,127 +546,36 @@ bd show <id> --json | jq -r '.[0].notes'
 
 | Component | Location |
 |-----------|----------|
-| Commands | `plugins/conductor/commands/*.md` |
+| User commands (bd-*) | `plugins/conductor/commands/bd-*.md` |
+| Conductor commands (bdc-*) | `plugins/conductor/commands/bdc-*.md` |
+| Worker commands (bdw-*) | `plugins/conductor/commands/bdw-*.md` |
 | Skills | `plugins/conductor/skills/*/SKILL.md` |
 | Agents | `plugins/conductor/agents/*.md` |
 | Scripts | `plugins/conductor/scripts/*.sh` |
-| My-Plugins Copy | `my-plugins/` |
-
----
-
-## Skill Visibility & Taxonomy
-
-### User-Invocable Frontmatter
-
-Skills in `/skills/` directories are visible in the slash command menu by default (since Claude Code 2.1.0). To hide internal pipeline skills, add `user-invocable: false` to frontmatter:
-
-```yaml
----
-name: wave-done
-description: "Conductor-only: merge branches and run unified review"
-user-invocable: false
----
-```
-
-### Three-Tier Taxonomy
-
-| Prefix | Purpose | User-Invocable |
-|--------|---------|----------------|
-| `bd:` | Human entry points | ✅ Yes |
-| `conductor:` | Orchestration steps | ❌ No (internal) |
-| `worker:` | Execution steps | ❌ No (internal) |
-
-### Entry Points (bd:)
-
-Users invoke these directly. Each uses `AskUserQuestion` for interactive configuration:
-
-| Skill | Purpose |
-|-------|---------|
-| `bd:status` | View open, blocked, ready, in-progress issues |
-| `bd:plan` | Prepare backlog: refine, enhance prompts, match skills |
-| `bd:work` | Single-session: you implement an issue |
-| `bd:conduct` | Multi-session: spawn parallel workers |
-
-### Conductor Skills (conductor:)
-
-Internal orchestration logic called by `bd:conduct`. Mark with `user-invocable: false`:
-
-| Skill | Called By |
-|-------|-----------|
-| `conductor:spawn-workers` | bd:conduct |
-| `conductor:monitor-wave` | bd:conduct |
-| `conductor:wave-done` | bd:conduct (after workers finish) |
-| `conductor:merge-branches` | wave-done |
-| `conductor:unified-review` | wave-done |
-
-### Worker Skills (worker:)
-
-Internal execution steps for individual workers. Mark with `user-invocable: false`:
-
-| Skill | Purpose |
-|-------|---------|
-| `worker:verify-build` | Run build, check for errors |
-| `worker:run-tests` | Run test suite |
-| `worker:code-review` | Opus review with auto-fix |
-| `worker:commit-changes` | Stage + conventional commit |
-| `worker:close-issue` | Close beads issue |
-| `worker:notify-conductor` | Signal completion to conductor |
-
-### Decision Framework
-
-| If the step... | It belongs in... |
-|----------------|------------------|
-| Is a human choice/entry point | `bd:` |
-| Manages multiple workers/sessions | `conductor:` |
-| Is done by a single worker on one issue | `worker:` |
 
 ---
 
 ## Implementation Status
 
-### Completed (v2)
+### Completed
 
 | Feature | Status |
 |---------|--------|
-| `/conductor:work` skill | ✅ |
-| `/conductor:bd-plan` skill | ✅ |
+| Prefix taxonomy (bd-, bdc-, bdw-) | ✅ |
+| `/conductor:bd-work` command | ✅ |
+| `/conductor:bd-plan` command | ✅ |
+| `/conductor:bd-swarm` command | ✅ |
 | Auto-detect worker vs standalone | ✅ |
 | `bd worktree` integration | ✅ |
 | Agent bead tracking | ✅ |
 | Prepared prompt storage | ✅ |
-| Removed monitor-workers.sh | ✅ |
-| Deprecation notices | ✅ |
-| my-plugins conductor | ✅ |
-| code-review plugin expansion | ✅ |
-| frontend-expert agent | ✅ |
-| backend-expert agent | ✅ |
-
-### In Progress (v3 - Taxonomy Consolidation)
-
-| Feature | Status | Issue |
-|---------|--------|-------|
-| Document user-invocable pattern | 🔄 | TabzBeads-gok |
-| bd:/conductor:/worker: taxonomy | 🔄 | TabzBeads-yy6 |
-| Fix broken skill nesting | 🔄 | TabzBeads-gok |
-| Sync TabzChrome skills | 🔄 | TabzBeads-gok |
-
-### Known Issues
-
-**Double-nested skill structure (BROKEN):**
-Many skills have incorrect structure that prevents discovery:
-```
-WRONG:  skills/name/skills/name/SKILL.md
-RIGHT:  skills/name/SKILL.md
-```
-
-Affected: frontend, backend, tools, specialized, visual, meta, docs categories.
+| Synced skills from TabzChrome | ✅ |
 
 ### Future (Proposed)
 
 | Feature | Status |
 |---------|--------|
-| Molecules (workflow templates) | 🔮 |
-| `/conductor:refine` with Haiku | 🔮 |
+| Molecules (workflow templates) | 🔮 TabzBeads-u7c |
+| Complexity-aware worker pipeline | 🔮 TabzBeads-32q |
 | Cross-project deps (bd ship) | 🔮 |
 | Visual QA automation | 🔮 |
-| Complexity-aware worker pipeline | 🔮 (TabzBeads-32q) |
