@@ -58,11 +58,11 @@
       "keywords": ["tools", "debug", "review", "thinking", "problem", "solving", "docs", "search"]
     },
     {
-      "name": "terminal",
-      "description": "Terminal skills - xterm.js, tmux automation, session management, handoffs, context wipe",
-      "source": "./plugins/terminal",
+      "name": "tmux",
+      "description": "Tmux automation - restart, wipe, pmux session control",
+      "source": "./plugins/tmux",
       "category": "terminal",
-      "keywords": ["terminal", "xterm", "tmux", "session", "handoff", "wipe", "restart"]
+      "keywords": ["tmux", "session", "wipe", "restart", "pmux"]
     },
     {
       "name": "specialized",
