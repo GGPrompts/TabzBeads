@@ -210,9 +210,13 @@ Workers should complete their tasks with the full pipeline:
 Run `/conductor:worker-done ISSUE-ID`
 ```
 
-This executes: verify-build → run-tests → code-review → commit → close-issue
+This executes: verify-build → run-tests → commit → close-issue → notify-conductor
 
-For quick completion (skip review): `/conductor:commit-changes` then `/conductor:close-issue ISSUE-ID`
+**Workers skip code review** - the conductor does unified review after merge (wave-done step 4).
+
+The pipeline auto-detects mode:
+- **Worker mode** (CONDUCTOR_SESSION set or in worktree): Skip review, skip push, notify conductor
+- **Standalone mode**: Optional review, you push
 
 ---
 
@@ -228,14 +232,20 @@ GOOD: 3-4 terminals with focused prompts -> smooth execution
 ### Use Worktrees for Isolation
 
 ```bash
-# Create worktree for each worker
-git worktree add ../project-feature branch-name
+# Create worktree using beads (auto-configures beads redirect)
+bd worktree create TabzBeads-abc --branch feature/TabzBeads-abc
 
-# Spawn worker in worktree
+# Spawn worker in worktree with agent bead
+AGENT_ID=$(bd create --type=agent --title="Worker: TabzBeads-abc" --labels="conductor:worker" --json | jq -r ".id")
+bd agent state $AGENT_ID spawning
+bd slot set $AGENT_ID hook TabzBeads-abc
+
 curl -s -X POST http://localhost:8129/api/spawn \
   -H "Content-Type: application/json" \
   -H "X-Auth-Token: $TOKEN" \
-  -d '{"name": "Claude: Feature", "workingDir": "../project-feature", "command": "claude --dangerously-skip-permissions"}'
+  -d "{\"name\": \"Claude: TabzBeads-abc\", \"workingDir\": \"./TabzBeads-abc\", \"command\": \"BD_SOCKET=/tmp/bd-worker-abc.sock claude --dangerously-skip-permissions\"}"
+
+bd agent state $AGENT_ID running
 ```
 
 ### Monitor Workers
@@ -353,25 +363,39 @@ tmux send-keys -t "$SESSION" C-m
 
 ```bash
 # Get ready issues
-bd ready
+bd ready --json | jq -r '.[].id'
 
-# Create worktrees (parallel)
-for ID in beads-abc beads-def; do
-  git worktree add ../$ID feature/$ID &
+# Create worktrees (parallel, beads-native)
+for ID in TabzBeads-abc TabzBeads-def; do
+  bd worktree create $ID --branch feature/$ID &
 done
 wait
 
-# Spawn workers (parallel)
-for ID in beads-abc beads-def; do
+# Check for prepared prompts
+for ID in TabzBeads-abc TabzBeads-def; do
+  PREPARED=$(bd show $ID --json | jq -r '.[0].notes // empty' | grep -c "prepared.prompt" || echo 0)
+  if [ "$PREPARED" -gt 0 ]; then
+    echo "$ID has prepared prompt"
+  fi
+done
+
+# Create agent beads and spawn workers
+for ID in TabzBeads-abc TabzBeads-def; do
+  SHORT_ID=$(echo $ID | sed 's/TabzBeads-//')
+  AGENT_ID=$(bd create --type=agent --title="Worker: $ID" --labels="conductor:worker" --json | jq -r ".id")
+  bd agent state $AGENT_ID spawning
+  bd slot set $AGENT_ID hook $ID
+
   curl -s -X POST http://localhost:8129/api/spawn \
     -H "Content-Type: application/json" \
     -H "X-Auth-Token: $TOKEN" \
-    -d "{\"name\": \"Claude: $ID\", \"workingDir\": \"../$ID\", \"command\": \"claude --dangerously-skip-permissions\"}" &
-done
-wait
+    -d "{\"name\": \"Claude: $ID\", \"workingDir\": \"./$ID\", \"command\": \"BD_SOCKET=/tmp/bd-worker-$SHORT_ID.sock claude --dangerously-skip-permissions\"}"
 
-# Send prompts (sequential - need session IDs)
-# ... send skill-aware prompts to each worker
+  bd agent state $AGENT_ID running
+done
+
+# Send prompts (use prepared.prompt if available, else craft dynamically)
+# ... tmux send-keys to each worker
 ```
 
 ---
@@ -414,12 +438,28 @@ tmux send-keys -t "$SESSION" C-m
 
 | Resource | Purpose |
 |----------|---------|
-| `/conductor:orchestration` | Full skill with Task tool access (preferred) |
-| `/conductor:bd-swarm` | Spawn workers for beads issues |
+| `/conductor:work` | Single-session workflow (YOU do the work) |
+| `/conductor:bd-plan` | Prepare backlog (refine, enhance prompts) |
+| `/conductor:bd-swarm-auto` | Fully autonomous parallel execution |
 | `/conductor:wave-done` | Complete a wave of parallel workers |
-| `/conductor:worker-done` | Complete individual worker task pipeline |
-| `/conductor:bd-swarm-auto` | Fully autonomous backlog completion |
+| `/conductor:worker-done` | Complete individual worker (auto-detects mode) |
+| `/conductor:orchestration` | Full skill with Task tool access |
 | `conductor:tabz-manager` | Browser automation agent |
-| `conductor:tui-expert` | Spawn TUI tools (btop, lazygit, lnav) |
 | `conductor:code-reviewer` | Autonomous code review |
-| `scripts/setup-worktree.sh` | Create worktrees, install deps |
+
+### Beads Commands Used
+
+| Command | Purpose |
+|---------|---------|
+| `bd worktree create` | Create worktree with beads redirect |
+| `bd create --type=agent` | Create agent bead for worker |
+| `bd agent state <id>` | Set agent state (spawning/running/done) |
+| `bd slot set <agent> hook <issue>` | Attach work to agent |
+| `bd list --type=agent` | Monitor worker states |
+
+### Deprecated (still work but warn)
+
+| Old | New |
+|-----|-----|
+| `/conductor:bd-work` | `/conductor:work` |
+| `/conductor:bd-swarm` | `/conductor:bd-swarm-auto` |
