@@ -2,6 +2,7 @@
 name: silent-failure-hunter
 description: "Specialized reviewer for error handling. Finds empty catch blocks, swallowed errors, silent fallbacks, missing logging. Use for thorough reviews or standalone audit."
 model: sonnet
+tools: Bash, Read, Glob, Grep
 ---
 
 # Silent Failure Hunter

@@ -163,20 +163,6 @@
       "keywords": ["skill", "eval", "evaluate", "hook", "remind", "activate"]
     },
     {
-      "name": "conductor",
-      "description": "Multi-session workflow orchestration - spawn workers, track with beads, parallel execution",
-      "source": "./plugins/meta/conductor",
-      "category": "meta",
-      "keywords": ["conductor", "workflow", "orchestration", "beads", "parallel", "worker", "swarm"]
-    },
-    {
-      "name": "claudeforcodex",
-      "description": "Query OpenAI Codex for root cause analysis (read-only, no edits)",
-      "source": "./plugins/tools/claudeforcodex",
-      "category": "tools",
-      "keywords": ["codex", "openai", "analysis", "debug", "query", "readonly"]
-    },
-    {
       "name": "debugging",
       "description": "Systematic debugging skills - root cause tracing, defense in depth, verification",
       "source": "./plugins/tools/debugging",

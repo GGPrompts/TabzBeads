@@ -167,6 +167,23 @@ trust_level = "trusted"
 | Agents | N/A | Plugin agents |
 | Hooks | N/A | Plugin hooks |
 
+## Cross-Tool Integration
+
+**Complementary skill:** `claudeforcodex` teaches Codex about Claude Code configuration.
+
+Install for Codex:
+```bash
+mkdir -p ~/.codex/skills
+ln -sfn /path/to/TabzBeads/codex-skills/claudeforcodex ~/.codex/skills/claudeforcodex
+```
+
+| Skill | Installed For | Teaches About |
+|-------|---------------|---------------|
+| `codexforclaude` | Claude Code | Codex CLI config |
+| `claudeforcodex` | Codex | Claude Code plugins |
+
+This enables both tools to help users configure the other.
+
 ## Reference Files
 
 - `references/config-toml.md` - Complete config.toml reference

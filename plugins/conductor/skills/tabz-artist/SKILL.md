@@ -1,6 +1,6 @@
 ---
-name: TabzArtist
-description: Generate images via DALL-E and videos via Sora using browser automation. This skill should be used when a project needs visual assets like hero images, team photos, feature icons, or product demo videos. Spawnable as a conductor agent during bd-swarm-auto for parallel asset generation.
+name: tabz-artist
+description: "Generate images via DALL-E and videos via Sora using browser automation. This skill should be used when a project needs visual assets like hero images, team photos, feature icons, or product demo videos. Spawnable as a conductor agent during bd-swarm-auto for parallel asset generation."
 ---
 
 # TabzArtist - AI Asset Generation via Browser Automation

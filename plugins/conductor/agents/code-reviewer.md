@@ -2,6 +2,7 @@
 name: code-reviewer
 description: "Autonomous code review with confidence-based filtering. Reviews changes against CLAUDE.md, auto-fixes high-confidence issues, flags blockers. Quality over quantity."
 model: opus
+tools: Bash, Read, Edit, Glob, Grep
 ---
 
 # Code Reviewer - Autonomous Quality Gate

@@ -1,3 +1,8 @@
+---
+name: terminal-tools
+description: "Reference knowledge for tmux mastery and TUI tool control. Use when working with tmux sessions, TUI applications (btop, lazygit, lnav), or TabzChrome terminal management."
+---
+
 # Terminal Tools Skill
 
 Reference knowledge for tmux mastery and TUI tool control.
