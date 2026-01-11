@@ -1,5 +1,14 @@
 ---
-description: "Run a conductor wave from the mol-conductor-wave template. Instantiate with: /conductor:bdc-run-wave <issue-ids>"
+description: "Run a conductor wave from the conductor-wave molecule template"
+user-invocable: false
+keywords:
+  - wave
+  - mol
+  - molecule
+  - template
+  - conductor-wave
+  - wisp
+  - pour
 ---
 
 # Run Conductor Wave - Template-Based Wave Execution
@@ -29,9 +38,9 @@ bd formula show conductor-wave
 bd mol wisp conductor-wave --dry-run --var issues="TabzBeads-abc TabzBeads-def"
 ```
 
-## What This Command Does
+## What This Skill Does
 
-This command provides a convenient interface to the `conductor-wave` formula template.
+This skill provides a convenient interface to the `conductor-wave` formula template.
 It wraps `bd mol wisp/pour conductor-wave` with proper variable binding.
 
 ### Template Steps
@@ -110,9 +119,9 @@ bd mol progress <mol-id>
 
 | Scenario | Use |
 |----------|-----|
-| Want step-by-step tracking | This command (creates tracked molecule) |
+| Want step-by-step tracking | This skill (creates tracked molecule) |
 | Want simple execution | `/conductor:bdc-swarm-auto` (embedded logic) |
-| Debugging wave issues | This command with `--pour` for audit trail |
+| Debugging wave issues | This skill with `--pour` for audit trail |
 | Standard production run | `/conductor:bdc-swarm-auto` |
 
 ## Options
@@ -155,10 +164,10 @@ bd mol squash <mol-id>
 bd mol burn <mol-id>
 ```
 
-## Related Commands
+## Related
 
-| Command | Purpose |
-|---------|---------|
+| Skill/Command | Purpose |
+|---------------|---------|
 | `/conductor:bdc-swarm-auto` | Autonomous wave loop (embedded, not templated) |
 | `/conductor:bdc-wave-done` | Complete a wave (merge, review, cleanup) |
 | `bd formula list` | List available templates |
