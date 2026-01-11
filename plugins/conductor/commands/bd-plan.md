@@ -12,6 +12,46 @@ Prepare the beads backlog before spawning workers. This is an **optional** phase
 /conductor:bd-plan
 ```
 
+## Step 0: Show Backlog Status
+
+Before presenting options, show the current state of ready issues:
+
+```bash
+echo "=== Backlog Preparation Status ==="
+
+# Count ready issues and their preparation state
+READY_JSON=$(bd ready --json 2>/dev/null || echo "[]")
+TOTAL=$(echo "$READY_JSON" | jq 'length')
+
+if [ "$TOTAL" -eq 0 ]; then
+  echo "No ready issues found. Run 'bd ready' to check for blockers."
+else
+  # Count prepared vs unprepared
+  PREPARED=0
+  UNPREPARED=0
+
+  for ISSUE_ID in $(echo "$READY_JSON" | jq -r '.[].id'); do
+    NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+    if echo "$NOTES" | grep -q "prepared.prompt"; then
+      PREPARED=$((PREPARED + 1))
+    else
+      UNPREPARED=$((UNPREPARED + 1))
+    fi
+  done
+
+  echo "Ready: $TOTAL issues | Prepared: $PREPARED | Unprepared: $UNPREPARED"
+
+  if [ "$UNPREPARED" -gt 0 ]; then
+    echo "Tip: Run 'Enhance Prompts' to prepare $UNPREPARED issues for workers"
+  else
+    echo "All ready issues have prepared prompts - ready for /conductor:bd-swarm"
+  fi
+fi
+echo ""
+```
+
+---
+
 ## Step 1: Select Planning Activity
 
 Use AskUserQuestion to determine what planning activity to perform:
@@ -328,6 +368,9 @@ After reviewing:
 
 ```
 /conductor:bd-plan
+  │
+  ├─> Step 0: Show Backlog Status
+  │     └── Ready: N issues | Prepared: X | Unprepared: Y
   │
   ├─> AskUserQuestion: "What planning activity?"
   │
