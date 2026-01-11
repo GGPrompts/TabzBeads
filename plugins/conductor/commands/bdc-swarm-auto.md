@@ -261,39 +261,22 @@ Fall back to the template below:
 ```markdown
 ## Task: ISSUE-ID - Title
 
-## Skills to Load
-**FIRST**, invoke these skills before starting work:
-- /backend-development:backend-development
-- /conductor:orchestration
-
-These load patterns and context you'll need.
-
 ## Context
 [WHY this matters - helps Claude generalize and make good decisions]
+This task involves [domain keywords: e.g., "FastAPI REST endpoint with PostgreSQL database"]
 
 ## Key Files
 - path/to/file.ts (focus on lines X-Y)
 - path/to/other.ts
 
 ## Approach
-[Implementation guidance - what to do]
+[Implementation guidance - include domain keywords for skill activation]
 
 ## When Done
 Run `/conductor:bdw-worker-done ISSUE-ID`
 ```
 
-**CRITICAL: Use full `plugin:skill` format for skill invocation.**
-
-To find actual available skills, run:
-```bash
-./plugins/conductor/scripts/discover-skills.sh "backend api terminal"
-```
-
-| ❌ Wrong format | ✅ Correct format |
-|-----------------|-------------------|
-| `/backend-development` | `/backend-development:backend-development` |
-| `/xterm-js` | `/xterm-js:xterm-js` |
-| "Use the X skill" | Explicit `/plugin:skill` invocation |
+**Note:** The skill-eval hook handles skill activation - just include relevant domain keywords in the prompt (e.g., "shadcn/ui components", "FastAPI REST API", "xterm.js terminal").
 
 **Prompt Guidelines:**
 - **Be explicit** - "Fix null reference on line 45" not "fix the bug"
@@ -315,10 +298,7 @@ When spawning a worker for a batch of issues, use this template:
 
 You have been assigned multiple tasks to complete in sequence. Complete each task and commit separately.
 
-## Skills to Load
-**FIRST**, invoke these skills before starting work:
-- /skill1:skill1
-- /skill2:skill2
+These tasks involve [domain keywords from matched skills: e.g., "React components with Tailwind CSS styling"].
 
 ---
 

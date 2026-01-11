@@ -108,40 +108,34 @@ Structure worker prompts in clear sections:
 ## Task: ISSUE-ID - Title
 [What to do - explicit, actionable]
 
-## Skills to Load
-**FIRST**, invoke these skills before starting work:
-- /backend-development:backend-development
-- /ui-styling:ui-styling
-
-These load patterns and context you'll need.
-
 ## Context
 [Background, WHY this matters]
+This task involves [domain keywords: e.g., "FastAPI REST endpoint with PostgreSQL database"]
 
 ## Key Files
 [File paths as text, not @file - workers read on-demand]
 
 ## Approach
-[Implementation guidance - what to do, not which skills to use]
+[Implementation guidance - include domain keywords for skill activation]
 
 ## When Done
 Run `/conductor:bdw-worker-done ISSUE-ID`
 ```
 
-### Skill Invocation: Explicit Commands
+### Skill Activation via Keywords
 
-**CRITICAL:** Skills must be invoked with explicit `/plugin:skill` commands in a dedicated section.
+The skill-eval hook (meta plugin) automatically activates relevant skills based on keywords in the prompt.
+Include domain-specific keywords to help skill identification:
 
-| ❌ Doesn't work | ✅ Works |
-|-----------------|----------|
-| "Use the X skill for Y" | `/backend-development:backend-development` |
-| "Follow patterns from X skill" | `/ui-styling:ui-styling` |
-| Weaving into prose | Explicit invocation in "Skills to Load" section |
+| Domain | Keywords to Include |
+|--------|---------------------|
+| UI/Frontend | shadcn/ui components, Tailwind CSS, Radix UI |
+| Terminal | xterm.js, resize handling, FitAddon, WebSocket PTY |
+| Backend | FastAPI, REST API, Node.js, database patterns |
+| Plugin dev | Claude Code plugin, skill creation, agent patterns |
+| Browser | MCP tools, screenshots, browser automation |
 
-To find available skills:
-```bash
-./plugins/conductor/scripts/discover-skills.sh "backend api terminal"
-```
+The hook handles activation - just include relevant keywords in the prompt context.
 
 ### Anti-Patterns
 
@@ -151,8 +145,6 @@ To find available skills:
 | "Don't do X" | Negative framing is harder to follow | "Do Y instead" (positive framing) |
 | Vague adjectives ("good", "proper") | Undefined, varies by interpretation | Specific criteria or examples |
 | Including full file contents | Bloats prompt, may be stale | File paths as text, read on-demand |
-| "Use the X skill for..." | Interpreted as guidance, not invocation | Explicit `/plugin:skill` commands |
-| Shorthand skill names | May not resolve (e.g., `/backend-development`) | Full format `/plugin:skill` |
 
 ## Related Files
 

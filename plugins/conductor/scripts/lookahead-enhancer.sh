@@ -204,14 +204,17 @@ enhance_issue() {
     FILES_SECTION=$(echo "$KEY_FILES" | tr ',' '\n' | sed 's/^/- /')
   fi
 
-  # Craft prepared prompt
+  # Craft prepared prompt (keywords for skill-eval hook activation)
+  local SKILL_KEYWORDS=""
+  if [ -n "$SKILL_LOADS" ]; then
+    SKILL_KEYWORDS="
+This task involves: $SKILL_LOADS"
+  fi
+
   local PREPARED_PROMPT="## Task: $ISSUE_ID - $TITLE
 
-## Skills to Load
-First, invoke these skills to get relevant context:$SKILL_LOADS
-
 ## Context
-$DESC
+$DESC$SKILL_KEYWORDS
 
 ## Key Files
 $FILES_SECTION

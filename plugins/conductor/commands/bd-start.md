@@ -138,8 +138,9 @@ You: /conductor:bd-start
 Claude: Found ready issue TabzBeads-xyz: "Add dark mode toggle"
 
 === Prepared Prompt ===
-## Skills to Load
-- /frontend:ui-styling
+## Context
+Add a dark mode toggle to the settings page.
+This task involves: shadcn/ui components, Tailwind CSS styling, Radix UI
 
 ## Key Files
 - src/components/Settings.tsx

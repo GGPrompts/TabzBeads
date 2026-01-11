@@ -183,21 +183,16 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
   KEY_FILES=$(echo "$KEY_FILES" | tr ' ' '\n' | sort -u | head -10 | tr '\n' ',' | sed 's/,$//')
   [ -n "$KEY_FILES" ] && echo "Files: $KEY_FILES"
 
-  # Build skill load instructions (already in /plugin:skill format)
-  SKILL_LOADS=""
-  for skill in $(echo "$SKILL_CMDS" | tr ',' ' '); do
-    [ -n "$skill" ] && SKILL_LOADS="$SKILL_LOADS
-$skill"
-  done
+  # Build skill keywords (for skill-eval hook activation)
+  SKILL_KEYWORDS=""
+  [ -n "$SKILL_CMDS" ] && SKILL_KEYWORDS="
+This task involves: $SKILL_CMDS"
 
-  # Craft prepared prompt
+  # Craft prepared prompt (keywords help skill-eval hook identify relevant skills)
   PREPARED_PROMPT="Fix beads issue $ISSUE_ID: \"$TITLE\"
 
-## Skills to Load
-$SKILL_LOADS
-
 ## Context
-$DESC
+$DESC$SKILL_KEYWORDS
 
 ## Key Files
 $KEY_FILES
@@ -206,7 +201,7 @@ $KEY_FILES
 Run: /conductor:bdw-worker-done $ISSUE_ID"
 
   # Store prepared data in issue notes (YAML-like format)
-  # Skills stored with slash - ready to use as commands
+  # Skills stored as keyword phrases (hook handles activation)
   NOTES="prepared.skills: $SKILL_CMDS
 prepared.files: $KEY_FILES
 prepared.prompt: |

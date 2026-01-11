@@ -67,18 +67,19 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/match-skills.sh --verify "backend api terminal"
 - MCP tools (shadcn/*, tabz/*) are NOT skills - call them via `mcp-cli call`
 - If no skills match, omit the "Skills to Load" section entirely
 
-Common verified skill patterns (if installed):
+The skill-eval hook automatically activates relevant skills based on keywords in the prompt.
+Include domain-specific keywords to help skill identification:
 
-| Keywords | Skill to Invoke |
-|----------|-----------------|
-| UI, component, modal, dashboard | `/ui-styling:ui-styling` |
-| terminal, xterm, pty, resize | `/xterm-js:xterm-js` |
-| backend, API, server, websocket | `/backend-development:backend-development` |
-| plugin, skill, agent, hook | `/plugin-dev:plugin-dev` |
-| MCP, browser, screenshot | `/conductor:tabz-mcp` |
-| auth, login, oauth | `/better-auth:better-auth` |
+| Domain | Keywords to Include |
+|--------|---------------------|
+| UI/Frontend | shadcn/ui, Tailwind CSS, Radix UI, React components |
+| Terminal | xterm.js, resize handling, FitAddon, WebSocket PTY |
+| Backend | FastAPI, REST API, Node.js, database patterns |
+| Plugin dev | Claude Code plugin, skill creation, agent patterns |
+| Browser | MCP tools, screenshots, browser automation |
+| Auth | Better Auth, OAuth, JWT, session management |
 
-**CRITICAL:** Use full `plugin:skill` format. "Use the X skill" does NOT trigger invocation.
+**Note:** The skill-eval hook handles activation - just include relevant keywords in the prompt.
 
 ---
 
@@ -104,15 +105,9 @@ Follow the template from `references/worker-architecture.md`:
 ```markdown
 Fix beads issue ISSUE-ID: "Title"
 
-## Skills to Load
-**FIRST**, invoke these skills before starting work:
-- /backend-development:backend-development
-- /ui-styling:ui-styling
-
-These load patterns and context you'll need.
-
 ## Context
 [WHY this matters, background from issue description]
+This task involves [domain keywords: e.g., "React components with Tailwind CSS styling"]
 
 ## Key Files
 [File paths as text - worker reads on-demand]

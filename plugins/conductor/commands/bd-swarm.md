@@ -332,38 +332,33 @@ SKILL_HINTS=$($MATCH_SCRIPT --verify --issue "$ISSUE_ID")
 
 See `scripts/match-skills.sh` for the complete, authoritative list of skill mappings. Key patterns:
 
-| Keywords | Skill to Invoke |
-|----------|-----------------|
-| terminal, xterm, pty, resize | `/xterm-js` |
-| UI, component, modal, dashboard | `/ui-styling` |
-| backend, api, server, websocket | `/backend-development` |
-| plugin, skill, agent, conductor | `/plugin-dev` |
-| browser, screenshot, click, mcp | (use tabz_* MCP tools directly) |
+The skill-eval hook (meta plugin) automatically activates relevant skills based on keywords.
+Include domain keywords in prompts to help skill identification:
 
-**Key insight**: Neither "Use the X skill" nor "follow X patterns" triggers invocation. Workers need explicit `/skill-name` commands in a "Skills to Load" section.
+| Domain | Keywords to Include |
+|--------|---------------------|
+| Terminal | xterm.js, resize handling, FitAddon, WebSocket PTY |
+| UI/Frontend | shadcn/ui components, Tailwind CSS, Radix UI |
+| Backend | FastAPI, REST API, Node.js, database patterns |
+| Plugin dev | Claude Code plugin, skill creation, agent patterns |
+| Browser | (use tabz_* MCP tools directly via mcp-cli) |
 
 ### Enhanced Prompt Structure
 
-All worker prompts must follow this structure (see `references/worker-architecture.md`):
+All worker prompts should follow this structure:
 
 ```markdown
 Fix beads issue ISSUE-ID: "Title"
 
-## Skills to Load
-**FIRST**, invoke these skills before starting work:
-- /backend-development:backend-development
-- /conductor:orchestration
-
-These load patterns and context you'll need.
-
 ## Context
 [Description from bd show - explains WHY]
+This task involves [domain keywords: e.g., "React components with Tailwind CSS styling"]
 
 ## Key Files
 [Relevant file paths, or "Explore as needed"]
 
 ## Approach
-[Implementation guidance - what to do, not which skills to use]
+[Implementation guidance - include domain keywords for skill activation]
 
 After implementation, verify the build passes and test the changes work as expected.
 
@@ -377,20 +372,7 @@ Run: /conductor:bdw-worker-done ISSUE-ID
 This command will: build, run code review, commit changes, and close the issue.
 ```
 
-**CRITICAL: Use full `plugin:skill` format for skill invocation.**
-
-To find actual available skills, run:
-```bash
-./plugins/conductor/scripts/discover-skills.sh "backend api terminal"
-```
-
-This discovers real skills from the API and filesystem - don't use shorthand names.
-
-| ❌ Wrong format | ✅ Correct format |
-|-----------------|-------------------|
-| `/backend-development` | `/backend-development:backend-development` |
-| `/xterm-js` | `/xterm-js:xterm-js` |
-| `/plugin-dev` | `/conductor:orchestration` (or actual skill name) |
+**Note:** The skill-eval hook handles activation - just include relevant domain keywords in the prompt. No explicit skill invocation commands needed.
 
 **Exception:** Project-level skills (in `.claude/skills/`) can use shorthand: `/tabz-guide`
 

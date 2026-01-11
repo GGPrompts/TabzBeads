@@ -63,72 +63,72 @@ CONDUCTOR_ROOT=$(find_conductor_root)
 # ============================================================================
 # SKILL MAPPINGS - Single Source of Truth
 # ============================================================================
-# Format: keyword_pattern|skill_invocation_command
+# Format: keyword_pattern|keyword_phrase
 # Pattern uses bash regex (extended)
 # Add new mappings here - all skills/commands reference this file
 #
-# IMPORTANT: Output is explicit invocation commands (e.g., "/xterm-js")
-# Workers need explicit /skill-name commands to actually load skills.
-# "Use the X skill" is interpreted as guidance, not invocation.
+# IMPORTANT: Output is keyword phrases that help skill-eval hook identify relevant skills.
+# The hook (meta plugin UserPromptSubmit) tells Claude to evaluate and activate skills.
+# Keywords in prompts help Claude identify WHICH skills are relevant to the task.
+# This approach works WITH the hook instead of duplicating explicit invocation.
 
 SKILL_MAPPINGS=(
-  # Terminal / TabzChrome (project-level skill - shorthand ok)
-  "terminal|xterm|pty|resize|buffer|fitaddon|websocket.*terminal|/tabz-guide"
+  # Terminal / TabzChrome
+  "terminal|xterm|pty|resize|buffer|fitaddon|websocket.*terminal|xterm.js terminal, resize handling, FitAddon, WebSocket PTY"
 
-  # UI / Frontend (user-level plugin)
-  "ui|component|modal|dashboard|styling|tailwind|shadcn|form|button|/ui-styling:ui-styling"
+  # UI / Frontend - shadcn/ui patterns
+  "ui|component|modal|dashboard|styling|tailwind|shadcn|form|button|shadcn/ui components, Tailwind CSS styling, Radix UI primitives"
 
-  # Frontend frameworks (user-level plugin)
-  "react|next|vue|svelte|frontend|/frontend-development:frontend-development"
+  # Frontend frameworks
+  "react|next|vue|svelte|frontend|React, TypeScript, modern frontend patterns, component architecture"
 
-  # Backend / API (user-level plugin)
-  "backend|api|server|database|endpoint|express|websocket.*server|/backend-development:backend-development"
+  # Backend / API
+  "backend|api|server|database|endpoint|express|websocket.*server|backend development, REST API, Node.js, Python FastAPI, database patterns"
 
-  # Browser automation / MCP (tabz plugin skill)
-  "browser|screenshot|click|mcp|tabz_|automation|/tabz:tabz-mcp"
+  # Browser automation / MCP
+  "browser|screenshot|click|mcp|tabz_|automation|browser automation, MCP tools, screenshots, DOM interaction"
 
-  # Visual QA / UI review (tabz plugin - for wave-done UI verification)
-  # Also spawn tabz:tabz-manager agent for interactive browser control
-  "visual|qa|regression|console.*error|ui.*test|screenshot.*test|/tabz:tabz-mcp"
+  # Visual QA / UI review
+  "visual|qa|regression|console.*error|ui.*test|screenshot.*test|visual QA, UI testing, screenshot comparison, console error detection"
 
-  # Visual asset generation (conductor skill)
-  "hero.*image|team.*photo|icon.*generat|poster|dall-e|sora|video.*generat|/conductor:tabz-artist"
+  # Visual asset generation
+  "hero.*image|team.*photo|icon.*generat|poster|dall-e|sora|video.*generat|DALL-E image generation, Sora video, visual assets, poster design"
 
-  # Authentication (user-level plugin)
-  "auth|login|oauth|session|token|jwt|/better-auth:better-auth"
+  # Authentication
+  "auth|login|oauth|session|token|jwt|Better Auth, authentication, OAuth, session management, JWT tokens"
 
-  # Plugin development (user-level plugin)
-  "plugin|skill|agent|hook|command|frontmatter|/plugin-dev:plugin-dev"
+  # Plugin development
+  "plugin|skill|agent|hook|command|frontmatter|Claude Code plugin development, skill creation, agent patterns, hooks"
 
-  # Conductor / orchestration (conductor skill)
-  "prompt|worker|swarm|conductor|orchestrat|/conductor:orchestration"
+  # Conductor / orchestration
+  "prompt|worker|swarm|conductor|orchestrat|multi-session orchestration, worker coordination, parallel execution"
 
-  # Audio / TTS / Multimodal (user-level plugin)
-  "audio|tts|speech|sound|voice|speak|gemini|/ai-multimodal:ai-multimodal"
+  # Audio / TTS / Multimodal
+  "audio|tts|speech|sound|voice|speak|gemini|audio processing, TTS speech synthesis, Gemini multimodal"
 
-  # Media processing (user-level plugin - verify exists)
-  "image|video|media|ffmpeg|imagemagick|/media-processing:media-processing"
+  # Media processing
+  "image|video|media|ffmpeg|imagemagick|FFmpeg video processing, ImageMagick, media manipulation"
 
-  # 3D / Three.js (project-specific reference - not a skill)
-  "3d|three|scene|focus.*mode|webgl|# Reference extension/3d/ for Three.js patterns"
+  # 3D / Three.js (reference, not skill)
+  "3d|three|scene|focus.*mode|webgl|Three.js 3D rendering, WebGL, scene management"
 
-  # Chrome extension (project-level skill - shorthand ok)
-  "chrome|extension|manifest|sidepanel|background|service.*worker|/tabz-guide"
+  # Chrome extension
+  "chrome|extension|manifest|sidepanel|background|service.*worker|Chrome extension development, manifest v3, service workers"
 
-  # Databases (user-level plugin - verify exists)
-  "postgres|mongodb|redis|sql|database|query|/databases:databases"
+  # Databases
+  "postgres|mongodb|redis|sql|database|query|PostgreSQL, MongoDB, Redis, database queries, schema design"
 
-  # Documentation discovery (user-level plugin - verify exists)
-  "docs|documentation|llms.txt|repomix|/docs-seeker:docs-seeker"
+  # Documentation discovery
+  "docs|documentation|llms.txt|repomix|documentation, llms.txt, repomix context generation"
 
-  # Code review (conductor skill)
-  "review|pr|pull.*request|lint|/conductor:code-review"
+  # Code review
+  "review|pr|pull.*request|lint|code review, pull request analysis, linting, quality checks"
 
-  # Web frameworks (user-level plugin - verify exists)
-  "nextjs|express|fastapi|django|nest|/web-frameworks:web-frameworks"
+  # Web frameworks
+  "nextjs|express|fastapi|django|nest|Next.js, Express, FastAPI, Django, NestJS web frameworks"
 
-  # Testing (general guidance, not a specific skill)
-  "test|jest|vitest|spec|coverage|# Check existing test files for testing conventions"
+  # Testing (general guidance)
+  "test|jest|vitest|spec|coverage|testing patterns, Jest, Vitest, test coverage"
 )
 
 # ============================================================================
@@ -326,31 +326,42 @@ get_issue_skills() {
   fi
 
   if [ -n "$PERSISTED_SKILLS" ]; then
-    # Convert comma-separated skill names to explicit invocation commands
-    # Use full plugin:skill format for user-level plugins
+    # Output keyword phrases directly - the skill-eval hook handles activation
+    # Keywords help Claude identify which skills are relevant to the task
     for skill in $(echo "$PERSISTED_SKILLS" | tr ',' ' '); do
       skill=$(echo "$skill" | tr -d ' ')
       case "$skill" in
-        # Project-level skills (shorthand ok)
-        xterm-js|xterm|tabz-guide) echo "/tabz-guide" ;;
-        # Conductor skills
-        tabz-mcp|mcp|browser) echo "/conductor:tabz-mcp" ;;
-        conductor*|orchestration) echo "/conductor:orchestration" ;;
-        code-review|review) echo "/conductor:code-review" ;;
-        # User-level plugins (need full plugin:skill format)
-        ui-styling|ui) echo "/ui-styling:ui-styling" ;;
-        backend*) echo "/backend-development:backend-development" ;;
-        better-auth|auth) echo "/better-auth:better-auth" ;;
-        plugin-dev|plugin) echo "/plugin-dev:plugin-dev" ;;
-        ai-multimodal|audio) echo "/ai-multimodal:ai-multimodal" ;;
-        media-processing|media) echo "/media-processing:media-processing" ;;
-        docs-seeker|docs) echo "/docs-seeker:docs-seeker" ;;
-        frontend*) echo "/frontend-development:frontend-development" ;;
+        # Terminal
+        xterm-js|xterm|tabz-guide|terminal) echo "xterm.js terminal, resize handling, FitAddon" ;;
+        # Browser automation
+        tabz-mcp|mcp|browser) echo "browser automation, MCP tools, screenshots" ;;
+        # Orchestration
+        conductor*|orchestration) echo "multi-session orchestration, worker coordination" ;;
+        # Code review
+        code-review|review) echo "code review, pull request analysis, quality checks" ;;
+        # UI/styling
+        ui-styling|ui|shadcn) echo "shadcn/ui components, Tailwind CSS, Radix UI" ;;
+        # Backend
+        backend*) echo "backend development, REST API, Node.js, FastAPI" ;;
+        # Auth
+        better-auth|auth) echo "Better Auth, authentication, OAuth, JWT" ;;
+        # Plugin dev
+        plugin-dev|plugin) echo "Claude Code plugin development, skill creation" ;;
+        # Multimodal
+        ai-multimodal|audio) echo "audio processing, TTS, Gemini multimodal" ;;
+        # Media
+        media-processing|media) echo "FFmpeg video, ImageMagick, media processing" ;;
+        # Docs
+        docs-seeker|docs) echo "documentation, llms.txt, repomix" ;;
+        # Frontend
+        frontend*) echo "React, TypeScript, frontend patterns" ;;
+        # Databases
+        databases|postgres|mongodb) echo "PostgreSQL, MongoDB, Redis, database queries" ;;
+        # Visual
+        visual|qa) echo "visual QA, UI testing, screenshot comparison" ;;
         *)
-          # For unknown skills, try full format if looks like a skill name
-          if [[ "$skill" =~ ^[a-z]+(-[a-z]+)*$ ]]; then
-            echo "/$skill:$skill"
-          fi
+          # Return the skill name as-is for unknown skills
+          echo "$skill"
           ;;
       esac
     done
