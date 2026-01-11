@@ -86,6 +86,10 @@ AskUserQuestion(
       {
         label: "Review Ready",
         description: "Show issues ready to work with no blockers"
+      },
+      {
+        label: "Codex Second Opinion",
+        description: "Get GPT review of backlog priorities and issue quality"
       }
     ]
   }]
@@ -605,6 +609,80 @@ After reviewing:
 - Run `/conductor:bd-work <issue-id>` for single issue (YOU do the work)
 - Run `/conductor:bdc-swarm-auto` for autonomous parallel work
 - Run `/conductor:bd-plan` again with "Enhance Prompts" to prepare prompts
+
+---
+
+## Activity: Codex Second Opinion
+
+Get an external GPT review of your backlog for a fresh perspective. Useful for:
+- Validating priorities
+- Checking issue clarity
+- Finding missing dependencies
+- Suggesting improvements
+
+### Commands
+
+```bash
+echo "=== Codex Backlog Review ==="
+
+# Export current backlog state
+BACKLOG=$(bd list --status=open --json | jq -c '.')
+READY=$(bd ready --json | jq -c '.')
+BLOCKED=$(bd blocked --json | jq -c '.' 2>/dev/null || echo '[]')
+
+# Create review prompt
+REVIEW_PROMPT="Review this project backlog and provide feedback:
+
+OPEN ISSUES:
+$BACKLOG
+
+READY TO WORK:
+$READY
+
+BLOCKED:
+$BLOCKED
+
+Please analyze:
+1. Are priorities appropriate? Any P3/P4 that should be higher?
+2. Are issue descriptions clear enough to implement?
+3. Are there missing dependencies between issues?
+4. Any issues that could be combined or split?
+5. Suggested order for tackling ready issues?
+
+Be concise and actionable."
+```
+
+Then call Codex (check schema first with `mcp-cli info codex/codex`):
+
+```bash
+# Get Codex opinion
+mcp-cli call codex/codex "{
+  \"prompt\": $(echo "$REVIEW_PROMPT" | jq -Rs .)
+}"
+```
+
+### Review Areas
+
+| Area | What Codex Checks |
+|------|-------------------|
+| **Priorities** | P0-P4 assignments, urgency vs importance |
+| **Clarity** | Can issues be implemented as described? |
+| **Dependencies** | Missing blockers, implicit orderings |
+| **Batching** | Issues that could be combined |
+| **Gaps** | Missing follow-up work |
+
+### When to Use
+
+- Before starting a swarm (validate priorities)
+- When backlog grows large (fresh eyes)
+- After major feature completion (what's next?)
+- When blocked on prioritization decisions
+
+### Limitations
+
+- Codex doesn't know your codebase deeply
+- May suggest impractical combinations
+- Treat as advisory, not authoritative
 
 ---
 
