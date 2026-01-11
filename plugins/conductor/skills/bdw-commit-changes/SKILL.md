@@ -1,4 +1,5 @@
 ---
+user-invocable: false
 description: "Stage and commit changes with conventional commit format."
 ---
 

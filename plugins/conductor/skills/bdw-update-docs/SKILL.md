@@ -1,4 +1,5 @@
 ---
+user-invocable: false
 description: "Check and update documentation for LLM consumption."
 ---
 
