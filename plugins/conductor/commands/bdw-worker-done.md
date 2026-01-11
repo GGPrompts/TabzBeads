@@ -21,15 +21,17 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 |------|---------|-----------|---------------|
 | 0 | Detect execution mode | No | Sets EXECUTION_MODE |
 | 0.5 | Detect change types | No | Sets DOCS_ONLY |
+| 0.6 | Detect complexity | No | Sets COMPLEXITY (simple/complex) |
 | 1 | `/conductor:verify-build` | Yes - stop on failure | Skip if DOCS_ONLY |
 | 1a | `plugin-validator` agent | Yes - stop on failure | ONLY if DOCS_ONLY |
 | 2 | `/conductor:run-tests` | Yes - stop on failure | Skip if DOCS_ONLY |
 | 3 | `/conductor:commit-changes` | Yes - stop on failure | Always run |
 | 4 | `/conductor:create-followups` | No - log and continue | Always run |
 | 5 | `/conductor:update-docs` | No - log and continue | Always run |
-| 5.5 | Record completion info | No - best effort | Always run |
+| 5.5 | Record completion info | No - best effort | Includes COMPLEXITY |
 | 5.6 | Update agent bead state | No - best effort | **Worker mode only** |
 | 6 | `/conductor:close-issue` | Yes - report result | Always run |
+| 6.5 | Complexity-aware review | No - standalone only | **Standalone only** |
 | 7 | Notify conductor | No - best effort | **Worker mode only** |
 | 8 | Standalone next steps | No - informational | **Standalone mode only** |
 
@@ -127,6 +129,75 @@ If `DOCS_ONLY=false`: Continue with full pipeline (Steps 1, 2, 3...).
 
 ---
 
+### Step 0.6: Detect Complexity
+
+**Run after change type detection to determine verification intensity.**
+
+```bash
+echo "=== Step 0.6: Detecting Complexity ==="
+
+# Get change statistics
+STATS=$(git diff --cached --stat 2>/dev/null; git diff --stat 2>/dev/null)
+FILE_COUNT=$(echo "$STATS" | grep -E '^\s*\S+\s+\|' | wc -l)
+INSERTIONS=$(echo "$STATS" | grep -oP '\d+(?= insertion)' | awk '{s+=$1}END{print s+0}')
+DELETIONS=$(echo "$STATS" | grep -oP '\d+(?= deletion)' | awk '{s+=$1}END{print s+0}')
+LOC_CHANGED=$((INSERTIONS + DELETIONS))
+
+# Check for new files vs modifications
+NEW_FILES=$(git diff --cached --diff-filter=A --name-only 2>/dev/null | wc -l)
+MODIFIED_FILES=$(git diff --cached --diff-filter=M --name-only 2>/dev/null | wc -l)
+
+# Check if tests are touched
+TOUCHES_TESTS=false
+if git diff --cached --name-only 2>/dev/null | grep -qE '(test|spec|__tests__)'; then
+  TOUCHES_TESTS=true
+elif git diff --name-only 2>/dev/null | grep -qE '(test|spec|__tests__)'; then
+  TOUCHES_TESTS=true
+fi
+
+# Complexity scoring
+COMPLEXITY_SCORE=0
+[ "$FILE_COUNT" -ge 3 ] && COMPLEXITY_SCORE=$((COMPLEXITY_SCORE + 1))
+[ "$FILE_COUNT" -ge 6 ] && COMPLEXITY_SCORE=$((COMPLEXITY_SCORE + 1))
+[ "$LOC_CHANGED" -ge 100 ] && COMPLEXITY_SCORE=$((COMPLEXITY_SCORE + 1))
+[ "$LOC_CHANGED" -ge 300 ] && COMPLEXITY_SCORE=$((COMPLEXITY_SCORE + 1))
+[ "$NEW_FILES" -ge 2 ] && COMPLEXITY_SCORE=$((COMPLEXITY_SCORE + 1))
+[ "$TOUCHES_TESTS" = "false" ] && [ "$LOC_CHANGED" -ge 50 ] && COMPLEXITY_SCORE=$((COMPLEXITY_SCORE + 1))
+
+# Determine complexity level
+if [ "$COMPLEXITY_SCORE" -ge 3 ]; then
+  COMPLEXITY="complex"
+else
+  COMPLEXITY="simple"
+fi
+
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  COMPLEXITY: $COMPLEXITY (score: $COMPLEXITY_SCORE/6)"
+echo "╠══════════════════════════════════════════════════════════════╣"
+echo "║  Files changed: $FILE_COUNT (new: $NEW_FILES, modified: $MODIFIED_FILES)"
+echo "║  Lines changed: $LOC_CHANGED (+$INSERTIONS/-$DELETIONS)"
+echo "║  Touches tests: $TOUCHES_TESTS"
+echo "╚══════════════════════════════════════════════════════════════╝"
+```
+
+**Complexity signals:**
+
+| Signal | Simple | Complex |
+|--------|--------|---------|
+| File count | 1-2 files | 3+ files |
+| LOC changed | <100 lines | 100+ lines |
+| New files | 0-1 new | 2+ new |
+| Test coverage | Tests included | No tests with 50+ LOC |
+
+**Pipeline adaptation based on complexity:**
+
+| Complexity | Tests | Review (standalone) |
+|------------|-------|---------------------|
+| Simple | run-tests | quick review |
+| Complex | run-tests | thorough review |
+
+---
+
 ### Step 1: Verify Build (skip if DOCS_ONLY)
 ```bash
 echo "=== Step 1: Build Verification ==="
@@ -183,15 +254,18 @@ echo "=== Step 5.5: Record Completion Info ==="
 EXISTING_NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.notes // ""')
 COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-# Append completion info to existing notes
+# Append completion info to existing notes (includes complexity metrics)
 NEW_NOTES="${EXISTING_NOTES}
 completed_at: $(date -Iseconds)
-commit: $COMMIT_SHA"
+commit: $COMMIT_SHA
+complexity: $COMPLEXITY (score: $COMPLEXITY_SCORE)
+files_changed: $FILE_COUNT
+loc_changed: $LOC_CHANGED"
 
 bd update "$ISSUE_ID" --notes "$NEW_NOTES"
 ```
 
-This creates an audit trail with start time (from spawn) and completion time + commit.
+This creates an audit trail with start time (from spawn), completion time, commit, and complexity metrics for analysis.
 
 ### Step 5.6: Update Agent Bead (WORKER MODE ONLY)
 
@@ -225,6 +299,47 @@ This enables monitoring workers via `bd list --type=agent` and dead detection vi
 echo "=== Step 6: Close Issue ==="
 ```
 Run `/conductor:close-issue <issue-id>`. Reports final status.
+
+### Step 6.5: Complexity-Aware Review (STANDALONE MODE ONLY)
+
+**Skip this step if EXECUTION_MODE=worker.** Workers don't run code review - conductor handles unified review after merge.
+
+In standalone mode, run complexity-aware code review:
+
+```bash
+if [ "$EXECUTION_MODE" = "standalone" ]; then
+  echo "=== Step 6.5: Complexity-Aware Code Review ==="
+
+  if [ "$COMPLEXITY" = "complex" ]; then
+    echo "Complex changes detected - running thorough review..."
+    # Run /conductor:code-review --thorough
+  else
+    echo "Simple changes detected - running quick review..."
+    # Run /conductor:code-review --quick
+  fi
+fi
+```
+
+**Review mode selection:**
+
+| Complexity | Review Mode | What It Does |
+|------------|-------------|--------------|
+| Simple | `--quick` | Lint + types + secrets only |
+| Complex | `--thorough` | Parallel specialized reviewers |
+
+**Invoke the appropriate review:**
+
+For **simple** changes:
+```
+/conductor:code-review --quick
+```
+
+For **complex** changes:
+```
+/conductor:code-review --thorough
+```
+
+Review is non-blocking for the close step (already completed), but any blockers found should be addressed before pushing.
 
 ### Step 7: Notify Conductor (WORKER MODE ONLY)
 
@@ -281,16 +396,16 @@ if [ "$EXECUTION_MODE" = "standalone" ]; then
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║  STANDALONE COMPLETION - Next Steps                          ║"
   echo "╠══════════════════════════════════════════════════════════════╣"
-  echo "║  Issue closed. Your changes are committed but NOT pushed.    ║"
+  echo "║  Issue closed. Complexity-aware review completed.            ║"
+  echo "║  Complexity: $COMPLEXITY (score: $COMPLEXITY_SCORE/6)"
   echo "║                                                              ║"
-  echo "║  Recommended next steps:                                     ║"
-  echo "║  1. [Optional] Run code review: /conductor:code-review       ║"
-  echo "║  2. Sync and push: bd sync && git push                       ║"
+  echo "║  Changes are committed but NOT pushed.                       ║"
+  echo "║  Next step: bd sync && git push                              ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
 fi
 ```
 
-**Why standalone doesn't auto-push:** In standalone mode, you may want to run code review or make additional changes before pushing. The conductor handles push automatically for workers, but standalone users have full control.
+**Why standalone doesn't auto-push:** In standalone mode, you may want to make additional changes before pushing. The conductor handles push automatically for workers, but standalone users have full control.
 
 ---
 
