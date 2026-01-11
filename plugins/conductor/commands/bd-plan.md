@@ -165,11 +165,11 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
 
   echo "=== $ISSUE_ID: $TITLE ==="
 
-  # Match skills (verified against available)
+  # Match skills (verified against available) - keep /plugin:skill format
   SKILLS=$($MATCH_SCRIPT --verify "$TITLE $DESC $LABELS" 2>/dev/null)
-  SKILL_NAMES=$(echo "$SKILLS" | grep -oE '/[a-z-]+:[a-z-]+' | sed 's|^/||' | tr '\n' ',' | sed 's/,$//')
-  if [ -n "$SKILL_NAMES" ]; then
-    echo "Skills: $SKILL_NAMES"
+  SKILL_CMDS=$(echo "$SKILLS" | grep -oE '/[a-z-]+:[a-z-]+' | sort -u | tr '\n' ',' | sed 's/,$//')
+  if [ -n "$SKILL_CMDS" ]; then
+    echo "Skills: $SKILL_CMDS"
   fi
 
   # Find key files (based on keywords in title/description)
@@ -183,17 +183,18 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
   KEY_FILES=$(echo "$KEY_FILES" | tr ' ' '\n' | sort -u | head -10 | tr '\n' ',' | sed 's/,$//')
   [ -n "$KEY_FILES" ] && echo "Files: $KEY_FILES"
 
-  # Build skill load instructions (explicit /plugin:skill format)
+  # Build skill load instructions (already in /plugin:skill format)
   SKILL_LOADS=""
-  for skill in $(echo "$SKILL_NAMES" | tr ',' ' '); do
+  for skill in $(echo "$SKILL_CMDS" | tr ',' ' '); do
     [ -n "$skill" ] && SKILL_LOADS="$SKILL_LOADS
-- /$skill"
+$skill"
   done
 
   # Craft prepared prompt
   PREPARED_PROMPT="Fix beads issue $ISSUE_ID: \"$TITLE\"
 
-## Skills to Load$SKILL_LOADS
+## Skills to Load
+$SKILL_LOADS
 
 ## Context
 $DESC
@@ -205,7 +206,8 @@ $KEY_FILES
 Run: /conductor:bdw-worker-done $ISSUE_ID"
 
   # Store prepared data in issue notes (YAML-like format)
-  NOTES="prepared.skills: $SKILL_NAMES
+  # Skills stored with slash - ready to use as commands
+  NOTES="prepared.skills: $SKILL_CMDS
 prepared.files: $KEY_FILES
 prepared.prompt: |
 $(echo "$PREPARED_PROMPT" | sed 's/^/  /')"
