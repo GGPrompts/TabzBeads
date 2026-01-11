@@ -124,15 +124,14 @@ These skills provide high-level orchestration for development workflows:
 ### Entry Points
 | Command | Purpose |
 |---------|---------|
-| `/conductor:work` | Unified entry point - interactive prompts guide you through issue selection, worker count, and completion steps |
-| `/conductor:bd-work` | Pick the top ready issue and spawn a visible worker |
+| `/conductor:bd-work` | Single-session workflow - YOU implement the issue |
 | `/conductor:bd-swarm` | Spawn multiple workers in parallel to tackle issues |
-| `/conductor:bd-swarm-auto` | Fully autonomous backlog completion - runs waves until `bd ready` is empty |
+| `/conductor:bdc-swarm-auto` | Fully autonomous backlog completion - runs waves until `bd ready` is empty |
 
 ### Planning & Preparation
 | Command | Purpose |
 |---------|---------|
-| `/conductor:plan-backlog` | Groom and organize issues into parallelizable waves for efficient multi-worker execution |
+| `/conductor:bd-plan` | Prepare backlog: refine priorities, enhance prompts with skill hints, match skills to issues |
 
 ### Atomic Commands (used by completion pipelines)
 | Command | Purpose |

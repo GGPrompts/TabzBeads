@@ -662,7 +662,7 @@ NEXT_COUNT=$(bd ready --json 2>/dev/null | jq 'length')
 if [ "$NEXT_COUNT" -gt 0 ]; then
   echo ""
   echo "$NEXT_COUNT issues ready for next wave"
-  echo "Run /conductor:bd-swarm-auto to continue"
+  echo "Run /conductor:bdc-swarm-auto to continue"
 else
   echo ""
   echo "Backlog complete!"

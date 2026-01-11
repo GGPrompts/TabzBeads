@@ -114,15 +114,15 @@ plugins/conductor/
 │   └── prompt-enhancer.md       # Optimize prompts
 ├── skills/
 │   ├── bd-conduct/              # Interactive orchestration
-│   ├── bd-swarm-auto/           # Autonomous swarm execution
-│   ├── code-review/             # Code review patterns
-│   ├── new-project/             # Project scaffolding
-│   ├── orchestration/           # Multi-session coordination
+│   ├── bd-new-project/          # Project scaffolding
+│   ├── bdc-orchestration/       # Multi-session coordination
+│   ├── bdc-swarm-auto/          # Autonomous swarm execution
+│   ├── bdc-wave-done/           # Wave completion
+│   ├── bdw-code-review/         # Code review patterns
+│   ├── bdw-worker-done/         # Worker completion
 │   ├── tabz-artist/             # Visual asset generation
 │   ├── tabz-mcp/                # Browser automation
-│   ├── terminal-tools/          # TUI tool control
-│   ├── wave-done/               # Wave completion
-│   └── worker-done/             # Worker completion
+│   └── terminal-tools/          # TUI tool control
 └── scripts/                     # Shell automation
     ├── setup-worktree.sh        # Git worktree creation
     ├── match-skills.sh          # Issue-to-skill matching

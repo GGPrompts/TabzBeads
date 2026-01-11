@@ -151,6 +151,6 @@ The hook handles activation - just include relevant keywords in the prompt conte
 | File | Purpose |
 |------|---------|
 | `commands/bd-swarm.md` | Main swarm workflow |
-| `skills/bd-swarm-auto/SKILL.md` | Autonomous backlog processing |
-| `commands/plan-backlog.md` | Sprint planning with skill matching |
+| `skills/bdc-swarm-auto/SKILL.md` | Autonomous backlog processing |
+| `commands/bd-plan.md` | Sprint planning with skill matching |
 | `scripts/completion-pipeline.sh` | Cleanup after workers complete |
