@@ -6,13 +6,15 @@ description: "Fully autonomous backlog completion. Runs waves until `bd ready` i
 
 **YOU are the conductor. Execute this workflow autonomously. Do NOT ask the user for input.**
 
-## Architecture: Parallel Terminal Workers
+## Architecture: Parallel Terminal Workers + Lookahead Enhancer
 
 Spawn **3-4 terminal workers max**, each handling 1-2 issues with skill-aware prompts.
+A **parallel enhancer** (Haiku) prepares prompts 1-2 waves ahead for efficiency.
 
 ```
 BAD:  10 terminals x 1 issue each    -> statusline chaos
 GOOD: 3-4 terminals with focused prompts -> smooth execution
+BEST: 3-4 workers + 1 enhancer preparing ahead -> maximum throughput
 ```
 
 ---
@@ -21,15 +23,50 @@ GOOD: 3-4 terminals with focused prompts -> smooth execution
 
 | Step | Action | Reference |
 |------|--------|-----------|
+| 0 | Spawn enhancer | Parallel prompt preparation |
 | 1 | Get ready issues | `bd ready --json` |
 | 2 | Calculate workers | Max 4, distribute issues |
 | 3 | Create worktrees | Parallel, wait for all |
 | 4 | Spawn workers | TabzChrome API |
-| 5 | Send prompts | Skill-aware prompts with issue context |
+| 5 | Send prompts | Check prepared.prompt first |
 | 6 | Poll status | Every 2 min, check context |
 | 7 | Merge & cleanup | Kill sessions first |
 | 8 | Visual QA | tabz-manager for UI waves |
-| 9 | Next wave | Loop until empty |
+| 9 | Next wave | Loop until empty, then kill enhancer |
+
+---
+
+## Step 0: Spawn Lookahead Enhancer
+
+Before starting waves, spawn the enhancer in a parallel terminal (Haiku model).
+The enhancer stays 1-2 waves ahead, preparing prompts while workers execute.
+
+```bash
+# Check if enhancer already running
+ENHANCER_SESSION=$(tmux list-sessions -F '#S' 2>/dev/null | grep '^ctt-enhancer' | head -1)
+
+if [ -z "$ENHANCER_SESSION" ]; then
+  echo "Spawning lookahead enhancer..."
+  TOKEN=$(cat /tmp/tabz-auth-token 2>/dev/null)
+
+  RESPONSE=$(curl -s -X POST http://localhost:8129/api/spawn \
+    -H "Content-Type: application/json" \
+    -H "X-Auth-Token: $TOKEN" \
+    -d '{
+      "name": "Enhancer",
+      "workingDir": "'"$(pwd)"'",
+      "command": "'"${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}"'/scripts/lookahead-enhancer.sh --max-ahead 8 --batch 4"
+    }')
+
+  ENHANCER_SESSION=$(echo "$RESPONSE" | jq -r '.terminal.ptyInfo.tmuxSession // empty')
+  [ -n "$ENHANCER_SESSION" ] && echo "Enhancer spawned: $ENHANCER_SESSION"
+fi
+
+# Give enhancer a head start (prepares first batch while we set up)
+sleep 5
+```
+
+**Note**: The enhancer script runs in a loop until killed. It marks issues with `enhancing: true` while processing, then stores `prepared.prompt` when done. This prevents race conditions with workers.
 
 ---
 
@@ -73,7 +110,15 @@ done
 
 # Check for next wave
 NEXT=$(bd ready --json | jq 'length')
-[ "$NEXT" -gt 0 ] && echo "Starting next wave..." # LOOP
+if [ "$NEXT" -gt 0 ]; then
+  echo "Starting next wave..."
+  # LOOP back to wave start (enhancer keeps running)
+else
+  echo "Backlog complete! Cleaning up..."
+  # Kill enhancer terminal
+  ENHANCER_SESSION=$(tmux list-sessions -F '#S' 2>/dev/null | grep '^ctt-enhancer' | head -1)
+  [ -n "$ENHANCER_SESSION" ] && tmux kill-session -t "$ENHANCER_SESSION" && echo "Killed enhancer session"
+fi
 ```
 
 ---
@@ -82,33 +127,72 @@ NEXT=$(bd ready --json | jq 'length')
 
 1. **NO USER INPUT** - Fully autonomous, no AskUserQuestion
 2. **MAX 4 TERMINALS** - Never spawn more than 4 workers
-3. **SKILL-AWARE PROMPTS** - Include skill hints in worker prompts
-4. **YOU MUST POLL** - Check issue status every 2 minutes
-5. **LOOP UNTIL EMPTY** - Keep running waves until `bd ready` is empty
-6. **VISUAL QA** - Spawn tabz-manager after UI waves
-7. **MONITOR CONTEXT** - At 70%+, trigger `/wipe:wipe`
+3. **ENHANCER PARALLEL** - Spawn lookahead enhancer at start, it runs continuously
+4. **CHECK PREPARED FIRST** - Always check `prepared.prompt` before crafting dynamically
+5. **SKILL-AWARE PROMPTS** - Include skill hints in worker prompts
+6. **YOU MUST POLL** - Check issue status every 2 minutes
+7. **LOOP UNTIL EMPTY** - Keep running waves until `bd ready` is empty
+8. **VISUAL QA** - Spawn tabz-manager after UI waves
+9. **MONITOR CONTEXT** - At 70%+, trigger `/wipe:wipe`
+10. **CLEANUP** - Kill enhancer terminal when backlog complete
 
 ---
 
 ## Worker Prompts: Prepared vs Dynamic
 
 **Before crafting a prompt, check if the issue has a prepared prompt in notes.**
+The lookahead enhancer runs in parallel, preparing prompts ahead of time.
 
-### Check for Prepared Prompt
+### Check for Prepared Prompt (with optional wait)
 
 ```bash
-# Extract prepared.prompt from issue notes
-NOTES=$(bd show "$ISSUE_ID" --json | jq -r '.[0].notes // ""')
-PREPARED_PROMPT=$(echo "$NOTES" | sed -n '/^prepared\.prompt: |/,/^prepared\./{ /^prepared\.prompt: |/d; /^prepared\./d; s/^  //p; }')
+get_prompt_for_issue() {
+  local ISSUE_ID="$1"
+  local MAX_WAIT="${2:-10}"  # Max seconds to wait for enhancer
+  local WAITED=0
 
-if [ -n "$PREPARED_PROMPT" ]; then
-  # Use prepared prompt verbatim - no exploration needed
-  echo "Using prepared prompt from notes"
-  WORKER_PROMPT="$PREPARED_PROMPT"
-else
-  # Craft dynamically (see template below)
-  echo "Crafting prompt dynamically..."
+  while [ "$WAITED" -lt "$MAX_WAIT" ]; do
+    NOTES=$(bd show "$ISSUE_ID" --json | jq -r '.[0].notes // ""')
+
+    # Check if enhancer is currently processing this issue
+    if echo "$NOTES" | grep -q "^enhancing: true"; then
+      echo "Waiting for enhancer to finish $ISSUE_ID..." >&2
+      sleep 2
+      WAITED=$((WAITED + 2))
+      continue
+    fi
+
+    # Check for prepared prompt
+    PREPARED_PROMPT=$(echo "$NOTES" | sed -n '/^prepared\.prompt: |/,/^[a-z]*\./{ /^prepared\.prompt: |/d; /^[a-z]*\./d; s/^  //p; }')
+
+    if [ -n "$PREPARED_PROMPT" ]; then
+      echo "Using prepared prompt from notes" >&2
+      echo "$PREPARED_PROMPT"
+      return 0
+    fi
+
+    # No prepared prompt and not enhancing - break and craft dynamically
+    break
+  done
+
+  # Fall back to dynamic crafting
+  echo "Crafting prompt dynamically..." >&2
+  return 1
+}
+
+# Usage in worker prompt construction
+WORKER_PROMPT=$(get_prompt_for_issue "$ISSUE_ID" 10)
+if [ $? -ne 0 ]; then
+  # Dynamic crafting (see template below)
+  WORKER_PROMPT="..."
 fi
+```
+
+### Enhancer Status Check
+
+```bash
+# Quick check on enhancer progress
+${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/lookahead-enhancer.sh --status
 ```
 
 ### When Prepared Prompt Exists

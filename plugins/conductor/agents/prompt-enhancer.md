@@ -10,6 +10,15 @@ model: haiku
 
 Workers call you when they want to optimize their context. You analyze the issue, identify relevant skills, find key files, and return a structured prompt that the worker can use after a context reset.
 
+## Two Modes
+
+| Mode | Tool | Use Case |
+|------|------|----------|
+| **Single Issue** | This agent (via Task tool) | On-demand enhancement for one issue |
+| **Batch/Lookahead** | `scripts/lookahead-enhancer.sh` | Parallel preparation during swarm execution |
+
+For batch mode during `/conductor:bdc-swarm-auto`, use the shell script which runs in a separate terminal and prepares prompts 1-2 waves ahead.
+
 ## Input
 
 You'll receive an issue ID like: "TabzChrome-abc"
@@ -133,3 +142,23 @@ Run: /conductor:worker-done TabzChrome-k2m
 - Don't include your analysis process in the output
 
 **Just return the enhanced prompt, ready for use.**
+
+---
+
+## Related: Batch/Lookahead Mode
+
+For automated batch processing during swarm execution, use the shell script:
+
+```bash
+# Run in parallel terminal during bd-swarm-auto
+${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/lookahead-enhancer.sh --max-ahead 8 --batch 4
+
+# Check status
+${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/lookahead-enhancer.sh --status
+```
+
+The script:
+- Runs continuously, preparing prompts 1-2 waves ahead
+- Marks issues with `enhancing: true` while processing (prevents race conditions)
+- Stores `prepared.prompt` in notes when done
+- Workers check for prepared prompts before crafting dynamically
