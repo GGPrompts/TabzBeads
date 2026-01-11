@@ -84,8 +84,15 @@ SKILL_MAPPINGS=(
   # Backend / API (user-level plugin)
   "backend|api|server|database|endpoint|express|websocket.*server|/backend-development:backend-development"
 
-  # Browser automation / MCP (conductor skill)
-  "browser|screenshot|click|mcp|tabz_|automation|/conductor:tabz-mcp"
+  # Browser automation / MCP (tabz plugin skill)
+  "browser|screenshot|click|mcp|tabz_|automation|/tabz:tabz-mcp"
+
+  # Visual QA / UI review (tabz plugin - for wave-done UI verification)
+  # Also spawn tabz:tabz-manager agent for interactive browser control
+  "visual|qa|regression|console.*error|ui.*test|screenshot.*test|/tabz:tabz-mcp"
+
+  # Visual asset generation (conductor skill)
+  "hero.*image|team.*photo|icon.*generat|poster|dall-e|sora|video.*generat|/conductor:tabz-artist"
 
   # Authentication (user-level plugin)
   "auth|login|oauth|session|token|jwt|/better-auth:better-auth"
@@ -134,9 +141,11 @@ LABEL_MAPPINGS=(
   "ui|frontend|styling"
   "backend|api|server"
   "mcp|browser|automation"
+  "visual|qa|screenshot"
   "auth|security"
   "plugin|skill|conductor"
   "audio|media"
+  "assets|image|video"
 )
 
 # ============================================================================
