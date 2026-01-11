@@ -7,8 +7,8 @@ This document describes the unified worker architecture for parallel issue proce
 ```
 Worker (vanilla Claude via tmux/TabzChrome)
   ├─> Gets context from `bd show <issue-id>`
-  ├─> Receives explicit skill invocations in prompt (e.g., "/xterm-js:xterm-js")
-  ├─> Invokes skills FIRST before starting work
+  ├─> Receives keyword-rich prompt (skill-eval hook activates skills automatically)
+  ├─> Has SessionStart hooks inject PRIME.md and beads context
   └─> Completes with /conductor:bdw-worker-done
 ```
 
@@ -16,33 +16,33 @@ Worker (vanilla Claude via tmux/TabzChrome)
 
 - **Vanilla Claude sessions** spawned via TabzChrome API or direct tmux
 - **Same plugin context** as the conductor (all skills available)
-- **Skill-aware** - workers receive skill hints in prompts and invoke skills directly
+- **Keyword-activated** - domain keywords in prompts trigger skill-eval hook
 - **Issue-focused** - each worker receives issue context and completes the task
 
 ## What Workers are NOT
 
 - **NOT specialized agents** - no worker-frontend.md, worker-backend.md, etc.
 - **NOT plugin-isolated** - no `--plugin-dir ./plugins/worker-minimal`
-- **NOT subagent invokers** - workers invoke skills directly, not via Task subagents
+- **NOT explicit skill invokers** - keywords trigger skills via hook, not `/plugin:skill`
 
-## Skill Matching
+## Skill Activation
 
-The conductor matches issue keywords to skill hints for worker prompts:
+The **skill-eval hook** (UserPromptSubmit) automatically detects domain keywords and activates relevant skills. The conductor includes keywords in prompts:
 
-| Issue Keywords | Skill Hint | Purpose |
-|----------------|-----------|---------|
-| terminal, xterm, PTY, resize | `/xterm-js:xterm-js` | Terminal rendering, resize, WebSocket |
-| UI, component, modal, dashboard | `/ui-styling:ui-styling` | shadcn/ui, Tailwind patterns |
-| backend, API, server, database | `/backend-development:backend-development` | Node.js, APIs, databases |
-| browser, screenshot, click | `/conductor:tabz-mcp` | Browser automation tools |
-| auth, login, oauth | `/better-auth:better-auth` | Authentication patterns |
+| Issue Keywords | Keywords to Include | Skills Activated |
+|----------------|---------------------|------------------|
+| terminal, xterm, PTY, resize | xterm.js terminal, resize handling, FitAddon | xterm-js |
+| UI, component, modal, dashboard | shadcn/ui components, Tailwind CSS styling | ui-styling |
+| backend, API, server, database | backend development, REST API, Node.js | backend-development |
+| browser, screenshot, click | browser automation, MCP tools | tabz-mcp |
+| auth, login, oauth | Better Auth, OAuth, session management | better-auth |
 
 ## Why This Architecture?
 
 1. **Simplicity** - Workers are just Claude sessions, no special configuration
-2. **Direct skills** - Workers invoke skills directly, avoiding subagent context overhead
-3. **Flexible** - Same worker can handle any issue type with appropriate skill hints
-4. **Lean prompts** - File paths as text (not @file), skills invoked on-demand
+2. **Hook-activated** - Skills activate automatically via keywords, no explicit invocations
+3. **Flexible** - Same worker can handle any issue type with appropriate keywords
+4. **Lean prompts** - File paths as text (not @file), keywords in Context section
 
 ## Worker Lifecycle
 

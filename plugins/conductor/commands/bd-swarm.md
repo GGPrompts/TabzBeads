@@ -217,7 +217,7 @@ Fully autonomous backlog completion. Runs waves until `bd ready` is empty.
 | Worker count | Ask user | All ready issues |
 | Waves | One wave | Loop until empty |
 | Decisions | AskUserQuestion ok | No questions |
-| Context | Manual check | Auto /wipe at 75% |
+| Context | Manual check | Auto /tmux:restart at 75% |
 
 ---
 
@@ -290,13 +290,13 @@ See `commands/worker-init.md` and `agents/prompt-enhancer.md`.
 
 ## Worker Architecture
 
-Workers are vanilla Claude sessions that receive skill-aware prompts:
+Workers are vanilla Claude sessions that receive keyword-rich prompts:
 
 ```
 Worker (vanilla Claude via tmux/TabzChrome)
   ├─> Gets context from `bd show <issue-id>`
-  ├─> Receives skill hint in prompt (e.g., "use /xterm-js:xterm-js skill")
-  ├─> Invokes skill directly when needed
+  ├─> Receives keyword-rich prompt (skill-eval hook activates skills automatically)
+  ├─> Has SessionStart hooks inject PRIME.md and beads context
   └─> Completes with /conductor:bdw-worker-done
 ```
 
@@ -306,7 +306,7 @@ Workers share the same plugin context as the conductor, so all skills are availa
 
 ## Skill Matching & Prompt Enhancement
 
-**Key insight:** Workers need detailed prompts with skill hints woven naturally into guidance, not listed as sidebars.
+**Key insight:** Workers need detailed prompts with domain keywords woven naturally into guidance. The skill-eval hook detects keywords and activates relevant skills automatically.
 
 ### Reading Skills from Beads
 

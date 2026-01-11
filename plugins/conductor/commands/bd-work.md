@@ -50,24 +50,24 @@ bd show <selected-id>
 
 ---
 
-## Phase 2: VERIFY Skills (MANDATORY)
+## Phase 2: Get Skill Keywords
 
-**CRITICAL: Run this BEFORE crafting prompts.** Only include skills that appear in output:
+Get keyword phrases for the issue to include in the worker prompt:
 
 ```bash
-# List ALL available skills - ONLY use these in prompts
-${CLAUDE_PLUGIN_ROOT}/scripts/match-skills.sh --available-full
+# Get keyword phrases for skill-eval hook activation
+${CLAUDE_PLUGIN_ROOT}/scripts/match-skills.sh --issue "$ISSUE_ID"
+# Returns: "xterm.js terminal, resize handling, FitAddon"
 
-# Or verify and match for specific keywords
-${CLAUDE_PLUGIN_ROOT}/scripts/match-skills.sh --verify "backend api terminal"
+# Or match from issue content directly
+${CLAUDE_PLUGIN_ROOT}/scripts/match-skills.sh --verify "$TITLE $DESCRIPTION"
 ```
 
-**Rules:**
-- If a skill doesn't appear in `--available-full`, DO NOT include it in prompts
-- MCP tools (shadcn/*, tabz/*) are NOT skills - call them via `mcp-cli call`
-- If no skills match, omit the "Skills to Load" section entirely
+**How it works:**
+- The skill-eval hook (UserPromptSubmit) detects domain keywords in prompts
+- Keywords like "xterm.js terminal" automatically activate the xterm-js skill
+- No explicit `/plugin:skill` invocations needed - just include keywords in Context
 
-The skill-eval hook automatically activates relevant skills based on keywords in the prompt.
 Include domain-specific keywords to help skill identification:
 
 | Domain | Keywords to Include |

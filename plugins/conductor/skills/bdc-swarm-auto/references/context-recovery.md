@@ -8,38 +8,52 @@ Your context percentage is visible in your status bar.
 
 **During every poll cycle (Step 6), check your context:**
 - **Below 70%:** Continue normally
-- **At 70% or above:** IMMEDIATELY run `/wipe:wipe`
+- **At 70% or above:** IMMEDIATELY trigger restart
 
-## How to Wipe with Handoff
+## Why /tmux:restart Instead of /wipe
+
+`/wipe` uses `/clear` which does NOT re-trigger SessionStart hooks. After `/clear`:
+- PRIME.md is NOT re-injected
+- Beads workflow context is NOT re-injected
+- Skill-eval hook still works, but you lose project context
+
+`/tmux:restart` exits and restarts Claude entirely, which DOES trigger SessionStart hooks.
+
+## How to Restart with Recovery
 
 1. First, save current wave state:
 ```bash
 # Note which issues are still in progress
-bd list --status=in_progress
+bd list --status=in_progress --json | jq -r '.[].id'
 ```
 
-2. Then invoke /wipe:wipe with this exact handoff message:
+2. Then invoke `/tmux:restart`:
 
 ```
-/wipe:wipe
+/tmux:restart
+```
 
-## BD Swarm Auto In Progress
+This will:
+1. Exit Claude Code
+2. Restart with `--continue` flag
+3. SessionStart hooks re-inject PRIME.md and beads context
+4. You get fresh context with all hooks active
 
-**Wave State:** Workers are processing issues. Resume monitoring.
+3. After restart, continue the swarm:
 
-**Active Issues:**
-- [list the in_progress issue IDs]
+```
+/conductor:bdc-swarm-auto
+```
 
-**Action Required:** Run `/conductor:bdc-swarm-auto` to continue.
-
-Beads has full state. The skill will:
-1. Check issue statuses (some may have closed while wiping)
+The skill will:
+1. Check issue statuses (some may have closed during restart)
 2. Resume polling for remaining in_progress issues
 3. Merge and cleanup when done
 4. Start next wave if more issues ready
-```
 
-**DO NOT wait until you run out of context.** Wipe proactively at 70%.
+**Beads tracks all state** - nothing is lost during restart.
+
+**DO NOT wait until you run out of context.** Restart proactively at 70%.
 
 ## Troubleshooting
 

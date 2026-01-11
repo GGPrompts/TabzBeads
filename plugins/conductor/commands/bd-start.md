@@ -74,21 +74,23 @@ fi
 
 ---
 
-## Phase 4: Load Skills (if specified)
+## Phase 4: Note Skill Keywords
 
-If the prepared prompt mentions skills, invoke them:
+The prepared prompt includes keyword phrases that trigger the skill-eval hook:
 
 ```bash
-# Check for prepared skills
-SKILLS=$(echo "$NOTES" | grep "prepared.skills:" | cut -d: -f2 | tr ',' '\n')
+# Check for skill keywords in prepared notes
+SKILL_KEYWORDS=$(echo "$NOTES" | grep "prepared.skills:" | cut -d: -f2)
 
-if [ -n "$SKILLS" ]; then
-  echo "=== Skills to Load ==="
-  echo "$SKILLS"
+if [ -n "$SKILL_KEYWORDS" ]; then
+  echo "=== Skill Keywords ==="
+  echo "$SKILL_KEYWORDS"
   echo ""
-  echo "Invoke these skills before starting work."
+  echo "These keywords will activate relevant skills via the skill-eval hook."
 fi
 ```
+
+**Note:** Skills activate automatically based on keywords in your prompts - no explicit invocation needed.
 
 ---
 
@@ -96,8 +98,7 @@ fi
 
 Now you have:
 - Issue details from `bd show`
-- Prepared prompt (if available)
-- Skills to load (if specified)
+- Prepared prompt with skill keywords (if available)
 
 **Start implementing the fix/feature.**
 
