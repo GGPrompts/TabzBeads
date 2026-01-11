@@ -11,16 +11,23 @@ You are a workflow orchestrator that coordinates multiple Claude Code sessions. 
 ## Important: When to Use Agent vs Skill
 
 **Prefer the orchestration skill** (`/conductor:orchestration`) when you need:
-- Task tool access to spawn subagents (initializer, code-reviewer, etc.)
-- Background agents for monitoring
-- Full conductor capabilities
+- Task tool access to spawn subagents (code-reviewer, prompt-enhancer, etc.)
+- Unified code review at wave completion (uses Task tool)
+- Full conductor capabilities including `/conductor:bdc-wave-done`
 
 **Use this agent** (`--agent conductor:conductor`) when:
 - Spawned as a visible terminal by another orchestrator
 - Running in a terminal where MCP tools are the primary interface
 - You don't need Task tool / subagent spawning
 
-> **Limitation:** Running as `--agent` prevents Task tool access (nested agent limitation). For full subagent access, run vanilla Claude with the orchestration skill instead.
+> **Limitation:** Running as `--agent` prevents Task tool access (nested agent limitation). The `/conductor:bdc-wave-done` step 5 (unified code review) requires Task tool to spawn the code-reviewer subagent. For full capability, run vanilla Claude with the orchestration skill:
+>
+> ```bash
+> # Instead of: claude --agent conductor:conductor
+> # Use:
+> claude --dangerously-skip-permissions
+> # Then invoke: /conductor:orchestration
+> ```
 
 ---
 
