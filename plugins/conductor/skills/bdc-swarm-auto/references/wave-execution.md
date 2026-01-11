@@ -71,33 +71,70 @@ Repeat for each worker (max 4). Save session names.
 
 ## Step 5: Send Skill-Aware Prompts
 
-Wait 5 seconds for Claude to initialize, then send each worker its prompt:
+Wait 5 seconds for Claude to initialize, then send each worker its prompt.
 
+**First, check for prepared prompt (from bd-plan):**
+```bash
+NOTES=$(bd show "$ISSUE_ID" --json | jq -r '.[0].notes // ""')
+PREPARED_PROMPT=$(echo "$NOTES" | sed -n '/^prepared\.prompt:/,/^[a-z_]*\.[a-z]*:/p' | sed '1d;$d' | sed 's/^  //')
+
+if [ -n "$PREPARED_PROMPT" ]; then
+  # Use the prepared prompt from bd-plan
+  echo "Using prepared prompt for $ISSUE_ID"
+  FINAL_PROMPT="$PREPARED_PROMPT"
+else
+  # Craft prompt dynamically
+  MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
+  SKILL_KEYWORDS=$($MATCH_SCRIPT --issue "$ISSUE_ID")
+  # Build prompt below...
+fi
+```
+
+**If no prepared prompt, get keyword phrases for skill activation:**
+```bash
+MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
+SKILL_KEYWORDS=$($MATCH_SCRIPT --issue "$ISSUE_ID")
+# Returns phrases like: "xterm.js terminal, resize handling, FitAddon"
+```
+
+**Then send the prompt using load-buffer (handles multi-line safely):**
 ```bash
 SESSION="<session-name>"
 ISSUE_ID="<issue-id>"
 TITLE="<issue-title>"
-SKILL_HINT="<matched-skill>"  # e.g., /xterm-js:xterm-js, /ui-styling:ui-styling
+DESC=$(bd show $ISSUE_ID --json | jq -r '.[0].description // "No description"')
 
 sleep 5
 
-tmux send-keys -t "$SESSION" -l "## Task: ${ISSUE_ID} - ${TITLE}
+# Write prompt to temp file
+PROMPT_FILE=$(mktemp)
+cat > "$PROMPT_FILE" << PROMPT_EOF
+## Task: ${ISSUE_ID} - ${TITLE}
 
-$(bd show $ISSUE_ID --json | jq -r '.[0].description // "No description"')
+## Context
+${DESC}
+This task involves ${SKILL_KEYWORDS}
 
 ## Key Files
 - path/to/relevant/file.ts
 - path/to/other/file.ts
 
-## Guidance
-Use the \`${SKILL_HINT}\` skill for guidance.
+## Approach
+[Implementation guidance based on issue description]
 
 ## When Done
-Run \`/conductor:bdw-worker-done ${ISSUE_ID}\`"
+Run \`/conductor:bdw-worker-done ${ISSUE_ID}\`
+PROMPT_EOF
 
+# Load and paste (bypasses shell quoting issues)
+tmux load-buffer "$PROMPT_FILE"
+tmux paste-buffer -t "$SESSION"
 sleep 0.3
 tmux send-keys -t "$SESSION" C-m
+rm "$PROMPT_FILE"
 ```
+
+**Why keywords instead of `/plugin:skill`?** The skill-eval hook automatically detects domain keywords and suggests relevant skills. Natural language like "xterm.js terminal patterns" triggers the same skills without explicit invocation.
 
 **Note:** List file paths as text, not @file references. Workers read files on-demand.
 

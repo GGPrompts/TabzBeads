@@ -79,7 +79,7 @@ NEXT=$(bd ready --json | jq 'length')
 4. **YOU MUST POLL** - Check issue status every 2 minutes
 5. **LOOP UNTIL EMPTY** - Keep running waves until `bd ready` is empty
 6. **VISUAL QA** - Spawn tabz-manager after UI waves
-7. **MONITOR CONTEXT** - At 70%+, trigger `/wipe:wipe`
+7. **MONITOR CONTEXT** - At 70%+, trigger `/tmux:restart` (NOT /wipe - needs hooks)
 
 ---
 
@@ -88,15 +88,9 @@ NEXT=$(bd ready --json | jq 'length')
 ```markdown
 ## Task: ISSUE-ID - Title
 
-## Skills to Load
-**FIRST**, invoke these skills before starting work:
-- /backend-development:backend-development
-- /conductor:bdc-orchestration
-
-These load patterns and context you'll need.
-
 ## Context
 [WHY this matters - helps Claude generalize and make good decisions]
+This task involves [domain keywords from match-skills.sh, e.g., "React components with shadcn/ui and Tailwind CSS styling"]
 
 ## Key Files
 - path/to/file.ts (focus on lines X-Y)
@@ -112,24 +106,28 @@ Run `/conductor:bdw-worker-done ISSUE-ID`
 The pipeline sends notifications to the conductor via tmux.
 ```
 
-**CRITICAL: Use full `plugin:skill` format for skill invocation.**
+**KEYWORD-BASED SKILL ACTIVATION:** The skill-eval hook automatically detects domain keywords and activates relevant skills. Include keywords naturally in the Context section.
 
-To find actual available skills, run:
+To get keyword phrases for an issue, run:
 ```bash
-./plugins/conductor/scripts/discover-skills.sh "backend api terminal"
+./plugins/conductor/scripts/match-skills.sh --issue ISSUE-ID
+# Or match from text:
+./plugins/conductor/scripts/match-skills.sh "backend api terminal"
 ```
 
-| ❌ Wrong format | ✅ Correct format |
-|-----------------|-------------------|
-| `/backend-development` | `/backend-development:backend-development` |
-| `/xterm-js` | `/xterm-js:xterm-js` |
-| "Use the X skill" | Explicit `/plugin:skill` invocation |
+| Domain | Keywords to Include |
+|--------|---------------------|
+| UI/Frontend | shadcn/ui components, Tailwind CSS styling, Radix UI |
+| Terminal | xterm.js terminal, resize handling, FitAddon |
+| Backend | backend development, REST API, Node.js, FastAPI |
+| Auth | Better Auth, OAuth, JWT, session management |
+| Browser | browser automation, MCP tools, screenshots |
 
 **Prompt Guidelines:**
+- **Use keywords naturally** - "This involves xterm.js terminal patterns" not "/xterm-js:xterm-js"
 - **Be explicit** - "Fix null reference on line 45" not "fix the bug"
 - **Add context** - Explain WHY to help Claude make good decisions
 - **Reference patterns** - Point to existing code for consistency
-- **Avoid ALL CAPS** - Claude 4.x overtriggers on aggressive language
 - **File paths as text** - Workers read files on-demand, avoids bloat
 
 **Full guidelines:** `references/worker-architecture.md`
@@ -153,13 +151,20 @@ tabz-manager can take screenshots, click elements, and verify UI changes work co
 
 ## Context Recovery
 
-At 70% context, run `/wipe:wipe` with handoff:
+At 70% context, use `/tmux:restart` (NOT `/wipe` - restart triggers session hooks that re-inject PRIME.md and beads context).
 
+Before restarting, note the active state:
+```bash
+# Get in-progress issues
+bd list --status=in_progress --json | jq -r '.[].id'
 ```
-## BD Swarm Auto In Progress
-**Active Issues:** [list in_progress IDs]
-**Action:** Run `/conductor:bdc-swarm-auto` to continue
+
+After restart, Claude will have fresh context with hooks re-injected. Run:
 ```
+/conductor:bdc-swarm-auto
+```
+
+The skill will pick up where it left off by checking `bd ready` and `bd list --status=in_progress`.
 
 ---
 
