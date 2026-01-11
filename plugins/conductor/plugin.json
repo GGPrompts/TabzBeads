@@ -6,6 +6,7 @@
     "./skills/bd-conduct",
     "./skills/bd-new-project",
     "./skills/bdc-orchestration",
+    "./skills/bdc-run-wave",
     "./skills/bdc-swarm-auto",
     "./skills/bdc-wave-done",
     "./skills/bdw-code-review",
