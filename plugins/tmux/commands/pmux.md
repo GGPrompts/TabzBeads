@@ -313,14 +313,12 @@ persist_prepared_prompt "<issue-id>" "skill1,skill2" "file1.ts,file2.ts" "Full p
 Or manually via bd update:
 ```bash
 bd update <issue-id> --notes "$(cat <<'EOF'
-prepared.skills: ui-styling,backend-development
+prepared.skills: shadcn/ui components, Tailwind CSS|backend development, REST API
 prepared.files: src/Component.tsx,src/api.ts
 prepared.prompt: |
-  ## Task
+  ## Context
   [Full worker prompt here...]
-
-  ## Approach
-  Use the ui-styling skill for component work.
+  This task involves shadcn/ui components and Tailwind CSS styling.
 
   ## Files
   @src/Component.tsx
@@ -363,22 +361,26 @@ fi
 
 ### Skill Matching from Issue Content
 ```bash
-# Auto-match skills (returns explicit invocation commands)
+# Auto-match skills (returns keyword phrases for skill-eval hook)
 SKILLS=$(./plugins/conductor/scripts/match-skills.sh --issue <issue-id>)
 
 # Or match from text directly
 SKILLS=$(./plugins/conductor/scripts/match-skills.sh "terminal resize buffer")
+# Returns: "xterm.js terminal, resize handling, FitAddon, WebSocket PTY"
 ```
 
 ### The prepared.* Notes Schema
 ```yaml
-prepared.skills: ui-styling,backend-development  # Comma-separated skill names
+prepared.skills: shadcn/ui components, Tailwind CSS|backend development, REST API  # Keyword phrases
 prepared.files: src/file1.ts,src/file2.ts        # Comma-separated file paths
 prepared.prompt: |                                # Multi-line YAML block
+  ## Context
   Full worker prompt text here.
-  Can span multiple lines.
+  This task involves shadcn/ui components and Tailwind CSS styling.
   Use @ references for files.
 ```
+
+**Note:** Skills are stored as keyword phrases that trigger the skill-eval hook. The hook handles actual skill activation - prompts just need relevant domain keywords.
 
 Workers spawned by `/conductor:bd-swarm` will read this prepared prompt instead of crafting their own, saving tokens and ensuring consistent prompt quality.
 
