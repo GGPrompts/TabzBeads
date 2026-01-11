@@ -1,0 +1,676 @@
+# Conductor Wave Formula
+#
+# Orchestrates a wave of parallel terminal workers to complete beads issues.
+# This is the reusable template for multi-session Claude workflows.
+#
+# Usage:
+#   bd mol pour conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
+#   bd mol wisp conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
+#
+# Or via skill:
+#   /conductor:run-wave-template --issues "TabzBeads-abc TabzBeads-def"
+
+formula = "conductor-wave"
+description = """
+Conductor wave workflow - orchestrate parallel terminal workers for beads issues.
+
+This formula defines the complete lifecycle of a conductor wave:
+
+Phase 1 - Setup:
+  1. Parse and validate issue IDs
+  2. Create worktrees (parallel, one per issue)
+  3. Create agent beads for worker tracking
+
+Phase 2 - Execution:
+  4. Spawn terminal workers via TabzChrome API
+  5. Send skill-aware prompts to workers
+  6. Monitor workers (poll every 2 minutes)
+
+Phase 3 - Completion:
+  7. Verify all workers completed (issues closed)
+  8. Review worker discoveries (found TODOs, created issues)
+  9. Capture transcripts before killing sessions
+  10. Kill worker sessions
+  11. Merge branches to main
+  12. Cleanup worktrees and branches
+  13. Build verification
+  14. Unified code review (conductor-level)
+  15. Visual QA (if UI changes)
+  16. Sync and push
+
+## Key Concepts
+
+- **Workers skip code review**: Each worker does NOT run code review to avoid
+  parallel conflicts. The conductor runs unified review after merging all branches.
+
+- **Agent beads track workers**: Each worker is represented as an agent bead
+  with state transitions: spawning -> running -> done/failed.
+
+- **Skill-aware prompts**: Workers receive prompts with skill hints matched
+  to the issue content.
+
+## Variables
+
+- `issues`: Space-separated list of issue IDs to process in this wave
+- `max_workers`: Maximum concurrent workers (default: 4)
+- `skip_review`: Skip unified code review (default: false)
+- `skip_visual_qa`: Skip visual QA step (default: true)
+
+## When to Use Pour vs Wisp
+
+- **Pour (persistent)**: When you want audit trail of wave execution
+- **Wisp (ephemeral)**: For operational waves that don't need history
+
+Recommended: Use wisp for normal operations, pour for debugging/auditing.
+"""
+type = "workflow"
+phase = "vapor"  # Recommend wisp (ephemeral) - operational workflow
+version = 1
+
+# =============================================================================
+# Variables
+# =============================================================================
+
+[vars.issues]
+description = "Space-separated list of issue IDs to process (e.g., 'TabzBeads-abc TabzBeads-def')"
+required = true
+
+[vars.max_workers]
+description = "Maximum concurrent terminal workers (1-4)"
+default = "4"
+
+[vars.skip_review]
+description = "Skip unified code review (use for trivial changes)"
+default = "false"
+
+[vars.skip_visual_qa]
+description = "Skip visual QA step (true unless UI changes)"
+default = "true"
+
+# =============================================================================
+# Phase 1: Setup
+# =============================================================================
+
+[[steps]]
+id = "validate-issues"
+title = "Validate issue IDs"
+description = """
+Parse and validate the issue IDs from input.
+
+```bash
+ISSUES="{{issues}}"
+ISSUE_COUNT=$(echo "$ISSUES" | wc -w)
+
+if [ "$ISSUE_COUNT" -eq 0 ]; then
+  echo "ERROR: No issues provided"
+  exit 1
+fi
+
+echo "Wave will process $ISSUE_COUNT issues:"
+for ISSUE in $ISSUES; do
+  STATUS=$(bd show "$ISSUE" --json 2>/dev/null | jq -r '.[0].status // "not-found"')
+  TITLE=$(bd show "$ISSUE" --json 2>/dev/null | jq -r '.[0].title // "Unknown"')
+  echo "  - $ISSUE ($STATUS): $TITLE"
+
+  if [ "$STATUS" = "not-found" ]; then
+    echo "ERROR: Issue $ISSUE not found"
+    exit 1
+  fi
+  if [ "$STATUS" = "closed" ]; then
+    echo "WARNING: Issue $ISSUE is already closed"
+  fi
+done
+```
+
+All issues must exist. Already-closed issues will be skipped during execution.
+"""
+
+[[steps]]
+id = "check-batches"
+title = "Check for batch assignments"
+needs = ["validate-issues"]
+description = """
+Check if issues have batch assignments for grouping.
+
+```bash
+MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
+
+# Check for batch assignments
+BATCHES=$($MATCH_SCRIPT --all-batches 2>/dev/null)
+
+if [ -n "$BATCHES" ]; then
+  echo "=== Batch Mode Detected ==="
+  echo "Issues are grouped into batches:"
+  echo "$BATCHES" | while read -r BATCH; do
+    BATCH_ISSUES=$($MATCH_SCRIPT --batch-issues "$BATCH")
+    echo "  Batch $BATCH: $BATCH_ISSUES"
+  done
+  echo ""
+  echo "One worker will be spawned per batch (not per issue)"
+else
+  echo "=== Standard Mode ==="
+  echo "One worker will be spawned per issue"
+fi
+```
+
+Batch mode spawns fewer workers (1 per batch) with batched prompts.
+Standard mode spawns 1 worker per issue (up to max_workers).
+"""
+
+[[steps]]
+id = "create-worktrees"
+title = "Create worktrees (parallel)"
+needs = ["check-batches"]
+description = """
+Create git worktrees for each issue/batch in parallel.
+
+```bash
+SETUP_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/setup-worktree.sh"
+
+ISSUES="{{issues}}"
+for ISSUE in $ISSUES; do
+  "$SETUP_SCRIPT" "$ISSUE" &
+done
+wait
+
+echo "Created worktrees for all issues"
+ls -la "${PROJECT_DIR}-worktrees/" 2>/dev/null || echo "Worktrees in place"
+```
+
+Each worktree gets:
+- Fresh checkout on feature/$ISSUE branch
+- .beads redirect to main repo (shared issue state)
+- Isolated node_modules (via npm install)
+"""
+
+[[steps]]
+id = "create-agent-beads"
+title = "Create agent beads for tracking"
+needs = ["create-worktrees"]
+description = """
+Create agent beads to track each worker's lifecycle.
+
+```bash
+ISSUES="{{issues}}"
+for ISSUE in $ISSUES; do
+  AGENT_ID=$(bd create --type=agent --title="Worker: $ISSUE" --labels="conductor:worker" --json | jq -r ".id")
+  bd agent state "$AGENT_ID" spawning
+  bd slot set "$AGENT_ID" hook "$ISSUE"
+
+  # Link agent to issue in notes
+  EXISTING_NOTES=$(bd show "$ISSUE" --json 2>/dev/null | jq -r '.[0].notes // ""')
+  bd update "$ISSUE" --notes "${EXISTING_NOTES}
+agent_id: $AGENT_ID"
+
+  echo "Created agent $AGENT_ID for $ISSUE"
+done
+```
+
+Agent states: spawning -> running -> done | failed | stalled
+"""
+
+# =============================================================================
+# Phase 2: Execution
+# =============================================================================
+
+[[steps]]
+id = "spawn-workers"
+title = "Spawn terminal workers"
+needs = ["create-agent-beads"]
+description = """
+Spawn terminal workers via TabzChrome API.
+
+```bash
+TOKEN=$(cat /tmp/tabz-auth-token 2>/dev/null)
+if [ -z "$TOKEN" ]; then
+  echo "ERROR: TabzChrome auth token not found"
+  exit 1
+fi
+
+PROJECT_DIR=$(pwd)
+ISSUES="{{issues}}"
+SESSIONS=""
+
+for ISSUE in $ISSUES; do
+  WORKTREE_DIR="${PROJECT_DIR}-worktrees/${ISSUE}"
+
+  RESPONSE=$(curl -s -X POST http://localhost:8129/api/spawn \
+    -H "Content-Type: application/json" \
+    -H "X-Auth-Token: $TOKEN" \
+    -d '{
+      "name": "Worker: '"$ISSUE"'",
+      "workingDir": "'"$WORKTREE_DIR"'",
+      "command": "claude --dangerously-skip-permissions"
+    }')
+
+  SESSION=$(echo "$RESPONSE" | jq -r '.terminal.ptyInfo.tmuxSession // empty')
+  if [ -n "$SESSION" ]; then
+    echo "Spawned worker: $SESSION"
+    SESSIONS="$SESSIONS $SESSION"
+    echo "$SESSION" >> /tmp/swarm-sessions.txt
+  else
+    echo "ERROR: Failed to spawn worker for $ISSUE"
+  fi
+done
+```
+
+Workers are vanilla Claude sessions with full Task tool access.
+"""
+
+[[steps]]
+id = "send-prompts"
+title = "Send skill-aware prompts"
+needs = ["spawn-workers"]
+description = """
+Send task prompts to each worker session.
+
+```bash
+ISSUES="{{issues}}"
+
+for ISSUE in $ISSUES; do
+  # Find session for this issue
+  SESSION=$(grep "$ISSUE" /tmp/swarm-sessions.txt | head -1)
+  [ -z "$SESSION" ] && continue
+
+  # Check for prepared prompt (from bd-plan enhance step)
+  NOTES=$(bd show "$ISSUE" --json | jq -r '.[0].notes // ""')
+  PREPARED=$(echo "$NOTES" | sed -n '/^prepared\\.prompt:/,/^[a-z]*\\./p')
+
+  if [ -n "$PREPARED" ]; then
+    PROMPT="$PREPARED"
+  else
+    # Dynamic prompt with skill hints
+    TITLE=$(bd show "$ISSUE" --json | jq -r '.[0].title // ""')
+    DESC=$(bd show "$ISSUE" --json | jq -r '.[0].description // ""')
+
+    PROMPT="## Task: $ISSUE - $TITLE
+
+## Context
+$DESC
+
+## When Done
+Run /conductor:bdw-worker-done $ISSUE"
+  fi
+
+  # Send prompt via tmux
+  sleep 2
+  tmux send-keys -t "$SESSION" -l "$PROMPT"
+  sleep 0.3
+  tmux send-keys -t "$SESSION" C-m
+
+  echo "Sent prompt to $SESSION for $ISSUE"
+done
+```
+
+Prompts include skill hints when prepared by bd-plan enhance step.
+"""
+
+[[steps]]
+id = "monitor-workers"
+title = "Monitor worker status"
+needs = ["send-prompts"]
+description = """
+Poll worker status every 2 minutes until all complete.
+
+```bash
+ISSUES="{{issues}}"
+MAX_WAIT=3600  # 1 hour max
+POLL_INTERVAL=120  # 2 minutes
+WAITED=0
+
+while [ "$WAITED" -lt "$MAX_WAIT" ]; do
+  ALL_DONE=true
+
+  for ISSUE in $ISSUES; do
+    STATUS=$(bd show "$ISSUE" --json 2>/dev/null | jq -r '.[0].status // "unknown"')
+    if [ "$STATUS" != "closed" ]; then
+      ALL_DONE=false
+      echo "Waiting: $ISSUE is $STATUS"
+    fi
+  done
+
+  if [ "$ALL_DONE" = true ]; then
+    echo "All workers completed!"
+    break
+  fi
+
+  sleep $POLL_INTERVAL
+  WAITED=$((WAITED + POLL_INTERVAL))
+done
+
+if [ "$ALL_DONE" != true ]; then
+  echo "WARNING: Timeout waiting for workers"
+fi
+```
+
+Use bd list --type=agent --label="conductor:worker" to see all workers.
+"""
+
+# =============================================================================
+# Phase 3: Completion
+# =============================================================================
+
+[[steps]]
+id = "verify-completion"
+title = "Verify all workers completed"
+needs = ["monitor-workers"]
+description = """
+Confirm all issues are closed before proceeding.
+
+```bash
+ISSUES="{{issues}}"
+ALL_CLOSED=true
+
+for ISSUE in $ISSUES; do
+  STATUS=$(bd show "$ISSUE" --json 2>/dev/null | jq -r '.[0].status // "unknown"')
+  if [ "$STATUS" != "closed" ]; then
+    echo "BLOCKED: $ISSUE is $STATUS (not closed)"
+    ALL_CLOSED=false
+  else
+    echo "OK: $ISSUE is closed"
+  fi
+done
+
+if [ "$ALL_CLOSED" != "true" ]; then
+  echo ""
+  echo "ERROR: Not all issues are closed."
+  echo "Either wait for workers to finish or investigate stuck workers."
+  exit 1
+fi
+```
+
+If any issue is not closed, investigate the worker session for errors.
+"""
+
+[[steps]]
+id = "review-discoveries"
+title = "Review worker discoveries"
+needs = ["verify-completion"]
+description = """
+Check for issues discovered by workers (TODOs, follow-up work).
+
+```bash
+ISSUES="{{issues}}"
+
+# Check for issues with discovered-from links
+for ISSUE in $ISSUES; do
+  DISCOVERIES=$(bd list --all --json 2>/dev/null | \
+    jq -r --arg parent "$ISSUE" \
+    '.[] | select(.depends_on[]? | contains("discovered-from") and contains($parent)) | .id' 2>/dev/null)
+
+  if [ -n "$DISCOVERIES" ]; then
+    echo "Discoveries from $ISSUE:"
+    echo "$DISCOVERIES" | while read -r DISC; do
+      [ -z "$DISC" ] && continue
+      TITLE=$(bd show "$DISC" --json 2>/dev/null | jq -r '.[0].title // "?"')
+      echo "  - $DISC: $TITLE"
+    done
+  fi
+done
+
+# Check for untracked TODOs
+echo ""
+echo "Checking for untracked TODOs in worker changes..."
+for ISSUE in $ISSUES; do
+  BRANCH="feature/${ISSUE}"
+  if git rev-parse --verify "$BRANCH" >/dev/null 2>&1; then
+    TODOS=$(git diff main.."$BRANCH" 2>/dev/null | grep -E "^\\+.*TODO|^\\+.*FIXME" | head -5)
+    if [ -n "$TODOS" ]; then
+      echo "WARNING: Untracked TODOs in $BRANCH:"
+      echo "$TODOS"
+    fi
+  fi
+done
+```
+
+Create follow-up issues for important discoveries before killing sessions.
+"""
+
+[[steps]]
+id = "capture-transcripts"
+title = "Capture session transcripts"
+needs = ["review-discoveries"]
+description = """
+Save worker session output for later analysis.
+
+```bash
+CAPTURE_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/capture-session.sh"
+TRANSCRIPT_DIR=".beads/transcripts"
+mkdir -p "$TRANSCRIPT_DIR"
+
+ISSUES="{{issues}}"
+for ISSUE in $ISSUES; do
+  SESSION=$(grep "$ISSUE" /tmp/swarm-sessions.txt 2>/dev/null | head -1)
+  [ -z "$SESSION" ] && continue
+
+  if tmux has-session -t "$SESSION" 2>/dev/null; then
+    # Capture full session output
+    tmux capture-pane -t "$SESSION" -p -S - > "$TRANSCRIPT_DIR/${ISSUE}.txt"
+    echo "Captured transcript: $TRANSCRIPT_DIR/${ISSUE}.txt"
+  fi
+done
+```
+
+Transcripts can be analyzed later with /conductor:bdc-analyze-transcripts.
+"""
+
+[[steps]]
+id = "kill-sessions"
+title = "Kill worker sessions"
+needs = ["capture-transcripts"]
+description = """
+Terminate all worker tmux sessions.
+
+```bash
+ISSUES="{{issues}}"
+for ISSUE in $ISSUES; do
+  SESSION=$(grep "$ISSUE" /tmp/swarm-sessions.txt 2>/dev/null | head -1)
+  [ -z "$SESSION" ] && continue
+
+  if tmux has-session -t "$SESSION" 2>/dev/null; then
+    tmux kill-session -t "$SESSION"
+    echo "Killed session: $SESSION"
+  fi
+done
+
+# Cleanup session tracking file
+rm -f /tmp/swarm-sessions.txt
+```
+
+Sessions MUST be killed before removing worktrees to release file locks.
+"""
+
+[[steps]]
+id = "merge-branches"
+title = "Merge branches to main"
+needs = ["kill-sessions"]
+description = """
+Merge all feature branches into main.
+
+```bash
+PROJECT_DIR=$(pwd)
+cd "$PROJECT_DIR"
+git checkout main
+
+ISSUES="{{issues}}"
+MERGE_COUNT=0
+MERGE_FAILED=""
+
+for ISSUE in $ISSUES; do
+  BRANCH="feature/${ISSUE}"
+
+  if git merge --no-edit "$BRANCH" 2>/dev/null; then
+    echo "Merged: $BRANCH"
+    MERGE_COUNT=$((MERGE_COUNT + 1))
+  else
+    echo "CONFLICT: $BRANCH"
+    MERGE_FAILED="$MERGE_FAILED $ISSUE"
+    git merge --abort 2>/dev/null || true
+  fi
+done
+
+if [ -n "$MERGE_FAILED" ]; then
+  echo ""
+  echo "ERROR: Merge conflicts in:$MERGE_FAILED"
+  echo "Resolve conflicts manually, then continue."
+  exit 1
+fi
+
+echo "Successfully merged $MERGE_COUNT branches"
+```
+
+Stop on conflicts - they need manual resolution.
+"""
+
+[[steps]]
+id = "cleanup-worktrees"
+title = "Cleanup worktrees and branches"
+needs = ["merge-branches"]
+description = """
+Remove worktrees and delete feature branches.
+
+IMPORTANT: This MUST happen before build verification.
+Next.js includes worktree directories in compilation.
+
+```bash
+PROJECT_DIR=$(pwd)
+WORKTREE_DIR="${PROJECT_DIR}-worktrees"
+
+ISSUES="{{issues}}"
+for ISSUE in $ISSUES; do
+  # Remove worktree
+  if [ -d "${WORKTREE_DIR}/${ISSUE}" ]; then
+    git worktree remove --force "${WORKTREE_DIR}/${ISSUE}" 2>/dev/null || true
+    echo "Removed worktree: ${ISSUE}"
+  fi
+
+  # Delete feature branch
+  git branch -d "feature/${ISSUE}" 2>/dev/null && \
+    echo "Deleted branch: feature/${ISSUE}" || true
+done
+
+# Remove worktrees dir if empty
+rmdir "$WORKTREE_DIR" 2>/dev/null || true
+```
+"""
+
+[[steps]]
+id = "verify-build"
+title = "Build verification"
+needs = ["cleanup-worktrees"]
+description = """
+Verify the merged code builds correctly.
+
+Run /conductor:bdw-verify-build
+
+This step checks:
+- TypeScript compilation
+- Build process completes
+- No type errors in merged code
+
+If build fails, fix errors before continuing.
+"""
+
+[[steps]]
+id = "unified-review"
+title = "Unified code review"
+needs = ["verify-build"]
+skip_if = "{{skip_review}}"
+description = """
+Conductor-level code review of all merged changes.
+
+Run /conductor:bdw-code-review
+
+Why unified review at wave level:
+- Workers do NOT run code review (avoids parallel conflicts)
+- Catches cross-worker interactions
+- Ensures combined changes work together
+- Single review covers all changes
+
+If blockers found, fix issues before continuing.
+"""
+
+[[steps]]
+id = "visual-qa"
+title = "Visual QA (if UI changes)"
+needs = ["unified-review"]
+skip_if = "{{skip_visual_qa}}"
+description = """
+Visual verification for UI changes.
+
+Spawn tabz-manager subagent:
+
+```
+Task(subagent_type="tabz:tabz-manager",
+     prompt="Visual QA after wave merge.
+       1. Start dev server if needed
+       2. Screenshot key UI areas at 1920x1080
+       3. Check browser console for errors
+       4. Verify all merged UI changes render correctly
+       5. Create beads issues for any visual bugs found")
+```
+
+Skip if wave was backend-only or config/docs changes.
+"""
+
+[[steps]]
+id = "sync-and-push"
+title = "Sync and push"
+needs = ["visual-qa"]
+description = """
+Final sync and push to remote.
+
+```bash
+# Commit any wave-level changes (if review made fixes)
+if ! git diff --quiet HEAD; then
+  git add -A
+  git commit -m "chore: wave completion fixes
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+fi
+
+# Sync beads and push
+bd sync
+git push origin main
+
+echo "Pushed to main"
+```
+
+Wave is complete after this step.
+"""
+
+[[steps]]
+id = "wave-summary"
+title = "Wave summary"
+needs = ["sync-and-push"]
+description = """
+Generate summary and audio notification.
+
+```bash
+ISSUES="{{issues}}"
+ISSUE_COUNT=$(echo "$ISSUES" | wc -w)
+
+echo "=== Wave Complete ==="
+echo "Issues completed: $ISSUE_COUNT"
+for ISSUE in $ISSUES; do
+  TITLE=$(bd show "$ISSUE" --json 2>/dev/null | jq -r '.[0].title // "?"')
+  echo "  - $ISSUE: $TITLE"
+done
+
+# Check for next wave
+NEXT_COUNT=$(bd ready --json 2>/dev/null | jq 'length')
+if [ "$NEXT_COUNT" -gt 0 ]; then
+  echo ""
+  echo "$NEXT_COUNT issues ready for next wave"
+  echo "Run /conductor:bd-swarm-auto to continue"
+else
+  echo ""
+  echo "Backlog complete!"
+fi
+
+# Audio notification via TTS
+mcp-cli call tabz/tabz_speak '{"text": "Wave complete. '"$ISSUE_COUNT"' issues closed.", "rate": 1.1}' 2>/dev/null || true
+```
+
+Summary shows completed issues and next steps.
+"""

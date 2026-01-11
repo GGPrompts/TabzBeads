@@ -160,7 +160,32 @@ bdw-*   = Worker internal (execution steps)
 - `bd worktree create` - auto-configures beads redirect
 - `bd create --type agent` - track workers as agents
 - `bd agent spawn/done` - state machine for workers
-- `bd mol run` - spawn from workflow templates
+- `bd mol pour/wisp` - spawn from workflow templates
+
+### Molecule Templates
+
+Reusable workflow templates are stored in `.beads/formulas/`:
+
+| Formula | Purpose |
+|---------|---------|
+| `conductor-wave` | Complete wave lifecycle (setup → execute → complete) |
+
+```bash
+# List available formulas
+bd formula list
+
+# Show formula details
+bd formula show conductor-wave
+
+# Instantiate as ephemeral wisp (recommended)
+bd mol wisp conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
+
+# Instantiate as persistent pour (for audit trail)
+bd mol pour conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
+
+# Or use the command
+/conductor:bdc-run-wave TabzBeads-abc TabzBeads-def
+```
 
 ---
 
@@ -179,6 +204,7 @@ bdw-*   = Worker internal (execution steps)
 |---------|---------|
 | `/conductor:bdc-swarm-auto` | Autonomous waves until backlog empty |
 | `/conductor:bdc-wave-done` | Merge branches, unified review, cleanup |
+| `/conductor:bdc-run-wave` | Run wave from conductor-wave template |
 | `/conductor:bdc-orchestration` | Multi-session coordination |
 
 ### Worker Internal (bdw-)
