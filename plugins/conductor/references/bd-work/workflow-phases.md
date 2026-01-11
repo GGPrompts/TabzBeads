@@ -172,20 +172,19 @@ fi
 
 ## Phase 6: Match Skills
 
-Match issue keywords to relevant skills:
+Match issue keywords to domain phrases that trigger skill-eval hook:
 
-| Issue mentions... | Relevant skill |
-|-------------------|----------------|
-| UI, component, modal, form | `/shadcn-ui` |
-| terminal, xterm, pty | `/xterm-js:xterm-js` |
-| style, CSS, tailwind | `/tailwindcss` or `/ui-styling:ui-styling` |
-| MCP, tools, server | `/mcp-builder:mcp-builder` |
-| docs, documentation | `/docs-seeker:docs-seeker` |
-| code review, quality | `/conductor:bdw-code-review` |
+| Issue mentions... | Keywords to include |
+|-------------------|---------------------|
+| UI, component, modal, form | shadcn/ui components, Radix UI |
+| terminal, xterm, pty | xterm.js terminal, resize handling, FitAddon |
+| style, CSS, tailwind | Tailwind CSS styling |
+| MCP, tools, server | MCP tools, browser automation |
+| docs, documentation | documentation, llms.txt |
+| code review, quality | code review, quality checks |
 
-**Invocation formats:**
-- User/project skills: `/skill-name`
-- Plugin skills: `/plugin-name:skill-name`
+**How it works:**
+Include domain keywords in the prompt Context section. The skill-eval hook (UserPromptSubmit) detects these keywords and suggests relevant skills to activate.
 
 ---
 

@@ -64,7 +64,7 @@ echo "Backlog complete!"
 | Worker count | Ask user | All ready issues |
 | Waves | One wave | Repeat until empty |
 | Decisions | AskUserQuestion | Reasonable defaults |
-| Context check | Manual | Auto /wipe at 75% |
+| Context check | Manual | Auto /tmux:restart at 75% |
 
 ## Enhanced Prompt for Autonomous Workers
 

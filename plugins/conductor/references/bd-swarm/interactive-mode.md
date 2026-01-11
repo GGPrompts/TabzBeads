@@ -117,21 +117,18 @@ Before sending, craft a detailed prompt following the structure in `references/w
 Find real available skills using the discovery script:
 
 ```bash
-# Discover actual skills (queries API + filesystem)
-./plugins/conductor/scripts/discover-skills.sh "backend api terminal"
-
-# Or use match-skills.sh for keyword-based matching:
+# Get keyword phrases for skill-eval hook activation:
 MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
-SKILL_INVOCATIONS=$($MATCH_SCRIPT --issue "$ISSUE_ID")
-# Output: /backend-development:backend-development /conductor:bdc-orchestration
+SKILL_KEYWORDS=$($MATCH_SCRIPT --issue "$ISSUE_ID")
+# Output: "backend development, REST API, Node.js"
 ```
 
-**CRITICAL:** Use full `plugin:skill` format. "Use the X skill" does NOT trigger invocation.
+**KEYWORD-BASED ACTIVATION:** The skill-eval hook detects domain keywords and activates skills automatically.
 
-| ❌ Wrong | ✅ Correct |
-|----------|-----------|
-| `/backend-development` | `/backend-development:backend-development` |
-| "Use the X skill for..." | Explicit `/plugin:skill` in "Skills to Load" section |
+| ❌ Old Approach | ✅ New Approach |
+|-----------------|-----------------|
+| `/backend-development:backend-development` | "backend development, REST API patterns" |
+| "Skills to Load" section | Keywords in Context section |
 
 ### Step 5b: Get Key Files (Optional)
 
@@ -149,9 +146,8 @@ SESSION="ctt-claude-xxx"
 ISSUE_ID="TabzChrome-abc"
 TITLE="Fix something"
 DESCRIPTION="Details from bd show"
-# Skill invocations from discover-skills.sh or match-skills.sh:
-SKILL_INVOCATIONS="/backend-development:backend-development
-/ui-styling:ui-styling"
+# Keyword phrases from match-skills.sh:
+SKILL_KEYWORDS="backend development, REST API, Node.js"
 KEY_FILES="extension/components/Terminal.tsx
 extension/hooks/useTerminalSessions.ts"
 
@@ -168,18 +164,13 @@ if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   exit 1
 fi
 
-# Build enhanced prompt with skill invocations
+# Build enhanced prompt with keywords (skill-eval hook handles activation)
 PROMPT=$(cat <<EOF
 Fix beads issue ${ISSUE_ID}: "${TITLE}"
 
-## Skills to Load
-**FIRST**, invoke these skills before starting work:
-${SKILL_INVOCATIONS}
-
-These load patterns and context you'll need.
-
 ## Context
 ${DESCRIPTION}
+This task involves ${SKILL_KEYWORDS}
 
 ## Key Files
 ${KEY_FILES:-"Explore as needed based on the issue description."}
@@ -197,7 +188,7 @@ The worker-done command notifies the conductor via API automatically.
 EOF
 )
 
-# Send prompt safely
+# Send prompt safely using load-buffer (handles multi-line)
 printf '%s' "$PROMPT" | tmux load-buffer -
 tmux paste-buffer -t "$SESSION"
 sleep 0.3
@@ -209,13 +200,12 @@ tmux send-keys -t "$SESSION" C-m
 | Section | Purpose |
 |---------|---------|
 | Title line | Issue ID + title for clarity |
-| Skills to Load | **Explicit** `/plugin:skill` invocations |
-| Context | Description + WHY this matters |
+| Context | Description + domain keywords for skill activation |
 | Key Files | Starting points (optional) |
 | Approach | Implementation guidance |
 | When Done | **Mandatory** `/conductor:bdw-worker-done` instruction |
 
-**Note:** The `/conductor:bdw-worker-done` command automatically notifies the conductor via API.
+**Note:** Domain keywords trigger the skill-eval hook automatically. The `/conductor:bdw-worker-done` command notifies the conductor via API.
 
 ## 6. Start Monitor & Poll
 
