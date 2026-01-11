@@ -40,6 +40,7 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. H
 | 7 | Visual QA (--visual-qa flag) | Optional | Quick checks (default) or full subagent review |
 | 8 | Sync and push | Yes | Final push to remote |
 | 9 | Audio summary | No | Announce completion |
+| 10 | Context check | No | If ≥75%, signal to run /clear + bd prime |
 
 **Why unified review at wave level:** Workers do NOT run code review (to avoid conflicts when running in parallel). The conductor does the sole code review after merge, catching cross-worker interactions and ensuring the combined changes work together.
 
@@ -501,3 +502,49 @@ fi
 ```
 
 For fully autonomous operation, use `/conductor:bd-swarm-auto` which loops waves automatically.
+
+---
+
+## Step 10: Context Check and Auto-Clear
+
+**Final step:** Check conductor context and clear if high to prepare for next wave.
+
+```bash
+echo "=== Step 10: Context Check ==="
+
+# Extract context % from tmux status bar
+CTX=$(tmux capture-pane -p | grep -oE '[0-9]+% ctx' | grep -oE '[0-9]+' | tail -1)
+
+if [ -z "$CTX" ]; then
+  echo "Could not detect context % - skipping auto-clear"
+elif [ "$CTX" -ge 75 ]; then
+  echo "⚠️  Context at ${CTX}% - clearing for next wave..."
+  echo ""
+  echo "Run these commands to clear and continue:"
+  echo "  /clear"
+  echo "  bd prime"
+  echo ""
+  echo "Or wait 5 seconds for auto-clear..."
+  # Note: Actual /clear must be invoked by Claude, not bash
+  # This is a signal to the conductor to run /clear + bd prime
+elif [ "$CTX" -ge 50 ]; then
+  echo "⚡ Context at ${CTX}% - consider clearing soon"
+else
+  echo "✓ Context at ${CTX}% - OK for next wave"
+fi
+```
+
+**Thresholds:**
+| Context | Action |
+|---------|--------|
+| < 50% | ✓ Continue normally |
+| 50-74% | ⚡ Warning - consider clearing after next wave |
+| ≥ 75% | ⚠️ Critical - run `/clear` then `bd prime` |
+
+**Important:** The `/clear` command must be invoked by Claude directly (not via bash). When context is critical:
+1. Wave-done outputs the warning
+2. Conductor runs `/clear`
+3. Conductor runs `bd prime` to reload beads context
+4. Ready for next wave with fresh context
+
+This ensures all wave state (closed issues, merged code, synced beads) is persisted before clearing context.

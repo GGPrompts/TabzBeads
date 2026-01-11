@@ -165,11 +165,10 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
 
   echo "=== $ISSUE_ID: $TITLE ==="
 
-  # Match skills (verified against available) - keep /plugin:skill format
-  SKILLS=$($MATCH_SCRIPT --verify "$TITLE $DESC $LABELS" 2>/dev/null)
-  SKILL_CMDS=$(echo "$SKILLS" | grep -oE '/[a-z-]+:[a-z-]+' | sort -u | tr '\n' ',' | sed 's/,$//')
-  if [ -n "$SKILL_CMDS" ]; then
-    echo "Skills: $SKILL_CMDS"
+  # Match skills (keyword phrases for skill-eval hook activation)
+  SKILL_KEYWORDS=$($MATCH_SCRIPT --verify "$TITLE $DESC $LABELS" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//')
+  if [ -n "$SKILL_KEYWORDS" ]; then
+    echo "Skills: $SKILL_KEYWORDS"
   fi
 
   # Find key files (based on keywords in title/description)
@@ -183,16 +182,18 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
   KEY_FILES=$(echo "$KEY_FILES" | tr ' ' '\n' | sort -u | head -10 | tr '\n' ',' | sed 's/,$//')
   [ -n "$KEY_FILES" ] && echo "Files: $KEY_FILES"
 
-  # Build skill keywords (for skill-eval hook activation)
-  SKILL_KEYWORDS=""
-  [ -n "$SKILL_CMDS" ] && SKILL_KEYWORDS="
-This task involves: $SKILL_CMDS"
+  # Build skill context for prompt (uses keyword phrases directly)
+  SKILL_CONTEXT=""
+  [ -n "$SKILL_KEYWORDS" ] && SKILL_CONTEXT="
 
-  # Craft prepared prompt (keywords help skill-eval hook identify relevant skills)
+## Relevant Skills
+$SKILL_KEYWORDS"
+
+  # Craft prepared prompt (keyword phrases help skill-eval hook identify relevant skills)
   PREPARED_PROMPT="Fix beads issue $ISSUE_ID: \"$TITLE\"
 
 ## Context
-$DESC$SKILL_KEYWORDS
+$DESC$SKILL_CONTEXT
 
 ## Key Files
 $KEY_FILES
@@ -201,8 +202,8 @@ $KEY_FILES
 Run: /conductor:bdw-worker-done $ISSUE_ID"
 
   # Store prepared data in issue notes (YAML-like format)
-  # Skills stored as keyword phrases (hook handles activation)
-  NOTES="prepared.skills: $SKILL_CMDS
+  # Skills stored as keyword phrases (hook handles activation via natural language)
+  NOTES="prepared.skills: $SKILL_KEYWORDS
 prepared.files: $KEY_FILES
 prepared.prompt: |
 $(echo "$PREPARED_PROMPT" | sed 's/^/  /')"
@@ -241,16 +242,13 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
   DESC=$(echo "$ISSUE_JSON" | jq -r '.[0].description // ""')
   LABELS=$(echo "$ISSUE_JSON" | jq -r '.[0].labels[]?' | tr '\n' ' ')
 
-  # Match skills using central script (verified against available skills)
-  SKILLS=$($MATCH_SCRIPT --verify "$TITLE $DESC $LABELS" 2>/dev/null)
+  # Match skills using central script (returns keyword phrases)
+  SKILL_KEYWORDS=$($MATCH_SCRIPT --verify "$TITLE $DESC $LABELS" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//')
 
-  # Extract skill names for storage (e.g., "ui-styling, backend-development")
-  SKILL_NAMES=$(echo "$SKILLS" | grep -oE '/[a-z-]+:[a-z-]+' | sed 's|^/||' | tr '\n' ',' | sed 's/,$//')
-
-  if [ -n "$SKILL_NAMES" ]; then
-    # Persist to beads notes
-    $MATCH_SCRIPT --persist "$ISSUE_ID" "$SKILL_NAMES"
-    echo "$ISSUE_ID: $SKILL_NAMES"
+  if [ -n "$SKILL_KEYWORDS" ]; then
+    # Persist keyword phrases to beads notes
+    $MATCH_SCRIPT --persist "$ISSUE_ID" "$SKILL_KEYWORDS"
+    echo "$ISSUE_ID: $SKILL_KEYWORDS"
   else
     echo "$ISSUE_ID: (no skills matched)"
   fi
