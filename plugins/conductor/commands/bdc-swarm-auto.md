@@ -36,8 +36,8 @@ GOOD: 3-4 terminals with focused prompts -> smooth execution
 ## EXECUTE NOW - Wave Loop
 
 ```bash
-# Get ready issues
-READY=$(bd ready --json | jq -r '.[].id')
+# Get ready issues (skip epics and gate issues)
+READY=$(bd ready --json | jq -r '.[] | select(.type != "epic") | select(.title | test("GATE"; "i") | not) | .id')
 [ -z "$READY" ] && echo "Backlog complete!" && exit 0
 
 # Count and distribute to max 4 workers
