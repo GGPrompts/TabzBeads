@@ -39,6 +39,7 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 | 5.6 | Update agent bead state | No - best effort | **Worker mode only** |
 | 6 | `/conductor:bdw-close-issue` | Yes - report result | Closes all issues if batched |
 | 6.5 | Complexity-aware review | No - standalone only | **Standalone only** |
+| 6.8 | Capture transcript | No - best effort | **Worker mode only** |
 | 7 | Notify conductor | No - best effort | **Worker mode only** |
 | 8 | Standalone next steps | No - informational | **Standalone mode only** |
 
@@ -432,6 +433,59 @@ For **complex** changes:
 ```
 
 Review is non-blocking for the close step (already completed), but any blockers found should be addressed before pushing.
+
+### Step 6.8: Capture Transcript (WORKER MODE ONLY)
+
+**Skip this step if EXECUTION_MODE=standalone.**
+
+Capture the worker session transcript before notifying conductor. This preserves the full session for later analysis.
+
+```bash
+if [ "$EXECUTION_MODE" = "worker" ]; then
+  echo "=== Step 6.8: Capture Transcript ==="
+
+  WORKER_SESSION=$(tmux display-message -p '#{session_name}' 2>/dev/null || echo '')
+  TRANSCRIPT_DIR=".beads/transcripts"
+
+  if [ -n "$WORKER_SESSION" ]; then
+    mkdir -p "$TRANSCRIPT_DIR"
+
+    # Use first issue ID for filename (or batch ID if batched)
+    if [ "$IS_BATCHED" = true ]; then
+      TRANSCRIPT_FILE="$TRANSCRIPT_DIR/batch-${ISSUE_IDS[0]}.txt"
+    else
+      TRANSCRIPT_FILE="$TRANSCRIPT_DIR/${ISSUE_ID}.txt"
+    fi
+
+    # Capture full scrollback
+    {
+      echo "# Transcript: $WORKER_SESSION"
+      echo "# Issue: ${ISSUE_ID:-${ISSUE_IDS[*]}}"
+      echo "# Captured: $(date -Iseconds)"
+      echo "# =========================================="
+      echo ""
+      tmux capture-pane -t "$WORKER_SESSION" -p -S - 2>/dev/null
+    } > "$TRANSCRIPT_FILE"
+
+    echo "Captured transcript to $TRANSCRIPT_FILE"
+
+    # Record in issue notes
+    if [ "$IS_BATCHED" = true ]; then
+      for ID in "${ISSUE_IDS[@]}"; do
+        bd update "$ID" --notes "$(bd show "$ID" --json | jq -r '.[0].notes // ""')
+transcript: $TRANSCRIPT_FILE" 2>/dev/null || true
+      done
+    else
+      bd update "$ISSUE_ID" --notes "$(bd show "$ISSUE_ID" --json | jq -r '.[0].notes // ""')
+transcript: $TRANSCRIPT_FILE" 2>/dev/null || true
+    fi
+  else
+    echo "No tmux session detected, skipping transcript capture"
+  fi
+fi
+```
+
+**Why capture before notify:** Once we notify the conductor, the session may be killed quickly. Capturing first preserves the full context.
 
 ### Step 7: Notify Conductor (WORKER MODE ONLY)
 
