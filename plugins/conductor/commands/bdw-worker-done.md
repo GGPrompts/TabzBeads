@@ -1,5 +1,5 @@
 ---
-description: "Complete worker task: verify build, run tests, commit, and close issue. Code review happens at conductor level after merge. Invoke with /conductor:worker-done <issue-id>"
+description: "Complete worker task: verify build, run tests, commit, and close issue. Supports batched mode with multiple issue IDs. Invoke with /conductor:worker-done <issue-id> [issue-id2] [issue-id3]"
 ---
 
 # Worker Done - Task Completion Orchestrator
@@ -9,28 +9,35 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 ## Usage
 
 ```bash
+# Single issue
 /conductor:worker-done TabzChrome-abc
+
+# Multiple issues (batched worker)
+/conductor:worker-done TabzChrome-abc TabzChrome-def TabzChrome-ghi
 
 # Or if issue ID is in your task header:
 /conductor:worker-done
 ```
+
+**Batched Mode:** When multiple issue IDs are provided, assumes commits are already done for each issue (as per batched prompt template). Runs build/test once, then closes all issues.
 
 ## Pipeline Overview
 
 | Step | Command | Blocking? | Mode-specific |
 |------|---------|-----------|---------------|
 | 0 | Detect execution mode | No | Sets EXECUTION_MODE |
+| 0.1 | Detect batched mode | No | Sets IS_BATCHED, ISSUE_IDS array |
 | 0.5 | Detect change types | No | Sets DOCS_ONLY |
 | 0.6 | Detect complexity | No | Sets COMPLEXITY (simple/complex) |
 | 1 | `/conductor:verify-build` | Yes - stop on failure | Skip if DOCS_ONLY |
 | 1a | `plugin-validator` agent | Yes - stop on failure | ONLY if DOCS_ONLY |
 | 2 | `/conductor:run-tests` | Yes - stop on failure | Skip if DOCS_ONLY |
-| 3 | `/conductor:commit-changes` | Yes - stop on failure | Always run |
+| 3 | `/conductor:commit-changes` | Yes - stop on failure | **Skip if batched** (commits done per-task) |
 | 4 | `/conductor:create-followups` | No - log and continue | Always run |
 | 5 | `/conductor:update-docs` | No - log and continue | Always run |
 | 5.5 | Record completion info | No - best effort | Includes COMPLEXITY |
 | 5.6 | Update agent bead state | No - best effort | **Worker mode only** |
-| 6 | `/conductor:close-issue` | Yes - report result | Always run |
+| 6 | `/conductor:close-issue` | Yes - report result | Closes all issues if batched |
 | 6.5 | Complexity-aware review | No - standalone only | **Standalone only** |
 | 7 | Notify conductor | No - best effort | **Worker mode only** |
 | 8 | Standalone next steps | No - informational | **Standalone mode only** |
@@ -92,6 +99,46 @@ fi
 | Code review | Skip (conductor handles) | Optional (user choice) |
 | Push | Skip (conductor handles) | User should push |
 | Notify conductor | Yes (Step 7) | No |
+
+---
+
+### Step 0.1: Detect Batched Mode
+
+**CRITICAL: Parse arguments to detect if multiple issue IDs were provided.**
+
+```bash
+echo "=== Step 0.1: Detecting Batched Mode ==="
+
+# Parse arguments - all args are issue IDs
+ISSUE_IDS=($@)  # Array of issue IDs
+ISSUE_COUNT=${#ISSUE_IDS[@]}
+
+if [ "$ISSUE_COUNT" -gt 1 ]; then
+  IS_BATCHED=true
+  echo "╔══════════════════════════════════════════════════════════════╗"
+  echo "║  BATCHED MODE DETECTED                                       ║"
+  echo "╠══════════════════════════════════════════════════════════════╣"
+  echo "║  Issues in batch: $ISSUE_COUNT"
+  for ID in "${ISSUE_IDS[@]}"; do
+    echo "║    - $ID"
+  done
+  echo "║                                                              ║"
+  echo "║  • Commits assumed done per-task (step 3 skipped)           ║"
+  echo "║  • Build/test runs once for all changes                     ║"
+  echo "║  • All issues closed together                               ║"
+  echo "╚══════════════════════════════════════════════════════════════╝"
+else
+  IS_BATCHED=false
+  ISSUE_ID="${ISSUE_IDS[0]:-$ISSUE_ID}"  # Use parsed or from context
+  echo "Single issue mode: $ISSUE_ID"
+fi
+```
+
+**Batched mode behavior:**
+- **Step 3 (commit)**: Skipped - batched prompt template instructs per-task commits
+- **Step 5.5 (record)**: Records completion for all issues in batch
+- **Step 6 (close)**: Uses `bd close <id1> <id2> ...` to close all at once
+- **Step 7 (notify)**: Notifies conductor with all issue IDs
 
 ---
 
@@ -233,11 +280,29 @@ echo "=== Step 2: Test Verification ==="
 ```
 Run `/conductor:run-tests`. If `passed: false` -> **STOP**, fix tests, re-run.
 
-### Step 3: Commit Changes
+### Step 3: Commit Changes (skip if batched)
+
 ```bash
 echo "=== Step 3: Commit ==="
+
+if [ "$IS_BATCHED" = true ]; then
+  echo "BATCHED MODE: Skipping commit step (commits done per-task in batched prompt)"
+  echo "Verifying commits exist for all batched issues..."
+  for ID in "${ISSUE_IDS[@]}"; do
+    if git log --oneline --all | grep -q "$ID"; then
+      echo "  ✓ $ID - commit found"
+    else
+      echo "  ✗ $ID - WARNING: no commit found with issue ID"
+    fi
+  done
+else
+  # Single issue mode - run commit command
+  /conductor:commit-changes $ISSUE_ID
+fi
 ```
-Run `/conductor:commit-changes <issue-id>`. Creates conventional commit with Claude signature.
+
+**Single issue:** Run `/conductor:commit-changes <issue-id>`. Creates conventional commit with Claude signature.
+**Batched:** Skip (commits already done per-task by worker following batched prompt template).
 
 ### Step 4-5: Non-blocking
 ```bash
@@ -250,19 +315,34 @@ Run `/conductor:create-followups` and `/conductor:update-docs`. Log and continue
 ```bash
 echo "=== Step 5.5: Record Completion Info ==="
 
-# Get existing notes and append completion info
-EXISTING_NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.notes // ""')
 COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+COMPLETED_AT=$(date -Iseconds)
 
-# Append completion info to existing notes (includes complexity metrics)
-NEW_NOTES="${EXISTING_NOTES}
-completed_at: $(date -Iseconds)
+# Function to record completion for a single issue
+record_completion() {
+  local ID="$1"
+  local EXISTING_NOTES=$(bd show "$ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+
+  # Append completion info to existing notes (includes complexity metrics)
+  local NEW_NOTES="${EXISTING_NOTES}
+completed_at: $COMPLETED_AT
 commit: $COMMIT_SHA
 complexity: $COMPLEXITY (score: $COMPLEXITY_SCORE)
 files_changed: $FILE_COUNT
 loc_changed: $LOC_CHANGED"
 
-bd update "$ISSUE_ID" --notes "$NEW_NOTES"
+  bd update "$ID" --notes "$NEW_NOTES"
+  echo "  Recorded completion for $ID"
+}
+
+if [ "$IS_BATCHED" = true ]; then
+  echo "Recording completion for ${#ISSUE_IDS[@]} batched issues..."
+  for ID in "${ISSUE_IDS[@]}"; do
+    record_completion "$ID"
+  done
+else
+  record_completion "$ISSUE_ID"
+fi
 ```
 
 This creates an audit trail with start time (from spawn), completion time, commit, and complexity metrics for analysis.
@@ -294,11 +374,23 @@ fi
 
 This enables monitoring workers via `bd list --type=agent` and dead detection via heartbeat.
 
-### Step 6: Close Issue
+### Step 6: Close Issue(s)
 ```bash
-echo "=== Step 6: Close Issue ==="
+echo "=== Step 6: Close Issue(s) ==="
+
+if [ "$IS_BATCHED" = true ]; then
+  echo "Closing ${#ISSUE_IDS[@]} batched issues..."
+  # bd close supports multiple IDs in a single command (more efficient)
+  bd close "${ISSUE_IDS[@]}" --reason="Completed in batch"
+  echo "  Closed: ${ISSUE_IDS[*]}"
+else
+  # Single issue - use close-issue command for standard behavior
+  /conductor:close-issue "$ISSUE_ID"
+fi
 ```
-Run `/conductor:close-issue <issue-id>`. Reports final status.
+
+**Single issue:** Run `/conductor:close-issue <issue-id>`. Reports final status.
+**Batched:** Use `bd close <id1> <id2> ...` to close all issues atomically.
 
 ### Step 6.5: Complexity-Aware Review (STANDALONE MODE ONLY)
 
@@ -356,11 +448,20 @@ echo "=== Step 7: Notify Conductor ==="
 SUMMARY=$(git log -1 --format='%s' 2>/dev/null | tr -d '\n' | head -c 80 || echo 'committed')
 WORKER_SESSION=$(tmux display-message -p '#{session_name}' 2>/dev/null || echo 'unknown')
 
+# Build notification message based on batched mode
+if [ "$IS_BATCHED" = true ]; then
+  ISSUE_LIST="${ISSUE_IDS[*]}"
+  NOTIFY_MSG="BATCH COMPLETE: ${ISSUE_IDS[*]} ($ISSUE_COUNT issues)"
+else
+  ISSUE_LIST="$ISSUE_ID"
+  NOTIFY_MSG="WORKER COMPLETE: $ISSUE_ID - $SUMMARY"
+fi
+
 # Primary method: tmux send-keys (Claude Code queues messages, safe even mid-output)
 CONDUCTOR_SESSION="${CONDUCTOR_SESSION:-}"
 if [ -n "$CONDUCTOR_SESSION" ]; then
   # CRITICAL: -l for literal, sleep before C-m, no special chars at start
-  tmux send-keys -t "$CONDUCTOR_SESSION" -l "WORKER COMPLETE: $ISSUE_ID - $SUMMARY"
+  tmux send-keys -t "$CONDUCTOR_SESSION" -l "$NOTIFY_MSG"
   sleep 0.5  # Increased delay - prevents race condition
   tmux send-keys -t "$CONDUCTOR_SESSION" C-m
   echo "Notified conductor via tmux"
@@ -369,10 +470,18 @@ fi
 # Secondary: API broadcast for browser UIs (WebSocket - conductor can't receive this)
 TOKEN=$(cat /tmp/tabz-auth-token 2>/dev/null)
 if [ -n "$TOKEN" ]; then
-  curl -s -X POST http://localhost:8129/api/notify \
-    -H "Content-Type: application/json" \
-    -H "X-Auth-Token: $TOKEN" \
-    -d "{\"type\": \"worker-complete\", \"issueId\": \"$ISSUE_ID\", \"summary\": \"$SUMMARY\", \"session\": \"$WORKER_SESSION\"}" >/dev/null
+  if [ "$IS_BATCHED" = true ]; then
+    # Send batch notification with all issue IDs
+    curl -s -X POST http://localhost:8129/api/notify \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $TOKEN" \
+      -d "{\"type\": \"batch-complete\", \"issueIds\": [$(echo "${ISSUE_IDS[@]}" | sed 's/ /","/g' | sed 's/^/"/;s/$/"/')], \"count\": $ISSUE_COUNT, \"session\": \"$WORKER_SESSION\"}" >/dev/null
+  else
+    curl -s -X POST http://localhost:8129/api/notify \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $TOKEN" \
+      -d "{\"type\": \"worker-complete\", \"issueId\": \"$ISSUE_ID\", \"summary\": \"$SUMMARY\", \"session\": \"$WORKER_SESSION\"}" >/dev/null
+  fi
 fi
 ```
 

@@ -22,54 +22,104 @@ GOOD: 3-4 terminals with focused prompts -> smooth execution
 | Step | Action | Reference |
 |------|--------|-----------|
 | 1 | Get ready issues | `bd ready --json` |
-| 2 | Calculate workers | Max 4, distribute issues |
+| 1.5 | Check for batches | `match-skills.sh --all-batches` |
+| 2 | Calculate workers | 1 per batch (max 4) |
 | 3 | Create worktrees | Parallel, wait for all |
 | 4 | Spawn workers | TabzChrome API |
-| 5 | Send prompts | Skill-aware prompts with issue context |
+| 5 | Send prompts | **Batch-aware prompts** for grouped issues |
 | 6 | Poll status | Every 2 min, check context |
 | 7 | Merge & cleanup | Kill sessions first |
 | 8 | Visual QA | tabz-manager for UI waves |
 | 9 | Next wave | Loop until empty |
+
+### Batch-Aware Spawning
+
+When issues have `batch.id` in notes (set by bd-plan "Group Tasks"):
+- Group issues by batch ID
+- Spawn 1 worker per batch (not per issue)
+- Use batched prompt template listing all issues
+- Worker commits each issue separately, then closes all
 
 ---
 
 ## EXECUTE NOW - Wave Loop
 
 ```bash
+MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
+
 # Get ready issues (skip epics and gate issues)
 READY=$(bd ready --json | jq -r '.[] | select(.type != "epic") | select(.title | test("GATE"; "i") | not) | .id')
 [ -z "$READY" ] && echo "Backlog complete!" && exit 0
 
-# Count and distribute to max 4 workers
-ISSUES_COUNT=$(echo "$READY" | wc -l)
+# Check for batch assignments
+BATCHES=$($MATCH_SCRIPT --all-batches 2>/dev/null)
+
+if [ -n "$BATCHES" ]; then
+  echo "=== Batch Mode: Spawning by batch ==="
+  WORKER_TARGETS="$BATCHES"
+  IS_BATCH_MODE=true
+else
+  echo "=== Standard Mode: Spawning per issue ==="
+  WORKER_TARGETS="$READY"
+  IS_BATCH_MODE=false
+fi
+
+# Count and limit to max 4 workers
+TARGET_COUNT=$(echo "$WORKER_TARGETS" | wc -l)
 # 1-4: 1-2 workers, 5-8: 2-3 workers, 9+: 3-4 workers
 
-# Create worktrees (parallel)
-for ISSUE_ID in $READY; do
-  ${CLAUDE_PLUGIN_ROOT}/scripts/setup-worktree.sh "$ISSUE_ID" &
+# Create worktrees (parallel) - use first issue ID for batch worktrees
+for TARGET in $WORKER_TARGETS; do
+  if [ "$IS_BATCH_MODE" = true ]; then
+    # For batches, use batch ID as worktree name, get first issue for branch
+    FIRST_ISSUE=$($MATCH_SCRIPT --batch-issues "$TARGET" | head -1)
+    ${CLAUDE_PLUGIN_ROOT}/scripts/setup-worktree.sh "$TARGET" &
+  else
+    ${CLAUDE_PLUGIN_ROOT}/scripts/setup-worktree.sh "$TARGET" &
+  fi
 done
 wait
 
-# Create agent beads for tracking (parallel)
-for ISSUE_ID in $READY; do
-  AGENT_ID=$(bd create --type=agent --title="Worker: $ISSUE_ID" --labels="conductor:worker" --json | jq -r ".id")
-  bd agent state "$AGENT_ID" spawning
-  bd slot set "$AGENT_ID" hook "$ISSUE_ID"
-  bd update "$ISSUE_ID" --notes "agent_id: $AGENT_ID"
+# Create agent beads for tracking
+for TARGET in $WORKER_TARGETS; do
+  if [ "$IS_BATCH_MODE" = true ]; then
+    BATCH_ISSUES=$($MATCH_SCRIPT --batch-issues "$TARGET")
+    AGENT_ID=$(bd create --type=agent --title="Worker: $TARGET" --labels="conductor:worker,batch" --json | jq -r ".id")
+    bd agent state "$AGENT_ID" spawning
+    # Link agent to all issues in batch
+    for ISSUE_ID in $BATCH_ISSUES; do
+      bd slot set "$AGENT_ID" hook "$ISSUE_ID"
+      EXISTING_NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+      bd update "$ISSUE_ID" --notes "${EXISTING_NOTES}
+agent_id: $AGENT_ID"
+    done
+  else
+    AGENT_ID=$(bd create --type=agent --title="Worker: $TARGET" --labels="conductor:worker" --json | jq -r ".id")
+    bd agent state "$AGENT_ID" spawning
+    bd slot set "$AGENT_ID" hook "$TARGET"
+    bd update "$TARGET" --notes "agent_id: $AGENT_ID"
+  fi
 done
 
-# Spawn workers, send prompts, monitor
-# ... see references/wave-execution.md
+# Spawn workers, send prompts (use batched prompt template), monitor
+# ... see "Batched Worker Prompt Template" section below
 
 # After worker init completes, update agent state to running
 # (Workers should call: bd agent state $AGENT_ID running)
 
 # FULL CLOSEOUT: Use wave-done skill (recommended)
-/conductor:wave-done $READY
+if [ "$IS_BATCH_MODE" = true ]; then
+  # For batches, wave-done receives all issue IDs from all batches
+  ALL_ISSUES=""
+  for BATCH_ID in $BATCHES; do
+    BATCH_ISSUES=$($MATCH_SCRIPT --batch-issues "$BATCH_ID")
+    ALL_ISSUES="$ALL_ISSUES $BATCH_ISSUES"
+  done
+  /conductor:wave-done $ALL_ISSUES
+else
+  /conductor:wave-done $READY
+fi
 # Runs: verify workers → kill sessions → merge → build → review → cleanup → push → summary
-
-# QUICK CLEANUP (alternative, skip review):
-# ${CLAUDE_PLUGIN_ROOT}/scripts/completion-pipeline.sh "$READY"
 
 # Check for next wave
 NEXT=$(bd ready --json | jq 'length')
@@ -169,6 +219,138 @@ To find actual available skills, run:
 - **File paths as text** - Workers read files on-demand, avoids bloat
 
 **Full guidelines:** `references/worker-architecture.md`
+
+---
+
+## Batched Worker Prompt Template
+
+When spawning a worker for a batch of issues, use this template:
+
+```markdown
+## Batch Task: BATCH-ID
+
+You have been assigned multiple tasks to complete in sequence. Complete each task and commit separately.
+
+## Skills to Load
+**FIRST**, invoke these skills before starting work:
+- /skill1:skill1
+- /skill2:skill2
+
+---
+
+## Task 1: ISSUE-1-ID - Title 1
+### Context
+[Description from issue 1]
+
+### When Done with Task 1
+```bash
+git add -A && git commit -m "fix(scope): description
+
+Closes: ISSUE-1-ID
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 2: ISSUE-2-ID - Title 2
+### Context
+[Description from issue 2]
+
+### When Done with Task 2
+```bash
+git add -A && git commit -m "fix(scope): description
+
+Closes: ISSUE-2-ID
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 3: ISSUE-3-ID - Title 3 (if present)
+### Context
+[Description from issue 3]
+
+### When Done with Task 3
+```bash
+git add -A && git commit -m "fix(scope): description
+
+Closes: ISSUE-3-ID
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+```
+
+---
+
+## When All Tasks Complete
+Run `/conductor:bdw-worker-done ISSUE-1-ID ISSUE-2-ID ISSUE-3-ID`
+```
+
+### Generating Batched Prompts
+
+```bash
+MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
+
+generate_batched_prompt() {
+  local BATCH_ID="$1"
+  local ISSUES=$($MATCH_SCRIPT --batch-issues "$BATCH_ID")
+  local TASK_NUM=1
+
+  echo "## Batch Task: $BATCH_ID"
+  echo ""
+  echo "You have been assigned multiple tasks to complete in sequence. Complete each task and commit separately."
+  echo ""
+
+  # Collect all skills from batch issues
+  ALL_SKILLS=""
+  for ISSUE_ID in $ISSUES; do
+    ISSUE_SKILLS=$($MATCH_SCRIPT --issue "$ISSUE_ID" 2>/dev/null)
+    ALL_SKILLS="$ALL_SKILLS $ISSUE_SKILLS"
+  done
+  UNIQUE_SKILLS=$(echo "$ALL_SKILLS" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ')
+
+  if [ -n "$UNIQUE_SKILLS" ]; then
+    echo "## Skills to Load"
+    echo "**FIRST**, invoke these skills before starting work:"
+    for skill in $UNIQUE_SKILLS; do
+      echo "- $skill"
+    done
+    echo ""
+  fi
+
+  echo "---"
+  echo ""
+
+  # Generate task sections
+  local ISSUE_LIST=""
+  for ISSUE_ID in $ISSUES; do
+    ISSUE_JSON=$(bd show "$ISSUE_ID" --json)
+    TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
+    DESC=$(echo "$ISSUE_JSON" | jq -r '.[0].description // ""')
+
+    echo "## Task $TASK_NUM: $ISSUE_ID - $TITLE"
+    echo "### Context"
+    echo "$DESC"
+    echo ""
+    echo "### When Done with Task $TASK_NUM"
+    echo '```bash'
+    echo "git add -A && git commit -m \"fix(scope): $TITLE"
+    echo ""
+    echo "Closes: $ISSUE_ID"
+    echo 'Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"'
+    echo '```'
+    echo ""
+    echo "---"
+    echo ""
+
+    ISSUE_LIST="$ISSUE_LIST $ISSUE_ID"
+    ((TASK_NUM++))
+  done
+
+  echo "## When All Tasks Complete"
+  echo "Run \`/conductor:bdw-worker-done$ISSUE_LIST\`"
+}
+
+# Usage: generate_batched_prompt "batch-001" > /tmp/prompt.md
+```
 
 ---
 

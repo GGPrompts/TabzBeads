@@ -40,6 +40,10 @@ AskUserQuestion(
         description: "Assign S/M/L complexity to issues for batching"
       },
       {
+        label: "Group Tasks",
+        description: "Batch simple issues together for efficient worker spawning"
+      },
+      {
         label: "Review Ready",
         description: "Show issues ready to work with no blockers"
       }
@@ -292,6 +296,148 @@ Workers spawned by `/conductor:bd-swarm` can read `complexity` from notes to adj
 
 ---
 
+## Activity: Group Tasks
+
+Combine simple issues into batches for efficient worker spawning. Reads complexity from notes (set by "Estimate Complexity" activity).
+
+### Grouping Rules
+
+| Configuration | Worker Count | Notes |
+|---------------|--------------|-------|
+| 3 Simple (S) | 1 worker | Max efficiency, sequential commits |
+| 2 Simple (S) | 1 worker | Good efficiency |
+| 1 Medium + 1 Simple | 1 worker | Medium leads, simple follows |
+| 1 Medium (M) | 1 worker | Standard execution |
+| 1 Large (L) | 1 worker | Isolated, full context |
+
+### Commands
+
+```bash
+MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
+
+echo "=== Grouping Ready Issues by Complexity ==="
+
+# Get ready issues with complexity from notes
+declare -A SIMPLE_ISSUES=()
+declare -A MEDIUM_ISSUES=()
+declare -A LARGE_ISSUES=()
+
+for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
+  ISSUE_JSON=$(bd show "$ISSUE_ID" --json)
+  NOTES=$(echo "$ISSUE_JSON" | jq -r '.[0].notes // ""')
+  TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
+
+  # Extract complexity (default to M if not set)
+  COMPLEXITY=$(echo "$NOTES" | grep -oP '^complexity:\s*\K[SML]' | head -1)
+  [ -z "$COMPLEXITY" ] && COMPLEXITY="M"
+
+  case "$COMPLEXITY" in
+    S) SIMPLE_ISSUES["$ISSUE_ID"]="$TITLE" ;;
+    M) MEDIUM_ISSUES["$ISSUE_ID"]="$TITLE" ;;
+    L) LARGE_ISSUES["$ISSUE_ID"]="$TITLE" ;;
+  esac
+done
+
+SIMPLE_COUNT=${#SIMPLE_ISSUES[@]}
+MEDIUM_COUNT=${#MEDIUM_ISSUES[@]}
+LARGE_COUNT=${#LARGE_ISSUES[@]}
+
+echo ""
+echo "Found: $SIMPLE_COUNT Simple, $MEDIUM_COUNT Medium, $LARGE_COUNT Large"
+echo ""
+
+# Generate batch IDs and assign
+BATCH_NUM=1
+BATCH_ASSIGNMENTS=()
+
+# Process Simple issues (batch up to 3 together)
+SIMPLE_IDS=(${!SIMPLE_ISSUES[@]})
+i=0
+while [ $i -lt $SIMPLE_COUNT ]; do
+  BATCH_ID="batch-$(printf '%03d' $BATCH_NUM)"
+  BATCH_ISSUES=""
+  BATCH_TITLES=""
+  COUNT=0
+
+  # Take up to 3 simple issues
+  while [ $COUNT -lt 3 ] && [ $i -lt $SIMPLE_COUNT ]; do
+    ID="${SIMPLE_IDS[$i]}"
+    BATCH_ISSUES="$BATCH_ISSUES $ID"
+    BATCH_TITLES="$BATCH_TITLES\n  - $ID: ${SIMPLE_ISSUES[$ID]}"
+
+    # Persist batch_id to issue notes
+    $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID"
+
+    ((COUNT++))
+    ((i++))
+  done
+
+  echo "[$BATCH_ID] Simple batch ($COUNT issues):$BATCH_TITLES"
+  BATCH_ASSIGNMENTS+=("$BATCH_ID:$BATCH_ISSUES")
+  ((BATCH_NUM++))
+done
+
+# Process Medium issues (can pair with 1 Simple if available)
+MEDIUM_IDS=(${!MEDIUM_ISSUES[@]})
+for ID in "${MEDIUM_IDS[@]}"; do
+  BATCH_ID="batch-$(printf '%03d' $BATCH_NUM)"
+
+  # Check if any simple issues left unassigned
+  PAIRED_SIMPLE=""
+  for SID in "${SIMPLE_IDS[@]}"; do
+    EXISTING_BATCH=$($MATCH_SCRIPT --get-batch "$SID" 2>/dev/null)
+    if [ -z "$EXISTING_BATCH" ]; then
+      PAIRED_SIMPLE="$SID"
+      break
+    fi
+  done
+
+  if [ -n "$PAIRED_SIMPLE" ]; then
+    echo "[$BATCH_ID] Medium + Simple batch:"
+    echo "  - $ID: ${MEDIUM_ISSUES[$ID]} (lead)"
+    echo "  - $PAIRED_SIMPLE: ${SIMPLE_ISSUES[$PAIRED_SIMPLE]} (follow)"
+    $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID"
+    $MATCH_SCRIPT --persist-batch "$PAIRED_SIMPLE" "$BATCH_ID"
+  else
+    echo "[$BATCH_ID] Medium (solo):"
+    echo "  - $ID: ${MEDIUM_ISSUES[$ID]}"
+    $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID"
+  fi
+
+  ((BATCH_NUM++))
+done
+
+# Process Large issues (always isolated)
+LARGE_IDS=(${!LARGE_ISSUES[@]})
+for ID in "${LARGE_IDS[@]}"; do
+  BATCH_ID="batch-$(printf '%03d' $BATCH_NUM)"
+  echo "[$BATCH_ID] Large (isolated):"
+  echo "  - $ID: ${LARGE_ISSUES[$ID]}"
+  $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID"
+  ((BATCH_NUM++))
+done
+
+echo ""
+echo "=== Summary ==="
+echo "Total batches: $((BATCH_NUM - 1))"
+echo "Workers needed: $((BATCH_NUM - 1)) (vs $((SIMPLE_COUNT + MEDIUM_COUNT + LARGE_COUNT)) without batching)"
+echo ""
+echo "Batch IDs persisted to issue notes. Run /conductor:bdc-swarm-auto to spawn."
+```
+
+### Output Format
+
+Each issue gets a `batch.id` field in its notes:
+```yaml
+complexity: S
+batch.id: batch-001
+batch.position: 1  # Position within batch (1, 2, or 3)
+```
+
+Workers read `batch.id` to know which issues to complete together. Position determines commit order.
+
+---
+
 ## Activity: Review Ready
 
 Show issues ready to work with no blockers.
@@ -343,9 +489,19 @@ After reviewing:
   ├─> Estimate Complexity
   │     └── Assign S/M/L complexity for batching strategy
   │
+  ├─> Group Tasks
+  │     └── Combine S/M/L issues into batches (3S, 1M+1S, 1L)
+  │
   └─> Review Ready
         └── bd ready with priority breakdown
 ```
+
+### Recommended Planning Flow
+
+For optimal batching:
+1. Run **Estimate Complexity** to assign S/M/L to issues
+2. Run **Group Tasks** to create batches
+3. Run `/conductor:bdc-swarm-auto` to spawn workers by batch
 
 ---
 
