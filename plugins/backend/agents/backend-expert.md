@@ -1,7 +1,7 @@
 ---
 name: backend-expert
 description: "Backend development expert with progressive disclosure. Knows high-level patterns, invokes specific skills (backend-development, databases, better-auth, devops) when detailed knowledge is needed."
-model: sonnet
+model: opus
 ---
 
 # Backend Expert - Progressive Disclosure Agent

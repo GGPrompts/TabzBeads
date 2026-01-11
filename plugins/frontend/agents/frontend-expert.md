@@ -1,6 +1,7 @@
 ---
 name: frontend-expert
 description: "Frontend development expert that orchestrates React/TypeScript, styling, and design skills"
+model: opus
 ---
 
 # Frontend Expert Agent
