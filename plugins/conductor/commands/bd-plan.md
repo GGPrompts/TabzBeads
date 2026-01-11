@@ -36,6 +36,10 @@ AskUserQuestion(
         description: "Run skill matcher and persist hints to issue notes"
       },
       {
+        label: "Estimate Complexity",
+        description: "Assign S/M/L complexity to issues for batching"
+      },
+      {
         label: "Review Ready",
         description: "Show issues ready to work with no blockers"
       }
@@ -217,6 +221,77 @@ Skills are matched once during planning and stored in issue notes. When bd-swarm
 
 ---
 
+## Activity: Estimate Complexity
+
+Analyze ready issues and assign complexity (S/M/L) for intelligent batching. Simple tasks can be grouped together, complex tasks stay isolated.
+
+### Complexity Heuristics
+
+| Complexity | Keywords | File Count | Description |
+|------------|----------|------------|-------------|
+| **S** (Simple) | fix, typo, icon, rename, update, bump | 1-2 files | Quick wins, can batch multiple |
+| **M** (Medium) | implement, add, create, extend, refactor | 3-5 files | Standard tasks |
+| **L** (Large) | consolidate, audit, redesign, migrate, overhaul | 6+ files | Complex, isolated execution |
+
+### Commands
+
+```bash
+echo "=== Estimating Complexity for Ready Issues ==="
+
+for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
+  ISSUE_JSON=$(bd show "$ISSUE_ID" --json)
+  TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""' | tr '[:upper:]' '[:lower:]')
+  DESC=$(echo "$ISSUE_JSON" | jq -r '.[0].description // ""' | tr '[:upper:]' '[:lower:]')
+  TEXT="$TITLE $DESC"
+
+  # Estimate complexity based on keywords
+  COMPLEXITY="M"  # Default to Medium
+
+  # Check for Large indicators first (highest priority)
+  if echo "$TEXT" | grep -qE '(consolidate|audit|redesign|migrate|overhaul|refactor.*major|complete.*rewrite)'; then
+    COMPLEXITY="L"
+  # Check for Simple indicators
+  elif echo "$TEXT" | grep -qE '(fix|typo|icon|rename|update|bump|tweak|adjust|minor|simple|quick)'; then
+    COMPLEXITY="S"
+  # Check for Medium indicators (explicit)
+  elif echo "$TEXT" | grep -qE '(implement|add|create|extend|refactor|feature|enhance)'; then
+    COMPLEXITY="M"
+  fi
+
+  # Get current notes and append/update complexity
+  CURRENT_NOTES=$(echo "$ISSUE_JSON" | jq -r '.[0].notes // ""')
+
+  # Remove existing complexity line if present, then add new one
+  NEW_NOTES=$(echo "$CURRENT_NOTES" | grep -v '^complexity:' || true)
+  NEW_NOTES="complexity: $COMPLEXITY
+$NEW_NOTES"
+
+  # Store in beads notes
+  bd update "$ISSUE_ID" --notes "$NEW_NOTES"
+
+  # Display result
+  DISPLAY_TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
+  echo "[$COMPLEXITY] $ISSUE_ID: $DISPLAY_TITLE"
+done
+
+echo ""
+echo "=== Summary ==="
+echo "Simple (S):  $(bd ready --json | jq '[.[] | select(.notes | test("complexity: S"))] | length' 2>/dev/null || echo 0) - can batch together"
+echo "Medium (M):  $(bd ready --json | jq '[.[] | select(.notes | test("complexity: M"))] | length' 2>/dev/null || echo 0) - standard execution"
+echo "Large (L):   $(bd ready --json | jq '[.[] | select(.notes | test("complexity: L"))] | length' 2>/dev/null || echo 0) - isolated execution"
+```
+
+### Batching Strategy
+
+After estimation:
+- **Simple (S)**: Can batch 2-3 together per worker session
+- **Medium (M)**: One issue per worker session
+- **Large (L)**: Dedicated worker with full context, no batching
+
+Workers spawned by `/conductor:bd-swarm` can read `complexity` from notes to adjust execution strategy.
+
+---
+
 ## Activity: Review Ready
 
 Show issues ready to work with no blockers.
@@ -264,6 +339,9 @@ After reviewing:
   │
   ├─> Match Skills
   │     └── Run match-skills.sh --persist for each ready issue
+  │
+  ├─> Estimate Complexity
+  │     └── Assign S/M/L complexity for batching strategy
   │
   └─> Review Ready
         └── bd ready with priority breakdown
