@@ -123,7 +123,7 @@ Find real available skills using the discovery script:
 # Or use match-skills.sh for keyword-based matching:
 MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
 SKILL_INVOCATIONS=$($MATCH_SCRIPT --issue "$ISSUE_ID")
-# Output: /backend-development:backend-development /conductor:orchestration
+# Output: /backend-development:backend-development /conductor:bdc-orchestration
 ```
 
 **CRITICAL:** Use full `plugin:skill` format. "Use the X skill" does NOT trigger invocation.

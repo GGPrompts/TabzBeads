@@ -1,29 +1,23 @@
 ---
-description: "Code review with parallel specialized reviewers. Modes: quick (Codex), standard (Codex + Sonnet parallel), thorough (+ Opus auto-fix). Confidence-based filtering (80+)."
+name: bdw-code-review
+description: "Code review with confidence-based filtering. Modes: quick (lint+types), standard (Opus), thorough (parallel agents). Auto-fixes >=95% confidence issues."
+user-invocable: false
 ---
 
-# Code Review - Parallel Reviewer Pattern
+# Code Review Skill
 
-Automated code review using parallel specialized reviewers for broad coverage with minimal cost.
+Automated code review with confidence-based filtering and test coverage assessment.
 
-**Architecture:** Cheap parallel agents (Codex/Sonnet) for coverage, Opus only for auto-fixes.
+> **Runs in main session.** This skill runs in your current session (NOT forked) to maintain conversation context about what's being reviewed and why. It explicitly spawns subagents (like `conductor:code-reviewer`) for isolated review tasks.
 
 ## Invocation
 
 ```bash
-/conductor:bdw-code-review                    # Standard: Codex + silent-failure-hunter
-/conductor:bdw-code-review --quick            # Quick: Codex only (cheapest)
-/conductor:bdw-code-review --thorough         # Thorough: + Opus for auto-fix
+/conductor:bdw-code-review                    # Standard review (Opus)
+/conductor:bdw-code-review --quick            # Fast: lint + types + secrets only
+/conductor:bdw-code-review --thorough         # Deep: parallel specialized reviewers
 /conductor:bdw-code-review <issue-id>         # Review for specific issue
 ```
-
-## Review Stack
-
-| Mode | Reviewers | Cost | Auto-fix |
-|------|-----------|------|----------|
-| `--quick` | Codex (GPT) | $ | ❌ |
-| Standard | Codex + silent-failure-hunter (Sonnet) | $$ | ❌ |
-| `--thorough` | Codex + silent-failure-hunter + code-reviewer (Opus) | $$$ | ✅ |
 
 ## Core Capabilities
 
@@ -107,69 +101,29 @@ For issues with >=95% confidence:
 
 ### Quick Mode (`--quick`)
 
-Codex only - cheapest, fastest:
-
-```bash
-echo "=== Quick Review (Codex) ==="
-
-# Run Codex review via MCP
-mcp-cli call codex/review '{
-  "uncommitted": true,
-  "prompt": "Check for bugs, security issues, and obvious problems. Be concise."
-}'
-```
-
-Returns pass/fail with issues. No auto-fix.
+Fast checks for trivial changes:
+- Lint check
+- Type check
+- Secret scan
+- Test assessment: `skip` (trivial changes)
 
 ### Standard Mode (default)
 
-Parallel: Codex + silent-failure-hunter (Sonnet)
-
-```bash
-echo "=== Standard Review (Parallel) ==="
-
-# Run both reviewers in parallel using Task tool
-# Reviewer 1: Codex for general issues
-Task(
-  subagent_type="general-purpose",
-  prompt="Run: mcp-cli call codex/review '{\"uncommitted\": true}' and report findings"
-)
-
-# Reviewer 2: Silent failure hunter for error handling
-Task(
-  subagent_type="conductor:silent-failure-hunter",
-  prompt="Audit error handling in uncommitted changes. Report issues with confidence >=80."
-)
-
-# Merge results - any blocker from either reviewer blocks
-```
-
-Broader coverage at low cost. No auto-fix.
+Spawns `conductor:code-reviewer` agent (Opus):
+- Reads CLAUDE.md files
+- Reviews against project conventions
+- Confidence-based filtering
+- **Full test assessment**
+- Auto-fixes high-confidence issues
 
 ### Thorough Mode (`--thorough`)
 
-All three reviewers + Opus auto-fix:
-
-```bash
-echo "=== Thorough Review (Parallel + Auto-fix) ==="
-
-# Run all three in parallel
-# 1. Codex - general issues
-Task(subagent_type="general-purpose", prompt="Run codex/review and report")
-
-# 2. Silent failure hunter - error handling
-Task(subagent_type="conductor:silent-failure-hunter", prompt="Audit error handling")
-
-# 3. Opus code-reviewer - deep review + auto-fix
-Task(
-  subagent_type="conductor:code-reviewer",
-  prompt="Thorough review with auto-fix for >=95% confidence issues"
-)
-
-# Merge results - Opus auto-fixes, others flag
-```
-
-Maximum coverage with auto-fix for high-confidence issues.
+Parallel specialized reviewers:
+1. CLAUDE.md compliance scan
+2. Bug detection
+3. Silent failure hunt
+4. Security scan
+5. **Test coverage analysis**
 
 ---
 
@@ -262,23 +216,7 @@ Task(
 
 | Resource | Purpose |
 |----------|---------|
-| `plugins/conductor/agents/code-reviewer.md` | Opus agent - deep review + auto-fix |
-| `plugins/conductor/agents/silent-failure-hunter.md` | Sonnet agent - error handling specialist |
-| `/conductor:bdw-codex-review` | Standalone Codex review (cheapest) |
+| `plugins/conductor/agents/code-reviewer.md` | Agent implementation |
+| `plugins/conductor/commands/code-review.md` | Command definition |
 | `/conductor:bdw-worker-done` | Full completion pipeline |
 | `/conductor:bdw-run-tests` | Test execution |
-
-## Design Notes
-
-**Why parallel reviewers?**
-- Inspired by Anthropic's feature-dev plugin
-- Cheap agents (Codex/Sonnet) for broad coverage
-- Expensive agent (Opus) only for auto-fixes
-- Specialized focus areas catch more issues than single reviewer
-
-**Cost comparison:**
-```
-Quick:     1x Codex call           ~$0.01
-Standard:  1x Codex + 1x Sonnet    ~$0.05
-Thorough:  1x Codex + 2x Sonnet + 1x Opus  ~$0.30
-```

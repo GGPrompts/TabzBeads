@@ -253,7 +253,7 @@ bd mol pour conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
 ### Additional Commands
 | Command | Purpose |
 |---------|---------|
-| `/conductor:new-project` | Multi-phase project scaffolding |
+| `/conductor:bd-new-project` | Multi-phase project scaffolding |
 | `/conductor:tabz-artist` | Generate images via DALL-E and videos via Sora |
 | `/conductor:tabz-mcp` | Browser automation MCP tool discovery |
 | `/conductor:terminal-tools` | Reference for tmux and TUI tool control |

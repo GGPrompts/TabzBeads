@@ -1,4 +1,5 @@
 ---
+name: bd-new-project
 description: "Multi-phase workflow for brainstorming, scaffolding, and setting up new projects with skill-aware configuration"
 ---
 
@@ -10,13 +11,13 @@ Create new projects from TabzTemplates starters with pre-configured beads issues
 
 ```bash
 # Interactive - prompts for all options
-/conductor:new-project
+/conductor:bd-new-project
 
 # With starter specified
-/conductor:new-project --starter=saas-landing
+/conductor:bd-new-project --starter=saas-landing
 
 # List available starters
-/conductor:new-project --list
+/conductor:bd-new-project --list
 ```
 
 ## Available Starters
@@ -124,7 +125,7 @@ Based on `manifest.yaml` plugins, remind user to configure:
 Display:
 - Project created at: `/path/to/project`
 - Issues loaded: N issues in M waves
-- Next steps: `cd /path/to/project && claude` then `/conductor:bd-swarm-auto`
+- Next steps: `cd /path/to/project && claude` then `/conductor:bdc-swarm-auto`
 
 ---
 
@@ -146,7 +147,7 @@ Reserved variables (auto-generated):
 ## Example Session
 
 ```
-User: /conductor:new-project
+User: /conductor:bd-new-project
 
 Claude: I found 1 available starter:
   1. saas-landing - Modern SaaS landing page with dashboards
@@ -166,7 +167,7 @@ Claude: Creating project at ~/projects/sunshine-rides/...
 
 Ready! To start building:
   cd ~/projects/sunshine-rides && claude
-  /conductor:bd-swarm-auto
+  /conductor:bdc-swarm-auto
 ```
 
 ---

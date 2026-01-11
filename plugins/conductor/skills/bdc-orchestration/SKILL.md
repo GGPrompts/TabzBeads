@@ -1,13 +1,14 @@
 ---
-name: orchestration
+name: bdc-orchestration
 description: "Multi-session Claude workflow orchestration. Spawn workers via TabzChrome, coordinate parallel tasks, use subagents for monitoring/exploration, manage beads issues. Use this skill when coordinating multiple Claude sessions or managing complex multi-step workflows."
+user-invocable: false
 ---
 
 # Orchestration Skill - Multi-Session Workflows
 
 Orchestrate multiple Claude Code sessions, spawn workers, and coordinate parallel work.
 
-> **Subagent support.** Conductor skills that need Task tool (like code-review) use `context: fork` to run in a forked sub-agent with full Task tool access, even when the parent was launched with `--agent`.
+> **Subagent pattern.** Orchestration skills (like wave-done, code-review) run in the main session to maintain conversation context. They explicitly spawn subagents (like `conductor:code-reviewer`) for isolated tasks that don't need parent context.
 
 ## Architecture
 
@@ -31,6 +32,18 @@ Task(
   prompt="Review changes in feature/TabzChrome-abc branch"
 )
 ```
+
+### When to Use Main Session vs Subagents
+
+| Task Type | Run In | Why |
+|-----------|--------|-----|
+| **Orchestration** (wave-done, bd-swarm) | Main session | Needs conversation context, coordinates multiple steps |
+| **Interactive** (bd-work, bd-plan) | Main session | User interaction, decisions, back-and-forth |
+| **Code review** | Subagent | Isolated: "review this diff" - doesn't need wave context |
+| **Docs update** | Subagent | Isolated: "update these docs" - self-contained |
+| **Visual QA** | Subagent | Isolated: "check this UI" - separate browser session |
+
+**Key insight:** Orchestration commands maintain context and spawn subagents for isolated work. Subagents receive explicit context in their prompt, not conversation history.
 
 ---
 

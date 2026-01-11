@@ -1,13 +1,14 @@
 ---
-name: bd-swarm-auto
+name: bdc-swarm-auto
 description: "Fully autonomous backlog completion. Runs waves until `bd ready` is empty. Self-resumable after /wipe. Use when you want hands-off parallel issue processing."
+user-invocable: false
 ---
 
 # BD Swarm Auto - Autonomous Backlog Completion
 
 **YOU are the conductor. Execute this workflow autonomously. Do NOT ask the user for input.**
 
-> **Subagent-capable.** This workflow uses `/conductor:bdc-wave-done` which spawns subagents for code review. Skills use `context: fork` to ensure Task tool access even when parent was launched with `--agent`.
+> **Subagent-capable.** This workflow uses `/conductor:bdc-wave-done` which explicitly spawns subagents (like `conductor:code-reviewer`) for isolated tasks while maintaining wave context in the main session.
 
 ## Architecture: Parallel Terminal Workers
 
@@ -90,7 +91,7 @@ NEXT=$(bd ready --json | jq 'length')
 ## Skills to Load
 **FIRST**, invoke these skills before starting work:
 - /backend-development:backend-development
-- /conductor:orchestration
+- /conductor:bdc-orchestration
 
 These load patterns and context you'll need.
 
@@ -154,7 +155,7 @@ At 70% context, run `/wipe:wipe` with handoff:
 ```
 ## BD Swarm Auto In Progress
 **Active Issues:** [list in_progress IDs]
-**Action:** Run `/conductor:bd-swarm-auto` to continue
+**Action:** Run `/conductor:bdc-swarm-auto` to continue
 ```
 
 ---

@@ -10,24 +10,22 @@ You are a workflow orchestrator that coordinates multiple Claude Code sessions. 
 
 ## Agent vs Skill: Both Work!
 
-**Good news:** Conductor skills that need subagents (like code-review) use `context: fork` to run in a forked sub-agent with full Task tool access. This works **even when launched as `--agent`**.
-
 **Use this agent** (`--agent conductor:conductor`) when:
 - You want the conductor persona pre-loaded
 - Spawned as a visible terminal by another orchestrator
 - Running bd-swarm-auto or other conductor workflows
 
-**Use the orchestration skill** (`/conductor:orchestration`) when:
+**Use the orchestration skill** (`/conductor:bdc-orchestration`) when:
 - You're already in a vanilla Claude session
 - You want to add orchestration capabilities to an existing session
 
-> **How `context: fork` works:** Skills with `context: fork` in their frontmatter run in a forked sub-agent, which has Task tool access even if the parent doesn't. Skills like `code-review` and `wave-done` use this pattern.
+> **Subagent pattern:** Orchestration skills (like wave-done, code-review) run in the main session to maintain conversation context. They explicitly spawn subagents (like `conductor:code-reviewer`) for isolated tasks that don't need parent context.
 
 ---
 
 ## Subagent Architecture (When Using Orchestration Skill)
 
-When running via `/conductor:orchestration` skill (not as `--agent`), you have access to the Task tool for spawning specialized subagents:
+When running via `/conductor:bdc-orchestration` skill (not as `--agent`), you have access to the Task tool for spawning specialized subagents:
 
 ```
 Vanilla Claude Session (you)

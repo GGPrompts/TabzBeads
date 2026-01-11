@@ -172,7 +172,7 @@ This runs: verify → kill sessions → merge → build → review → cleanup �
 
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bd-swarm-auto` | Fully autonomous, no prompts |
+| `/conductor:bdc-swarm-auto` | Fully autonomous, no prompts |
 | `/conductor:work` | Single-session, you do the work |
 | `/conductor:bd-work` | Spawn one visible worker |
 | `/conductor:bdc-wave-done` | Complete a wave of workers |

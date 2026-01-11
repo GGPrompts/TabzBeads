@@ -30,7 +30,7 @@ bd list --status=in_progress
 **Active Issues:**
 - [list the in_progress issue IDs]
 
-**Action Required:** Run `/conductor:bd-swarm-auto` to continue.
+**Action Required:** Run `/conductor:bdc-swarm-auto` to continue.
 
 Beads has full state. The skill will:
 1. Check issue statuses (some may have closed while wiping)

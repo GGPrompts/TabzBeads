@@ -87,7 +87,7 @@ BLOCKED_COUNT=$(bd blocked --json 2>/dev/null | jq 'length' 2>/dev/null || echo 
 
 if [ "$NEXT_READY" -gt 0 ]; then
   echo "  📦 $NEXT_READY issues ready for next wave"
-  echo "  Run: /conductor:bd-swarm or /conductor:bd-swarm-auto"
+  echo "  Run: /conductor:bd-swarm or /conductor:bdc-swarm-auto"
 else
   if [ "$BLOCKED_COUNT" -gt 0 ]; then
     echo "  🔒 $BLOCKED_COUNT issues blocked (waiting on dependencies)"

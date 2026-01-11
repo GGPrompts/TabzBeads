@@ -166,4 +166,4 @@ fi
 echo ""
 echo "Next steps:"
 echo "  bd sync && git push origin main"
-echo "  # Or run full closeout: /conductor:wave-done $ISSUES"
+echo "  # Or run full closeout: /conductor:bdc-wave-done $ISSUES"
