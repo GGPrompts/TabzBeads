@@ -24,9 +24,9 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. H
 | 1.5 | Review worker discoveries | No | Check for untracked TODOs, list discovered-from issues |
 | 2 | Capture transcripts and kill sessions | No | Save session output for analysis, then terminate |
 | 3 | Merge branches to main | Yes | Stop on conflicts |
-| 4 | Build verification | Yes | Verify merged code builds |
-| 5 | Unified code review | Yes | Review all changes together |
-| 6 | Cleanup worktrees and branches | No | Remove temporary resources |
+| 4 | Cleanup worktrees and branches | No | MUST happen before build (Next.js includes worktrees) |
+| 5 | Build verification | Yes | Verify merged code builds (clean directory) |
+| 6 | Unified code review | Yes | Review all changes together |
 | 7 | Visual QA (if UI changes) | Optional | Conductor-level UI verification |
 | 8 | Sync and push | Yes | Final push to remote |
 | 9 | Audio summary | No | Announce completion |
@@ -212,39 +212,12 @@ If merge conflicts -> **STOP**. Resolve manually and re-run.
 
 ---
 
-### Step 4: Build Verification
+### Step 4: Cleanup Worktrees and Branches
+
+**IMPORTANT:** Cleanup MUST happen before build verification. Next.js includes worktree directories in compilation, causing spurious type errors if they exist during build.
 
 ```bash
-echo "=== Step 4: Build Verification ==="
-```
-
-Run `/conductor:verify-build`. If `passed: false` -> **STOP**, fix errors, re-run.
-
-This verifies the merged code builds correctly with all workers' changes combined.
-
----
-
-### Step 5: Unified Code Review
-
-```bash
-echo "=== Step 5: Unified Code Review ==="
-```
-
-Run `/conductor:code-review`. This reviews all merged changes together to catch:
-- Cross-worker interactions
-- Combined code patterns
-- Architectural consistency
-
-**Note:** Workers do NOT run code review (to avoid parallel conflicts). This conductor-level review is the sole code review for all worker changes.
-
-If blockers found -> **STOP**, fix issues, re-run.
-
----
-
-### Step 6: Cleanup Worktrees and Branches
-
-```bash
-echo "=== Step 6: Cleanup ==="
+echo "=== Step 4: Cleanup Worktrees ==="
 
 PROJECT_DIR=$(pwd)
 WORKTREE_DIR="${PROJECT_DIR}-worktrees"
@@ -265,6 +238,35 @@ done
 # Remove worktrees dir if empty
 rmdir "$WORKTREE_DIR" 2>/dev/null || true
 ```
+
+---
+
+### Step 5: Build Verification
+
+```bash
+echo "=== Step 5: Build Verification ==="
+```
+
+Run `/conductor:verify-build`. If `passed: false` -> **STOP**, fix errors, re-run.
+
+This verifies the merged code builds correctly with all workers' changes combined. Worktrees are already cleaned up, so the build runs on a clean directory.
+
+---
+
+### Step 6: Unified Code Review
+
+```bash
+echo "=== Step 6: Unified Code Review ==="
+```
+
+Run `/conductor:code-review`. This reviews all merged changes together to catch:
+- Cross-worker interactions
+- Combined code patterns
+- Architectural consistency
+
+**Note:** Workers do NOT run code review (to avoid parallel conflicts). This conductor-level review is the sole code review for all worker changes.
+
+If blockers found -> **STOP**, fix issues, re-run.
 
 ---
 
