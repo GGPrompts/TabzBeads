@@ -12,12 +12,13 @@ Spawn multiple Claude workers to tackle beads issues in parallel, with skill-awa
 ## Quick Start
 
 ```bash
-# Interactive: select issues and worker count
+# Invoke the command - you'll be prompted to choose mode
 /conductor:bd-swarm
-
-# Auto mode: process entire backlog autonomously
-/conductor:bd-swarm --auto
 ```
+
+On invocation, you'll be asked to choose between:
+- **Interactive mode**: Select specific issues and worker count manually
+- **Autonomous mode**: Process all ready issues automatically in waves
 
 ## Workflow Overview
 
@@ -204,16 +205,27 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/monitor-workers.sh --summary
 
 ---
 
-## Auto Mode (`--auto`)
+## Mode Selection
+
+When invoked, bd-swarm uses AskUserQuestion to let you choose the execution mode:
+
+```markdown
+Use AskUserQuestion with:
+- question: "How should bd-swarm process the backlog?"
+- header: "Mode"
+- options:
+  - label: "Interactive (Recommended)"
+    description: "Select specific issues and worker count manually. Good for controlled execution."
+  - label: "Autonomous"
+    description: "Process all ready issues automatically in waves until backlog is empty."
+```
 
 **See full details:** `references/bd-swarm/auto-mode.md`
 
-Fully autonomous backlog completion. Runs waves until `bd ready` is empty.
+### Mode Comparison
 
-**Conductor behavior:** No user questions, make reasonable defaults, loop until backlog empty.
-
-| Aspect | Interactive | Auto |
-|--------|-------------|------|
+| Aspect | Interactive | Autonomous |
+|--------|-------------|------------|
 | Worker count | Ask user | All ready issues |
 | Waves | One wave | Loop until empty |
 | Decisions | AskUserQuestion ok | No questions |
