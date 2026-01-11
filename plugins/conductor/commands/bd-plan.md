@@ -338,7 +338,7 @@ Workers spawned by `/conductor:bd-swarm` can read `complexity` from notes to adj
 
 ## Activity: Group Tasks
 
-Combine simple issues into batches for efficient worker spawning. Reads complexity from notes (set by "Estimate Complexity" activity).
+Combine simple issues into batches for efficient worker spawning. Reads complexity from notes (set by "Estimate Complexity" activity). Also detects file overlap to prevent merge conflicts.
 
 ### Grouping Rules
 
@@ -349,20 +349,62 @@ Combine simple issues into batches for efficient worker spawning. Reads complexi
 | 1 Medium + 1 Simple | 1 worker | Medium leads, simple follows |
 | 1 Medium (M) | 1 worker | Standard execution |
 | 1 Large (L) | 1 worker | Isolated, full context |
+| Overlapping issues | Same batch OR separate waves | Prevent merge conflicts |
+
+### Overlap Detection
+
+Issues that may touch the same files are detected via:
+- **Explicit files**: `prepared.files` in issue notes
+- **Title keywords**: PascalCase components → `Component.tsx`
+- **Skill overlap**: Same frontend/backend skill = conflict risk
+
+Overlapping issues are grouped together (sequential execution) or assigned to different waves.
 
 ### Commands
 
 ```bash
 MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
 
-echo "=== Grouping Ready Issues by Complexity ==="
+echo "=== Grouping Ready Issues by Complexity + Overlap ==="
 
-# Get ready issues with complexity from notes
+# Get all ready issue IDs
+ALL_READY_IDS=$(bd ready --json | jq -r '.[].id' | tr '\n' ' ')
+
+# Step 1: Detect file overlap FIRST
+echo ""
+echo "--- Checking for file overlap ---"
+OVERLAP_PAIRS=$($MATCH_SCRIPT --detect-overlap "$ALL_READY_IDS" 2>/dev/null | grep -v "^No overlapping")
+
+if [ -n "$OVERLAP_PAIRS" ]; then
+  echo "Found overlapping issues (will group together):"
+  echo "$OVERLAP_PAIRS" | while IFS='|' read -r ID1 ID2 REASON; do
+    [ -z "$ID1" ] && continue
+    echo "  $ID1 <-> $ID2 ($REASON)"
+  done
+else
+  echo "No overlapping issues detected - safe for parallel execution"
+fi
+echo ""
+
+# Step 2: Get overlap groups (issues that must run together)
+OVERLAP_GROUPS=$($MATCH_SCRIPT --overlap-groups "$ALL_READY_IDS" 2>/dev/null | grep -v "^Issue groups")
+declare -A ISSUE_OVERLAP_GROUP
+GROUP_NUM=1
+while read -r GROUP; do
+  [ -z "$GROUP" ] && continue
+  for ID in $GROUP; do
+    ISSUE_OVERLAP_GROUP["$ID"]="$GROUP_NUM"
+  done
+  ((GROUP_NUM++))
+done <<< "$OVERLAP_GROUPS"
+
+# Step 3: Get complexity for each issue
 declare -A SIMPLE_ISSUES=()
 declare -A MEDIUM_ISSUES=()
 declare -A LARGE_ISSUES=()
 
-for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
+for ISSUE_ID in $ALL_READY_IDS; do
+  [ -z "$ISSUE_ID" ] && continue
   ISSUE_JSON=$(bd show "$ISSUE_ID" --json)
   NOTES=$(echo "$ISSUE_JSON" | jq -r '.[0].notes // ""')
   TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
@@ -382,51 +424,95 @@ SIMPLE_COUNT=${#SIMPLE_ISSUES[@]}
 MEDIUM_COUNT=${#MEDIUM_ISSUES[@]}
 LARGE_COUNT=${#LARGE_ISSUES[@]}
 
-echo ""
 echo "Found: $SIMPLE_COUNT Simple, $MEDIUM_COUNT Medium, $LARGE_COUNT Large"
 echo ""
 
-# Generate batch IDs and assign
+# Step 4: Create batches respecting overlap groups
 BATCH_NUM=1
-BATCH_ASSIGNMENTS=()
+declare -A ASSIGNED_ISSUES=()
 
-# Process Simple issues (batch up to 3 together)
+# Helper to check if issue is already assigned
+is_assigned() {
+  [ -n "${ASSIGNED_ISSUES[$1]}" ]
+}
+
+# Process overlap groups first - they MUST stay together
+echo "--- Batching by overlap groups ---"
+while read -r GROUP; do
+  [ -z "$GROUP" ] && continue
+  GROUP_SIZE=$(echo "$GROUP" | wc -w)
+
+  # Skip single-issue groups (no overlap)
+  [ "$GROUP_SIZE" -lt 2 ] && continue
+
+  BATCH_ID="batch-$(printf '%03d' $BATCH_NUM)"
+  echo "[$BATCH_ID] Overlap group ($GROUP_SIZE issues - sequential execution):"
+
+  POSITION=1
+  for ID in $GROUP; do
+    if ! is_assigned "$ID"; then
+      TITLE=""
+      [ -n "${SIMPLE_ISSUES[$ID]}" ] && TITLE="${SIMPLE_ISSUES[$ID]} [S]"
+      [ -n "${MEDIUM_ISSUES[$ID]}" ] && TITLE="${MEDIUM_ISSUES[$ID]} [M]"
+      [ -n "${LARGE_ISSUES[$ID]}" ] && TITLE="${LARGE_ISSUES[$ID]} [L]"
+      echo "  - $ID: $TITLE"
+      $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID" "$POSITION"
+      ASSIGNED_ISSUES["$ID"]=1
+      ((POSITION++))
+    fi
+  done
+
+  ((BATCH_NUM++))
+done <<< "$OVERLAP_GROUPS"
+
+echo ""
+echo "--- Batching remaining isolated issues ---"
+
+# Process remaining Simple issues (batch up to 3 together)
 SIMPLE_IDS=(${!SIMPLE_ISSUES[@]})
 i=0
 while [ $i -lt $SIMPLE_COUNT ]; do
+  ID="${SIMPLE_IDS[$i]}"
+  ((i++))
+
+  # Skip if already assigned to overlap group
+  is_assigned "$ID" && continue
+
   BATCH_ID="batch-$(printf '%03d' $BATCH_NUM)"
-  BATCH_ISSUES=""
-  BATCH_TITLES=""
-  COUNT=0
+  BATCH_TITLES="  - $ID: ${SIMPLE_ISSUES[$ID]}"
+  $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID" "1"
+  ASSIGNED_ISSUES["$ID"]=1
+  COUNT=1
 
-  # Take up to 3 simple issues
+  # Try to add more simple issues (up to 3 total)
   while [ $COUNT -lt 3 ] && [ $i -lt $SIMPLE_COUNT ]; do
-    ID="${SIMPLE_IDS[$i]}"
-    BATCH_ISSUES="$BATCH_ISSUES $ID"
-    BATCH_TITLES="$BATCH_TITLES\n  - $ID: ${SIMPLE_ISSUES[$ID]}"
-
-    # Persist batch_id to issue notes
-    $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID"
-
-    ((COUNT++))
+    NEXT_ID="${SIMPLE_IDS[$i]}"
     ((i++))
+
+    is_assigned "$NEXT_ID" && continue
+
+    BATCH_TITLES="$BATCH_TITLES\n  - $NEXT_ID: ${SIMPLE_ISSUES[$NEXT_ID]}"
+    ((COUNT++))
+    $MATCH_SCRIPT --persist-batch "$NEXT_ID" "$BATCH_ID" "$COUNT"
+    ASSIGNED_ISSUES["$NEXT_ID"]=1
   done
 
-  echo "[$BATCH_ID] Simple batch ($COUNT issues):$BATCH_TITLES"
-  BATCH_ASSIGNMENTS+=("$BATCH_ID:$BATCH_ISSUES")
+  echo "[$BATCH_ID] Simple batch ($COUNT issues):"
+  echo -e "$BATCH_TITLES"
   ((BATCH_NUM++))
 done
 
-# Process Medium issues (can pair with 1 Simple if available)
+# Process Medium issues
 MEDIUM_IDS=(${!MEDIUM_ISSUES[@]})
 for ID in "${MEDIUM_IDS[@]}"; do
+  is_assigned "$ID" && continue
+
   BATCH_ID="batch-$(printf '%03d' $BATCH_NUM)"
 
-  # Check if any simple issues left unassigned
+  # Check if any unassigned simple issues can be paired
   PAIRED_SIMPLE=""
   for SID in "${SIMPLE_IDS[@]}"; do
-    EXISTING_BATCH=$($MATCH_SCRIPT --get-batch "$SID" 2>/dev/null)
-    if [ -z "$EXISTING_BATCH" ]; then
+    if ! is_assigned "$SID"; then
       PAIRED_SIMPLE="$SID"
       break
     fi
@@ -436,12 +522,15 @@ for ID in "${MEDIUM_IDS[@]}"; do
     echo "[$BATCH_ID] Medium + Simple batch:"
     echo "  - $ID: ${MEDIUM_ISSUES[$ID]} (lead)"
     echo "  - $PAIRED_SIMPLE: ${SIMPLE_ISSUES[$PAIRED_SIMPLE]} (follow)"
-    $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID"
-    $MATCH_SCRIPT --persist-batch "$PAIRED_SIMPLE" "$BATCH_ID"
+    $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID" "1"
+    $MATCH_SCRIPT --persist-batch "$PAIRED_SIMPLE" "$BATCH_ID" "2"
+    ASSIGNED_ISSUES["$ID"]=1
+    ASSIGNED_ISSUES["$PAIRED_SIMPLE"]=1
   else
     echo "[$BATCH_ID] Medium (solo):"
     echo "  - $ID: ${MEDIUM_ISSUES[$ID]}"
-    $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID"
+    $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID" "1"
+    ASSIGNED_ISSUES["$ID"]=1
   fi
 
   ((BATCH_NUM++))
@@ -450,10 +539,13 @@ done
 # Process Large issues (always isolated)
 LARGE_IDS=(${!LARGE_ISSUES[@]})
 for ID in "${LARGE_IDS[@]}"; do
+  is_assigned "$ID" && continue
+
   BATCH_ID="batch-$(printf '%03d' $BATCH_NUM)"
   echo "[$BATCH_ID] Large (isolated):"
   echo "  - $ID: ${LARGE_ISSUES[$ID]}"
-  $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID"
+  $MATCH_SCRIPT --persist-batch "$ID" "$BATCH_ID" "1"
+  ASSIGNED_ISSUES["$ID"]=1
   ((BATCH_NUM++))
 done
 
@@ -461,6 +553,12 @@ echo ""
 echo "=== Summary ==="
 echo "Total batches: $((BATCH_NUM - 1))"
 echo "Workers needed: $((BATCH_NUM - 1)) (vs $((SIMPLE_COUNT + MEDIUM_COUNT + LARGE_COUNT)) without batching)"
+
+OVERLAP_BATCH_COUNT=$(echo "$OVERLAP_PAIRS" | grep -c '|' 2>/dev/null || echo 0)
+if [ "$OVERLAP_BATCH_COUNT" -gt 0 ]; then
+  echo "Overlap groups: $OVERLAP_BATCH_COUNT pairs detected and grouped"
+fi
+
 echo ""
 echo "Batch IDs persisted to issue notes. Run /conductor:bdc-swarm-auto to spawn."
 ```
