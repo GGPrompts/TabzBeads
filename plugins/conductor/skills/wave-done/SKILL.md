@@ -7,6 +7,16 @@ description: "Complete a wave of parallel workers: verify all workers finished, 
 
 Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. Handles merge, review, cleanup, and push.
 
+## CLI Flags
+
+| Flag | Values | Default | Description |
+|------|--------|---------|-------------|
+| `--visual-qa` | `quick`, `full`, `skip` | `quick` | Visual QA mode for UI waves |
+
+- **quick**: Console error check + DOM error pattern check (fast, automated)
+- **full**: Quick checks + spawn tabz-manager subagent for interactive review
+- **skip**: Skip visual QA entirely (for backend-only waves)
+
 ## Usage
 
 ```bash
@@ -28,7 +38,7 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. H
 | 4 | Cleanup worktrees and branches | No | MUST happen before build (Next.js includes worktrees) |
 | 5 | Build verification | Yes | Verify merged code builds (clean directory) |
 | 6 | Unified code review | Yes | Review all changes together |
-| 7 | Visual QA (if UI changes) | Optional | Conductor-level UI verification |
+| 7 | Visual QA (--visual-qa flag) | Optional | Quick checks (default) or full subagent review |
 | 8 | Sync and push | Yes | Final push to remote |
 | 9 | Audio summary | No | Announce completion |
 
@@ -271,30 +281,91 @@ If blockers found -> **STOP**, fix issues, re-run.
 
 ---
 
-### Step 7: Visual QA (Optional - UI Changes Only)
+### Step 7: Visual QA (Controlled by --visual-qa Flag)
 
-If the wave included UI changes (React components, CSS, dashboard updates):
+Automated visual sanity checks to catch compounding browser errors early during autonomous swarm execution.
 
 ```bash
 echo "=== Step 7: Visual QA ==="
+
+# Parse --visual-qa flag (default: quick)
+VISUAL_QA_MODE="${VISUAL_QA:-quick}"
+for arg in "$@"; do
+  case "$arg" in
+    --visual-qa=*) VISUAL_QA_MODE="${arg#*=}" ;;
+  esac
+done
+
+if [ "$VISUAL_QA_MODE" = "skip" ]; then
+  echo "Skipping visual QA (--visual-qa=skip)"
+elif [ "$VISUAL_QA_MODE" = "quick" ] || [ "$VISUAL_QA_MODE" = "full" ]; then
+  # Spawn visible tabz-mcp agent for QA checks
+  TOKEN=$(cat /tmp/tabz-auth-token 2>/dev/null)
+
+  if [ -z "$TOKEN" ]; then
+    echo "WARNING: No tabz auth token found - skipping visual QA"
+    echo "Start TabzChrome backend to enable visual QA checks"
+  else
+    PROJECT_DIR=$(pwd)
+
+    QA_PROMPT="Visual QA check after wave merge.
+
+## Mode: $VISUAL_QA_MODE
+
+## Quick Checks (always run)
+1. Check browser console for errors: use tabz_get_console_logs with level=error
+2. Check DOM for React error boundaries or error states (patterns like 'error boundary', 'something went wrong')
+3. Verify the dev server page loads without critical errors
+
+## Full Mode (if mode is 'full')
+- Take screenshots of key UI areas at 1920x1080
+- Interactive review of UI changes
+- Create beads issues for any visual bugs found
+
+## Report
+Summarize findings clearly:
+- If errors found: list them with severity
+- If no errors: confirm visual QA passed
+
+Exit when complete with a clear summary."
+
+    # Spawn the Visual QA agent
+    RESPONSE=$(curl -s -X POST http://localhost:8129/api/spawn \
+      -H "Content-Type: application/json" \
+      -H "X-Auth-Token: $TOKEN" \
+      -d "{\"name\": \"Visual-QA\", \"workingDir\": \"$PROJECT_DIR\", \"command\": \"claude --agent tabz:tabz-mcp --dangerously-skip-permissions\"}")
+
+    QA_SESSION=$(echo "$RESPONSE" | jq -r ".terminal.ptyInfo.tmuxSession")
+
+    if [ -n "$QA_SESSION" ] && [ "$QA_SESSION" != "null" ]; then
+      echo "Spawned Visual QA agent: $QA_SESSION"
+
+      # Wait for agent to initialize
+      sleep 6
+
+      # Send the QA prompt
+      tmux send-keys -t "$QA_SESSION" -l "$QA_PROMPT"
+      sleep 0.3
+      tmux send-keys -t "$QA_SESSION" C-m
+
+      # Wait for agent to complete (poll session existence)
+      echo "Waiting for Visual QA agent to complete..."
+      while tmux has-session -t "$QA_SESSION" 2>/dev/null; do
+        sleep 5
+      done
+      echo "Visual QA complete"
+    else
+      echo "WARNING: Failed to spawn Visual QA agent"
+      echo "Response: $RESPONSE"
+    fi
+  fi
+fi
 ```
 
-Spawn tabz-manager subagent for visual verification:
-
-```
-Task(subagent_type="conductor:tabz-manager",
-     prompt="Visual QA after wave merge.
-       1. Start dev server if needed
-       2. Screenshot key UI areas at 1920x1080
-       3. Check browser console for errors
-       4. Verify all merged UI changes render correctly
-       5. Create beads issues for any visual bugs found")
-```
-
-**Skip this step if:**
-- Wave was backend-only
-- Wave was config/docs changes only
-- No UI components were modified
+**Flag modes:**
+- `--visual-qa=quick` (default): Spawn agent for console + DOM error checks
+- `--visual-qa=full`: Quick checks + screenshots + interactive review
+- `--visual-qa=skip`: Skip entirely (for backend-only waves)
 
 ---
 
