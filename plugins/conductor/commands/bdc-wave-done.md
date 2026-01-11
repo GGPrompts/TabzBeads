@@ -289,11 +289,28 @@ echo "=== Step 7: Visual QA ==="
 
 # Parse --visual-qa flag (default: quick)
 VISUAL_QA_MODE="${VISUAL_QA:-quick}"
+VISUAL_QA_EXPLICIT=false
 for arg in "$@"; do
   case "$arg" in
-    --visual-qa=*) VISUAL_QA_MODE="${arg#*=}" ;;
+    --visual-qa=*) VISUAL_QA_MODE="${arg#*=}"; VISUAL_QA_EXPLICIT=true ;;
   esac
 done
+
+# Auto-detect if visual QA is relevant (unless explicitly set)
+has_ui_changes() {
+  for ISSUE in $ISSUES; do
+    BRANCH="feature/${ISSUE}"
+    if git diff main.."$BRANCH" --name-only 2>/dev/null | grep -qE "\.(tsx|jsx|css|scss|vue|svelte)$"; then
+      return 0  # Has UI changes
+    fi
+  done
+  return 1  # No UI changes
+}
+
+if [ "$VISUAL_QA_EXPLICIT" = "false" ] && ! has_ui_changes; then
+  echo "No UI changes detected - auto-skipping visual QA"
+  VISUAL_QA_MODE="skip"
+fi
 
 if [ "$VISUAL_QA_MODE" = "skip" ]; then
   echo "Skipping visual QA (--visual-qa=skip)"
