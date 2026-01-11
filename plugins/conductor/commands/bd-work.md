@@ -176,11 +176,34 @@ started_at: $(date -Iseconds)"
 
 ## Phase 6: Send Prompt
 
-Wait for Claude to load (~8 seconds), then send using `$SESSION` from Phase 5:
+Wait for Claude to load (~8 seconds), then send using `$SESSION` from Phase 5.
+
+**Use load-buffer for multi-line prompts** (prevents terminal corruption):
 
 ```bash
 sleep 8
-tmux send-keys -t "$SESSION" -l "<crafted-prompt>"
+
+# Write prompt to temp file (handles special chars safely)
+PROMPT_FILE=$(mktemp)
+cat > "$PROMPT_FILE" << 'PROMPT_EOF'
+<crafted-prompt-here>
+PROMPT_EOF
+
+# Load and paste (bypasses shell quoting issues)
+tmux load-buffer "$PROMPT_FILE"
+tmux paste-buffer -t "$SESSION"
+sleep 0.3
+tmux send-keys -t "$SESSION" C-m
+
+# Cleanup
+rm "$PROMPT_FILE"
+```
+
+**Why not `send-keys -l`?** Multi-line content with code blocks, backticks, or nested quotes can trigger tmux copy mode ("jump to backward" in status bar). `load-buffer` + `paste-buffer` bypasses shell processing entirely.
+
+**Short messages still work with send-keys:**
+```bash
+tmux send-keys -t "$SESSION" -l "Simple one-liner"
 sleep 0.3
 tmux send-keys -t "$SESSION" C-m
 ```

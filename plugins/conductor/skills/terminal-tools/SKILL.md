@@ -42,6 +42,39 @@ sleep 0.3  # CRITICAL: prevents race conditions
 tmux send-keys -t SESSION Enter
 ```
 
+### Sending Multi-line Content (Critical)
+```bash
+# WRONG: send-keys with multi-line content can corrupt terminal
+tmux send-keys -t SESSION -l "$LONG_PROMPT"  # May trigger copy mode!
+
+# RIGHT: use load-buffer + paste-buffer for multi-line content
+printf '%s' "$LONG_PROMPT" | tmux load-buffer -
+tmux paste-buffer -t "$SESSION"
+sleep 0.3
+tmux send-keys -t "$SESSION" C-m
+
+# Alternative: use temp file for very long content
+PROMPT_FILE=$(mktemp)
+cat > "$PROMPT_FILE" << 'PROMPT_EOF'
+Your multi-line prompt here...
+Can include special chars, quotes, backticks safely.
+PROMPT_EOF
+tmux load-buffer "$PROMPT_FILE"
+tmux paste-buffer -t "$SESSION"
+tmux send-keys -t "$SESSION" C-m
+rm "$PROMPT_FILE"
+```
+
+**Why this matters:** `send-keys -l` still processes content through the shell, and special characters (backticks, nested quotes, escape sequences) can trigger tmux copy mode or corrupt terminal state. `load-buffer` bypasses this entirely.
+
+**When to use which:**
+| Content Type | Method |
+|--------------|--------|
+| Short one-liner | `send-keys -l` |
+| Multi-line prompt | `load-buffer` + `paste-buffer` |
+| Content with code blocks | `load-buffer` + `paste-buffer` |
+| Simple notification | `send-keys -l` |
+
 ### Window/Pane
 ```bash
 tmux split-window -h                 # Split horizontal

@@ -148,3 +148,27 @@ Commands use prefixes to indicate their purpose:
 | `/conductor:bdw-commit-changes` | Stage + commit with conventional format |
 | `/conductor:bdw-close-issue` | Close a beads issue with completion reason |
 | `/conductor:bdw-worker-done` | Full completion pipeline: verify → test → commit → close → notify |
+
+## Terminal Communication (for workers)
+
+When sending multi-line prompts or notifications via tmux, use `load-buffer` + `paste-buffer` to avoid terminal corruption:
+
+```bash
+# WRONG: Can trigger copy mode with special chars
+tmux send-keys -t "$SESSION" -l "$LONG_PROMPT"
+
+# RIGHT: Reliable for multi-line content
+printf '%s' "$PROMPT" | tmux load-buffer -
+tmux paste-buffer -t "$SESSION"
+sleep 0.3
+tmux send-keys -t "$SESSION" C-m
+```
+
+**Short one-liners** (like notifications) can still use `send-keys -l`:
+```bash
+tmux send-keys -t "$CONDUCTOR_SESSION" -l "DONE: issue-id"
+sleep 0.5
+tmux send-keys -t "$CONDUCTOR_SESSION" C-m
+```
+
+For full tmux patterns, see `/conductor:terminal-tools`.

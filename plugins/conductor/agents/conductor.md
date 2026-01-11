@@ -131,14 +131,36 @@ curl -s -X POST http://localhost:8129/api/notify \
 
 ### Sending Prompts
 
+**For multi-line prompts** (use load-buffer to avoid terminal corruption):
+
 ```bash
 SESSION="ctt-claude-xxx"
 sleep 4  # Wait for Claude to initialize
 
-tmux send-keys -t "$SESSION" -l 'Your prompt here...'
-sleep 0.3  # CRITICAL: Prevents submission before prompt loads
+# Write prompt to temp file (handles special chars, code blocks safely)
+PROMPT_FILE=$(mktemp)
+cat > "$PROMPT_FILE" << 'PROMPT_EOF'
+Your multi-line prompt here...
+Can include backticks, quotes, code blocks.
+PROMPT_EOF
+
+# Load and paste (bypasses shell quoting issues)
+tmux load-buffer "$PROMPT_FILE"
+tmux paste-buffer -t "$SESSION"
+sleep 0.3
+tmux send-keys -t "$SESSION" C-m
+rm "$PROMPT_FILE"
+```
+
+**For short one-liners** (send-keys is fine):
+
+```bash
+tmux send-keys -t "$SESSION" -l 'Simple prompt here'
+sleep 0.3
 tmux send-keys -t "$SESSION" C-m
 ```
+
+**Why load-buffer?** Multi-line content with backticks, nested quotes, or escape sequences can trigger tmux copy mode ("jump to backward" in status bar). `load-buffer` + `paste-buffer` bypasses shell processing entirely.
 
 ### Kill and List
 
