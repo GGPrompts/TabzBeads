@@ -282,7 +282,45 @@ if [ "$MANIFEST_TYPE" = "marketplace" ]; then
 fi
 ```
 
-### 8. Summary
+### 8. Enabled Plugins Validation
+
+Detects stale `enabledPlugins` entries in settings that reference plugins no longer in the marketplace.
+
+```bash
+echo ""
+echo "=== Enabled Plugins Validation ==="
+
+if [ "$MANIFEST_TYPE" = "marketplace" ]; then
+  MARKETPLACE_NAME=$(jq -r '.name // empty' "$MANIFEST")
+
+  # Check both user and project settings
+  for SETTINGS_FILE in ~/.claude/settings.json .claude/settings.json; do
+    [ ! -f "$SETTINGS_FILE" ] && continue
+
+    echo "Checking: $SETTINGS_FILE"
+
+    # Get enabled plugins that reference this marketplace
+    ENABLED=$(jq -r ".enabledPlugins // {} | keys[]" "$SETTINGS_FILE" 2>/dev/null | grep "@${MARKETPLACE_NAME}$" || true)
+
+    for PLUGIN_REF in $ENABLED; do
+      PLUGIN_NAME="${PLUGIN_REF%@*}"  # Strip @marketplace suffix
+
+      # Check if plugin exists in marketplace
+      EXISTS=$(jq -r --arg name "$PLUGIN_NAME" '.plugins[] | select(.name == $name) | .name' "$MANIFEST" 2>/dev/null)
+      if [ -z "$EXISTS" ]; then
+        echo "  WARNING: Stale reference '$PLUGIN_REF' - plugin not found in marketplace"
+        WARNINGS=$((WARNINGS + 1))
+      else
+        echo "  ✓ $PLUGIN_REF"
+      fi
+    done
+  done
+else
+  echo "  (skipped - only applies to marketplaces)"
+fi
+```
+
+### 9. Summary
 
 ```bash
 echo ""
