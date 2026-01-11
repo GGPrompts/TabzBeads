@@ -4,19 +4,21 @@ A collection of plugins for development workflows, browser automation, and multi
 
 ## Features
 
-- **Prefix taxonomy**: `bd-` (user), `bdc-` (conductor), `bdw-` (worker)
+- **Prefix taxonomy**: `bd-` (user commands), `bdc-` (conductor skills), `bdw-` (worker skills)
 - **Beads integration**: AI-native issue tracking with `bd` CLI
 - **Multi-session orchestration**: Spawn parallel workers via TabzChrome
-- **10 conductor skills**: Synced from TabzChrome
+- **Auto-discovered skills**: Commands in `commands/`, internal skills in `skills/`
 
 ## Quick Start
 
 ```bash
-# User entry points
+# User entry points (commands)
 /conductor:bd-work [issue-id]   # Single-session: you do the work
 /conductor:bd-plan              # Prepare backlog
-/conductor:bd-swarm             # Spawn parallel workers
+/conductor:bd-swarm             # Spawn parallel workers (multi-select)
 /conductor:bd-status            # View issue state
+/conductor:bd-conduct           # Interactive orchestration
+/conductor:bd-new-project       # Project scaffolding
 ```
 
 ## Installation

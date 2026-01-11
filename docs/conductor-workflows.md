@@ -2,7 +2,7 @@
 
 This document maps all conductor plugin workflows, their components, and relationships. Use this to understand how the orchestration system works.
 
-**Last Updated**: 2026-01-10 (prefix taxonomy implemented)
+**Last Updated**: 2026-01-11 (commands/skills reorganization)
 
 ---
 
@@ -16,7 +16,7 @@ This document maps all conductor plugin workflows, their components, and relatio
 6. [Worker Pipeline](#worker-pipeline)
 7. [bdw-worker-done Pipeline](#bdw-worker-done-pipeline)
 8. [bdc-wave-done Pipeline](#bdc-wave-done-pipeline)
-9. [Atomic Commands](#atomic-commands)
+9. [Atomic Skills](#atomic-skills)
 10. [Agents](#agents)
 11. [Beads Integration](#beads-integration)
 12. [Quick Reference](#quick-reference)
@@ -60,9 +60,9 @@ This document maps all conductor plugin workflows, their components, and relatio
 
 | Symbol | Meaning |
 |--------|---------|
-| `bd-*` | User entry point command |
-| `bdc-*` | Conductor internal command |
-| `bdw-*` | Worker step command |
+| `bd-*` | User entry point (command) |
+| `bdc-*` | Conductor internal (skill) |
+| `bdw-*` | Worker step (skill) |
 | `bd X` | Beads CLI command |
 | `{agent}` | Subagent via Task() |
 | `⛔` | Blocking (stops on failure) |
@@ -71,15 +71,15 @@ This document maps all conductor plugin workflows, their components, and relatio
 
 ## Prefix Taxonomy
 
-Commands use prefixes to indicate their purpose:
+Prefixes indicate purpose and component type:
 
-| Prefix | Purpose | Example |
-|--------|---------|---------|
-| `bd-` | User entry points (you invoke these) | bd-work, bd-plan, bd-swarm |
-| `bdc-` | Conductor internal (orchestration) | bdc-swarm-auto, bdc-wave-done |
-| `bdw-` | Worker steps (execution pipeline) | bdw-verify-build, bdw-commit-changes |
+| Prefix | Type | Purpose | Example |
+|--------|------|---------|---------|
+| `bd-` | Command | User entry points (visible in menu) | bd-work, bd-plan, bd-swarm |
+| `bdc-` | Skill | Conductor internal (orchestration) | bdc-swarm-auto, bdc-wave-done |
+| `bdw-` | Skill | Worker steps (execution pipeline) | bdw-verify-build, bdw-commit-changes |
 
-This replaces the previous `user-invocable: false` approach, making command purpose obvious from the name.
+Skills have `user-invocable: false` so they don't appear in the slash command menu, but can still be invoked via `/conductor:bdc-*` or `/conductor:bdw-*`.
 
 ---
 
@@ -413,12 +413,12 @@ The pipeline **auto-detects execution mode**:
 
 ---
 
-## Atomic Commands
+## Atomic Skills
 
-### Worker Steps (bdw-*)
+### Worker Skills (bdw-*)
 
-| Command | Purpose | Blocking? |
-|---------|---------|-----------|
+| Skill | Purpose | Blocking? |
+|-------|---------|-----------|
 | `/conductor:bdw-verify-build` | Run build, check errors | ⛔ Yes |
 | `/conductor:bdw-run-tests` | Run test suite | ⛔ Yes |
 | `/conductor:bdw-code-review` | Opus review (auto-fix) | ⛔ Yes |
@@ -430,12 +430,13 @@ The pipeline **auto-detects execution mode**:
 | `/conductor:bdw-worker-done` | Full completion pipeline | ⛔ Yes |
 | `/conductor:bdw-worker-init` | Initialize worker context | No |
 
-### Conductor Steps (bdc-*)
+### Conductor Skills (bdc-*)
 
-| Command | Purpose | Blocking? |
-|---------|---------|-----------|
+| Skill | Purpose | Blocking? |
+|-------|---------|-----------|
 | `/conductor:bdc-swarm-auto` | Autonomous wave execution | ⛔ Yes |
 | `/conductor:bdc-wave-done` | Merge + unified review | ⛔ Yes |
+| `/conductor:bdc-run-wave` | Run wave from template | ⛔ Yes |
 | `/conductor:bdc-orchestration` | Multi-session coordination | ⛔ Yes |
 | `/conductor:bdc-analyze-transcripts` | Review worker sessions | No |
 
@@ -547,9 +548,9 @@ bd show <id> --json | jq -r '.[0].notes'
 | Component | Location |
 |-----------|----------|
 | User commands (bd-*) | `plugins/conductor/commands/bd-*.md` |
-| Conductor commands (bdc-*) | `plugins/conductor/commands/bdc-*.md` |
-| Worker commands (bdw-*) | `plugins/conductor/commands/bdw-*.md` |
-| Skills | `plugins/conductor/skills/*/SKILL.md` |
+| Conductor skills (bdc-*) | `plugins/conductor/skills/bdc-*/SKILL.md` |
+| Worker skills (bdw-*) | `plugins/conductor/skills/bdw-*/SKILL.md` |
+| Other skills | `plugins/conductor/skills/*/SKILL.md` |
 | Agents | `plugins/conductor/agents/*.md` |
 | Scripts | `plugins/conductor/scripts/*.sh` |
 

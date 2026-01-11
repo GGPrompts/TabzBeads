@@ -102,24 +102,38 @@ The conductor plugin orchestrates multi-session Claude workflows:
 ```
 plugins/conductor/
 ├── plugin.json
-├── commands/                    # Slash commands with prefix taxonomy
-│   ├── bd-*.md                  # User entry points (bd-work, bd-plan, bd-swarm, bd-status)
-│   ├── bdc-*.md                 # Conductor internal (bdc-swarm-auto, bdc-wave-done)
-│   └── bdw-*.md                 # Worker steps (bdw-verify-build, bdw-commit-changes)
+├── commands/                    # User entry points (bd-*)
+│   ├── bd-work.md               # Single-session workflow
+│   ├── bd-plan.md               # Prepare backlog
+│   ├── bd-swarm.md              # Spawn parallel workers
+│   ├── bd-status.md             # View issue state
+│   ├── bd-start.md              # Grab issue and start
+│   ├── bd-conduct.md            # Interactive orchestration
+│   └── bd-new-project.md        # Project scaffolding
 ├── agents/                      # Spawnable subagents
 │   ├── conductor.md             # Main orchestrator
 │   ├── code-reviewer.md         # Autonomous code review
 │   ├── docs-updater.md          # Update documentation
 │   ├── skill-picker.md          # Find skills for issues
 │   └── prompt-enhancer.md       # Optimize prompts
-├── skills/
-│   ├── bd-conduct/              # Interactive orchestration
-│   ├── bd-new-project/          # Project scaffolding
-│   ├── bdc-orchestration/       # Multi-session coordination
-│   ├── bdc-swarm-auto/          # Autonomous swarm execution
-│   ├── bdc-wave-done/           # Wave completion
-│   ├── bdw-code-review/         # Code review patterns
-│   ├── bdw-worker-done/         # Worker completion
+├── skills/                      # Internal skills (auto-discovered, user-invocable: false)
+│   ├── bdc-*/                   # Conductor internal (orchestration)
+│   │   ├── bdc-orchestration/
+│   │   ├── bdc-swarm-auto/
+│   │   ├── bdc-wave-done/
+│   │   ├── bdc-run-wave/
+│   │   └── bdc-analyze-transcripts/
+│   ├── bdw-*/                   # Worker steps (execution pipeline)
+│   │   ├── bdw-verify-build/
+│   │   ├── bdw-run-tests/
+│   │   ├── bdw-code-review/
+│   │   ├── bdw-codex-review/
+│   │   ├── bdw-commit-changes/
+│   │   ├── bdw-close-issue/
+│   │   ├── bdw-create-followups/
+│   │   ├── bdw-update-docs/
+│   │   ├── bdw-worker-init/
+│   │   └── bdw-worker-done/
 │   ├── tabz-artist/             # Visual asset generation
 │   ├── tabz-mcp/                # Browser automation
 │   └── terminal-tools/          # TUI tool control
@@ -217,28 +231,38 @@ bd mol pour conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
 
 ---
 
-## Commands Reference
+## Commands & Skills Reference
 
-### User Entry Points (bd-)
+### User Commands (bd-*)
+
+These are user entry points in `commands/`. Invoke with `/conductor:bd-*`.
+
 | Command | Purpose |
 |---------|---------|
 | `/conductor:bd-work` | Single-session: you implement an issue |
 | `/conductor:bd-plan` | Prepare backlog: refine, enhance, match skills |
-| `/conductor:bd-swarm` | Multi-session: spawn parallel workers |
+| `/conductor:bd-swarm` | Multi-session: spawn parallel workers (uses multi-select) |
 | `/conductor:bd-status` | View issue state (open, blocked, ready) |
+| `/conductor:bd-start` | Grab a ready issue and start working |
+| `/conductor:bd-conduct` | Interactive multi-session orchestration |
+| `/conductor:bd-new-project` | Multi-phase project scaffolding |
 
-### Conductor Internal (bdc-)
-| Command | Purpose |
-|---------|---------|
+### Internal Skills (bdc-*, bdw-*)
+
+These are in `skills/` with `user-invocable: false`. Still invoked via `/conductor:*` but not shown in slash command menu.
+
+#### Conductor Internal (bdc-*)
+| Skill | Purpose |
+|-------|---------|
 | `/conductor:bdc-swarm-auto` | Autonomous waves until backlog empty |
 | `/conductor:bdc-wave-done` | Merge branches, unified review, cleanup |
 | `/conductor:bdc-run-wave` | Run wave from conductor-wave template |
 | `/conductor:bdc-orchestration` | Multi-session coordination |
 | `/conductor:bdc-analyze-transcripts` | Review worker session transcripts |
 
-### Worker Internal (bdw-)
-| Command | Purpose |
-|---------|---------|
+#### Worker Steps (bdw-*)
+| Skill | Purpose |
+|-------|---------|
 | `/conductor:bdw-verify-build` | Run build, report errors |
 | `/conductor:bdw-run-tests` | Run tests if available |
 | `/conductor:bdw-code-review` | Opus review with auto-fix |
@@ -250,10 +274,9 @@ bd mol pour conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
 | `/conductor:bdw-worker-init` | Initialize worker context |
 | `/conductor:bdw-worker-done` | Full completion pipeline |
 
-### Additional Commands
-| Command | Purpose |
-|---------|---------|
-| `/conductor:bd-new-project` | Multi-phase project scaffolding |
+### Additional Skills
+| Skill | Purpose |
+|-------|---------|
 | `/conductor:tabz-artist` | Generate images via DALL-E and videos via Sora |
 | `/conductor:tabz-mcp` | Browser automation MCP tool discovery |
 | `/conductor:terminal-tools` | Reference for tmux and TUI tool control |

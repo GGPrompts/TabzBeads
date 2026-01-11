@@ -1,18 +1,5 @@
 {
   "name": "conductor",
   "version": "1.0.0",
-  "description": "Orchestrate multi-session Claude workflows - spawn workers, use subagents for monitoring, manage beads issues",
-  "skills": [
-    "./skills/bd-conduct",
-    "./skills/bd-new-project",
-    "./skills/bdc-orchestration",
-    "./skills/bdc-run-wave",
-    "./skills/bdc-swarm-auto",
-    "./skills/bdc-wave-done",
-    "./skills/bdw-code-review",
-    "./skills/bdw-worker-done",
-    "./skills/tabz-artist",
-    "./skills/tabz-mcp",
-    "./skills/terminal-tools"
-  ]
+  "description": "Orchestrate multi-session Claude workflows - spawn workers, use subagents for monitoring, manage beads issues"
 }
