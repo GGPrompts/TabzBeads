@@ -7,7 +7,7 @@ description: "Multi-session Claude workflow orchestration. Spawn workers via Tab
 
 Orchestrate multiple Claude Code sessions, spawn workers, and coordinate parallel work.
 
-> **You have Task tool access.** Unlike the conductor agent (`--agent conductor:conductor`), this skill runs in vanilla Claude and can spawn subagents via the Task tool.
+> **Subagent support.** Conductor skills that need Task tool (like code-review) use `context: fork` to run in a forked sub-agent with full Task tool access, even when the parent was launched with `--agent`.
 
 ## Architecture
 

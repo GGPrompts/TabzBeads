@@ -7,6 +7,8 @@ description: "Fully autonomous backlog completion. Runs waves until `bd ready` i
 
 **YOU are the conductor. Execute this workflow autonomously. Do NOT ask the user for input.**
 
+> **Subagent-capable.** This workflow uses `/conductor:bdc-wave-done` which spawns subagents for code review. Skills use `context: fork` to ensure Task tool access even when parent was launched with `--agent`.
+
 ## Architecture: Parallel Terminal Workers
 
 Spawn **3-4 terminal workers max**, each handling 1-2 issues with skill-aware prompts.

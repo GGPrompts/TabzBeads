@@ -1,11 +1,14 @@
 ---
 name: code-review
 description: "Code review with confidence-based filtering. Modes: quick (lint+types), standard (Opus), thorough (parallel agents). Auto-fixes >=95% confidence issues."
+context: fork
 ---
 
 # Code Review Skill
 
 Automated code review with confidence-based filtering and test coverage assessment.
+
+> **Runs in forked context.** Uses `context: fork` to ensure Task tool access for spawning the `conductor:code-reviewer` subagent, even when the parent session was launched with `--agent`.
 
 ## Invocation
 

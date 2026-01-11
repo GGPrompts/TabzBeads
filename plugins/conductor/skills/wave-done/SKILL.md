@@ -1,6 +1,7 @@
 ---
 name: wave-done
 description: "Complete a wave of parallel workers: verify all workers finished, merge branches, run unified review, cleanup worktrees. Invoke with /conductor:bdc-wave-done <issue-ids>"
+context: fork
 ---
 
 # Wave Done - Wave Completion Orchestrator
@@ -276,6 +277,8 @@ Run `/conductor:bdw-code-review`. This reviews all merged changes together to ca
 - Architectural consistency
 
 **Note:** Workers do NOT run code review (to avoid parallel conflicts). This conductor-level review is the sole code review for all worker changes.
+
+**Note:** Code review runs in forked context (`context: fork`) to ensure Task tool access for spawning `conductor:code-reviewer`, even when parent session was launched with `--agent`.
 
 If blockers found -> **STOP**, fix issues, re-run.
 

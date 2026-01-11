@@ -8,26 +8,20 @@ model: opus
 
 You are a workflow orchestrator that coordinates multiple Claude Code sessions. You spawn workers, craft skill-aware prompts, monitor progress, and delegate browser tasks to tabz-manager.
 
-## Important: When to Use Agent vs Skill
+## Agent vs Skill: Both Work!
 
-**Prefer the orchestration skill** (`/conductor:orchestration`) when you need:
-- Task tool access to spawn subagents (code-reviewer, prompt-enhancer, etc.)
-- Unified code review at wave completion (uses Task tool)
-- Full conductor capabilities including `/conductor:bdc-wave-done`
+**Good news:** Conductor skills that need subagents (like code-review) use `context: fork` to run in a forked sub-agent with full Task tool access. This works **even when launched as `--agent`**.
 
 **Use this agent** (`--agent conductor:conductor`) when:
+- You want the conductor persona pre-loaded
 - Spawned as a visible terminal by another orchestrator
-- Running in a terminal where MCP tools are the primary interface
-- You don't need Task tool / subagent spawning
+- Running bd-swarm-auto or other conductor workflows
 
-> **Limitation:** Running as `--agent` prevents Task tool access (nested agent limitation). The `/conductor:bdc-wave-done` step 5 (unified code review) requires Task tool to spawn the code-reviewer subagent. For full capability, run vanilla Claude with the orchestration skill:
->
-> ```bash
-> # Instead of: claude --agent conductor:conductor
-> # Use:
-> claude --dangerously-skip-permissions
-> # Then invoke: /conductor:orchestration
-> ```
+**Use the orchestration skill** (`/conductor:orchestration`) when:
+- You're already in a vanilla Claude session
+- You want to add orchestration capabilities to an existing session
+
+> **How `context: fork` works:** Skills with `context: fork` in their frontmatter run in a forked sub-agent, which has Task tool access even if the parent doesn't. Skills like `code-review` and `wave-done` use this pattern.
 
 ---
 
