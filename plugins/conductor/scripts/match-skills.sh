@@ -457,6 +457,75 @@ $(echo "${PROMPT:-}" | sed 's/^/  /')"
 }
 
 # ============================================================================
+# BATCH PERSISTENCE
+# ============================================================================
+# Used by bd-plan "Group Tasks" to group issues into batches
+
+# Persist batch ID to issue notes
+persist_batch_to_issue() {
+  local ISSUE_ID="$1"
+  local BATCH_ID="$2"
+  local POSITION="${3:-1}"  # Position within batch (1, 2, or 3)
+
+  if [ -z "$ISSUE_ID" ] || [ -z "$BATCH_ID" ]; then
+    return 1
+  fi
+
+  # Get existing notes (bd show returns an array)
+  local EXISTING_NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+
+  # Remove any existing batch.* lines
+  local CLEAN_NOTES=$(echo "$EXISTING_NOTES" | grep -v '^batch\.')
+
+  # Add new batch info
+  local NEW_NOTES="${CLEAN_NOTES}
+batch.id: ${BATCH_ID}
+batch.position: ${POSITION}"
+
+  # Update issue
+  bd update "$ISSUE_ID" --notes "$NEW_NOTES" 2>/dev/null
+}
+
+# Get batch ID from issue notes
+get_batch_from_issue() {
+  local ISSUE_ID="$1"
+
+  if [ -z "$ISSUE_ID" ]; then
+    return 1
+  fi
+
+  local NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+  echo "$NOTES" | grep -oP '^batch\.id:\s*\K.*' | head -1
+}
+
+# Get all issues in a batch
+get_batch_issues() {
+  local BATCH_ID="$1"
+
+  if [ -z "$BATCH_ID" ]; then
+    return 1
+  fi
+
+  # Search all ready issues for this batch ID
+  for ISSUE_ID in $(bd ready --json 2>/dev/null | jq -r '.[].id'); do
+    local NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+    local ISSUE_BATCH=$(echo "$NOTES" | grep -oP '^batch\.id:\s*\K.*' | head -1)
+    if [ "$ISSUE_BATCH" = "$BATCH_ID" ]; then
+      local POSITION=$(echo "$NOTES" | grep -oP '^batch\.position:\s*\K.*' | head -1)
+      echo "${POSITION:-1}:$ISSUE_ID"
+    fi
+  done | sort -n | cut -d: -f2
+}
+
+# Get unique batch IDs from ready issues
+get_all_batches() {
+  for ISSUE_ID in $(bd ready --json 2>/dev/null | jq -r '.[].id'); do
+    local NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+    echo "$NOTES" | grep -oP '^batch\.id:\s*\K.*' | head -1
+  done | grep -v '^$' | sort -u
+}
+
+# ============================================================================
 # CLI MODE
 # ============================================================================
 
@@ -475,11 +544,21 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       echo "  --available-json  List skills as JSON array with descriptions"
       echo "  --persist ID SK   Store skills in issue notes (prepared.skills format)"
       echo ""
+      echo "Batch Operations:"
+      echo "  --persist-batch ID BATCH [POS]  Store batch ID in issue notes"
+      echo "  --get-batch ID                  Get batch ID from issue notes"
+      echo "  --batch-issues BATCH            Get all issues in a batch (sorted by position)"
+      echo "  --all-batches                   List unique batch IDs from ready issues"
+      echo ""
       echo "Notes Format (prepared.* schema):"
       echo "  prepared.skills: ui-styling,backend-development"
       echo "  prepared.files: src/Button.tsx,src/utils.ts"
       echo "  prepared.prompt: |"
       echo "    Full worker prompt here..."
+      echo ""
+      echo "Batch Format:"
+      echo "  batch.id: batch-001"
+      echo "  batch.position: 1"
       echo ""
       echo "Examples:"
       echo "  match-skills.sh 'fix terminal resize bug'"
@@ -487,6 +566,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       echo "  match-skills.sh --issue TabzChrome-abc"
       echo "  match-skills.sh --available-full"
       echo "  match-skills.sh --persist TabzChrome-abc 'ui-styling,backend-development'"
+      echo "  match-skills.sh --persist-batch TabzChrome-abc batch-001 2"
+      echo "  match-skills.sh --batch-issues batch-001"
       ;;
     --json)
       shift
@@ -518,6 +599,21 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     --persist)
       shift
       persist_skills_to_issue "$1" "$2"
+      ;;
+    --persist-batch)
+      shift
+      persist_batch_to_issue "$1" "$2" "${3:-1}"
+      ;;
+    --get-batch)
+      shift
+      get_batch_from_issue "$1"
+      ;;
+    --batch-issues)
+      shift
+      get_batch_issues "$1"
+      ;;
+    --all-batches)
+      get_all_batches
       ;;
     *)
       match_skills "$*"
