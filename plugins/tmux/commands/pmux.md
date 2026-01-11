@@ -1,5 +1,6 @@
 ---
 description: "Interactive Prompt Engineer with tmux send-keys - directly send prompts to Claude Code sessions"
+args: "[--batch] [issue-id...]"
 ---
 # Interactive Prompt Engineering Agent (Tmux Edition)
 You are a prompt engineering expert helping craft optimal prompts through **interactive dialog-based refinement** that ends with **sending the prompt directly to a Claude Code session via tmux send-keys**.
@@ -20,11 +21,12 @@ Listen for:
 **If they already provided the goal**, acknowledge it and proceed to Step 1.5.
 ---
 ### Step 1.5: Load Capabilities
-**Read the capabilities manifest** (do NOT scan directories or launch subagents):
+**Get available skills with descriptions** (do NOT scan directories or launch subagents):
 ```bash
-cat ~/.claude/CAPABILITIES.md
+# Use the match-skills.sh script - single source of truth for skill discovery
+./plugins/conductor/scripts/match-skills.sh --available-full
 ```
-Use this to inform prompt suggestions. Skip this step if the file doesn't exist.
+This outputs all available skills with descriptions. Use this to inform prompt suggestions and capability-aware prompt crafting.
 ---
 ### Step 2: Draft Initial Prompt (Capability-Aware)
 Using your prompt engineering expertise, draft an initial prompt.
@@ -272,6 +274,115 @@ If "Yes":
 - Save to `~/.prompts/[filename].md`
 - Add metadata header (date, tokens, purpose)
 ---
+## Batch Mode: Process Multiple Beads Issues
+
+When called with `--batch` or when the user wants to prepare prompts for multiple issues at once, use this workflow instead of the interactive one.
+
+### Batch Workflow
+
+**Step B1: Get Ready Issues**
+```bash
+bd ready --json
+```
+This returns issues ready for work (no blockers). For each issue, you'll craft a prepared prompt.
+
+**Step B2: For Each Issue - Load Context**
+```bash
+# Get issue details
+bd show <issue-id> --json
+
+# Auto-match skills based on issue content
+./plugins/conductor/scripts/match-skills.sh --issue <issue-id>
+```
+
+**Step B3: Craft Prompt with Capability Awareness**
+For each issue, draft a worker-ready prompt using:
+1. Issue title and description
+2. Auto-matched skills from Step B2
+3. Available capabilities from `match-skills.sh --available-full`
+
+**Step B4: Output in prepared.* Format**
+Store the crafted prompt in the issue's notes using the prepared.* schema:
+
+```bash
+# Use the persist function from match-skills.sh
+source ./plugins/conductor/scripts/match-skills.sh
+persist_prepared_prompt "<issue-id>" "skill1,skill2" "file1.ts,file2.ts" "Full prompt text..."
+```
+
+Or manually via bd update:
+```bash
+bd update <issue-id> --notes "$(cat <<'EOF'
+prepared.skills: ui-styling,backend-development
+prepared.files: src/Component.tsx,src/api.ts
+prepared.prompt: |
+  ## Task
+  [Full worker prompt here...]
+
+  ## Approach
+  Use the ui-styling skill for component work.
+
+  ## Files
+  @src/Component.tsx
+  @src/api.ts
+EOF
+)"
+```
+
+**Step B5: Summary Report**
+After processing all issues, show:
+```
+✅ Prepared [N] issues for swarm execution
+
+Issue           | Skills                    | Files
+----------------|---------------------------|------------------
+TabzChrome-abc  | ui-styling, xterm-js     | 3 files
+TabzChrome-def  | backend-development      | 2 files
+...
+
+Run /conductor:bd-swarm to spawn workers with these prepared prompts.
+```
+
+---
+## Beads Integration
+
+### Reading Issue for Prompt Crafting
+```bash
+# Get full issue context
+ISSUE=$(bd show <issue-id> --json)
+TITLE=$(echo "$ISSUE" | jq -r '.[0].title')
+DESC=$(echo "$ISSUE" | jq -r '.[0].description // ""')
+NOTES=$(echo "$ISSUE" | jq -r '.[0].notes // ""')
+
+# Check if already prepared
+PREPARED=$(echo "$NOTES" | grep -oP '^prepared\.prompt:' || echo "")
+if [ -n "$PREPARED" ]; then
+  echo "Issue already has prepared prompt"
+fi
+```
+
+### Skill Matching from Issue Content
+```bash
+# Auto-match skills (returns explicit invocation commands)
+SKILLS=$(./plugins/conductor/scripts/match-skills.sh --issue <issue-id>)
+
+# Or match from text directly
+SKILLS=$(./plugins/conductor/scripts/match-skills.sh "terminal resize buffer")
+```
+
+### The prepared.* Notes Schema
+```yaml
+prepared.skills: ui-styling,backend-development  # Comma-separated skill names
+prepared.files: src/file1.ts,src/file2.ts        # Comma-separated file paths
+prepared.prompt: |                                # Multi-line YAML block
+  Full worker prompt text here.
+  Can span multiple lines.
+  Use @ references for files.
+```
+
+Workers spawned by `/conductor:bd-swarm` will read this prepared prompt instead of crafting their own, saving tokens and ensuring consistent prompt quality.
+
+---
 ## Key Principles
 - **@ references > summaries** - Let target Claude read actual files
 - **Specific paths** - Exact files, functions, technical terms
@@ -284,5 +395,14 @@ If "Yes":
 - Prompts auto-submit (0.3s delay prevents issues)
 - Saved prompts go to ~/.prompts/ for reuse
 - Use /pmux again to iterate on new requirements
+- Use `/pmux --batch` to prepare prompts for multiple beads issues
+- Prepared prompts are stored in issue notes (prepared.* format)
+- Run `/conductor:bd-swarm` after batch preparation to spawn workers
 ---
-Execute this workflow now. If the user already provided their goal, acknowledge it and jump to Step 2.
+## Execution
+
+**If called with `--batch` or issue IDs**: Use the Batch Mode workflow (Step B1-B5) to prepare prompts for beads issues.
+
+**Otherwise**: Use the Interactive workflow (Steps 1-5) to craft and send a single prompt.
+
+Execute now. If the user already provided their goal, acknowledge it and proceed accordingly.
