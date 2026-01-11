@@ -1,5 +1,4 @@
 ---
-name: bd-new-project
 description: "Multi-phase workflow for brainstorming, scaffolding, and setting up new projects with skill-aware configuration"
 ---
 
@@ -185,7 +184,7 @@ Ready! To start building:
 
 ## Execute This Workflow
 
-When this skill is invoked:
+When this command is invoked:
 
 1. Check if `--list` flag → just show available starters and exit
 2. Check if `--starter=X` provided → use that starter
