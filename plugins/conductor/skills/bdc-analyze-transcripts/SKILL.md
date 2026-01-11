@@ -1,5 +1,11 @@
 ---
 description: "Analyze worker session transcripts to find patterns, missed opportunities, and improvement areas"
+user-invocable: false
+keywords:
+  - analyze transcripts
+  - transcript analysis
+  - worker session review
+  - session patterns
 ---
 
 # Analyze Transcripts
