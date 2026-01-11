@@ -107,6 +107,9 @@ These load patterns and context you'll need.
 
 ## When Done
 Run `/conductor:bdw-worker-done ISSUE-ID`
+
+**CRITICAL: Always use the pipeline - do NOT commit directly.**
+The pipeline sends notifications to the conductor via tmux.
 ```
 
 **CRITICAL: Use full `plugin:skill` format for skill invocation.**

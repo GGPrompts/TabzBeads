@@ -184,6 +184,9 @@ Follow the pattern in [existing-file.ts] for consistency.
 
 ## When Done
 Run `/conductor:bdw-worker-done ISSUE-ID`
+
+**CRITICAL: Always use the pipeline - do NOT commit directly.**
+The pipeline sends notifications to the conductor via tmux.
 ```
 
 ### Skill Triggers

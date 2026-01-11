@@ -234,7 +234,12 @@ Workers should complete their tasks with the full pipeline:
 Run `/conductor:bdw-worker-done ISSUE-ID`
 ```
 
-This executes: verify-build → run-tests → commit → close-issue → notify-conductor
+This executes: verify-build → run-tests → commit → close-issue → **notify-conductor**
+
+**CRITICAL: Always use the pipeline.** Do NOT commit directly - the pipeline:
+- Detects DOCS_ONLY changes and skips build/tests automatically
+- Sends notification to conductor via tmux (required for wave coordination)
+- Records completion info in beads
 
 **Workers skip code review** - the conductor does unified review after merge (wave-done step 4).
 
