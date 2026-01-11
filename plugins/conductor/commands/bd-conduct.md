@@ -1,5 +1,4 @@
 ---
-name: bd-conduct
 description: "Interactive multi-session orchestration. Select issues, choose terminal count, pick mode (interactive/autonomous), then spawn workers. Use when you want guided parallel issue processing."
 ---
 
