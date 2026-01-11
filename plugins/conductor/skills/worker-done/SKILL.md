@@ -21,15 +21,17 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 | Step | Command | Blocking? | Skip if DOCS_ONLY? |
 |------|---------|-----------|-------------------|
 | 0 | Detect change types | No | - |
+| 0.5 | Detect complexity | No | Sets COMPLEXITY |
 | 1 | `/conductor:verify-build` | Yes - stop on failure | Yes |
 | 1a | `plugin-validator` agent | Yes - stop on failure | ONLY if DOCS_ONLY |
 | 2 | `/conductor:run-tests` | Yes - stop on failure | Yes |
 | 3 | `/conductor:commit-changes` | Yes - stop on failure | No |
 | 4 | `/conductor:create-followups` | No - log and continue | No |
 | 5 | `/conductor:update-docs` | No - log and continue | No |
-| 5.5 | Record completion info | No - best effort | No |
+| 5.5 | Record completion info | No - best effort | Includes COMPLEXITY |
 | 6 | `/conductor:close-issue` | Yes - report result | No |
-| 7 | Notify conductor | No - best effort | No |
+| 6.5 | Complexity-aware review | No - standalone only | Standalone only |
+| 7 | Notify conductor | No - best effort | Worker only |
 
 **CRITICAL: You MUST execute Step 7 after Step 6.** Workers that skip Step 7 force the conductor to poll, wasting resources.
 
@@ -72,6 +74,30 @@ fi
 
 If `DOCS_ONLY=true`: Run **Step 1a** (plugin-validator), then skip to **Step 3**.
 If `DOCS_ONLY=false`: Continue with full pipeline (Steps 1, 2, 3...).
+
+---
+
+### Step 0.5: Detect Complexity
+
+After detecting change types, analyze complexity to adapt the verification pipeline.
+
+**Complexity signals:**
+
+| Signal | Simple | Complex |
+|--------|--------|---------|
+| File count | 1-2 files | 3+ files |
+| LOC changed | <100 lines | 100+ lines |
+| New files | 0-1 new | 2+ new |
+| Test coverage | Tests included | No tests with 50+ LOC |
+
+**Pipeline adaptation:**
+
+| Complexity | Review (standalone) |
+|------------|---------------------|
+| Simple | `--quick` (lint + types) |
+| Complex | `--thorough` (parallel reviewers) |
+
+Workers don't run code review - conductor handles unified review after merge.
 
 ---
 
