@@ -526,6 +526,192 @@ get_all_batches() {
 }
 
 # ============================================================================
+# FILE OVERLAP DETECTION
+# ============================================================================
+# Detect issues that may touch same files to prevent merge conflicts
+
+# Extract potential file paths/patterns from issue
+# Sources: prepared.files, title keywords, description patterns
+get_issue_files() {
+  local ISSUE_ID="$1"
+
+  local ISSUE_JSON=$(bd show "$ISSUE_ID" --json 2>/dev/null)
+  if [ -z "$ISSUE_JSON" ]; then
+    return 1
+  fi
+
+  local NOTES=$(echo "$ISSUE_JSON" | jq -r '.[0].notes // ""')
+  local TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
+  local DESC=$(echo "$ISSUE_JSON" | jq -r '.[0].description // ""')
+
+  # 1. Explicit prepared.files from notes
+  local EXPLICIT_FILES=$(echo "$NOTES" | grep -oP '^prepared\.files:\s*\K.*' | head -1)
+  if [ -n "$EXPLICIT_FILES" ]; then
+    echo "$EXPLICIT_FILES" | tr ',' '\n' | sed 's/^\.\///' | sort -u
+  fi
+
+  # 2. Extract file-like patterns from title/description
+  # Look for: Component names (PascalCase), file paths, .tsx/.ts/.md extensions
+  local TEXT="$TITLE $DESC"
+
+  # PascalCase component names -> likely .tsx files
+  echo "$TEXT" | grep -oE '\b[A-Z][a-z]+([A-Z][a-z]+)+\b' | while read -r COMPONENT; do
+    echo "$COMPONENT.tsx"
+    echo "$COMPONENT.ts"
+  done
+
+  # Explicit file paths mentioned
+  echo "$TEXT" | grep -oE '[a-zA-Z0-9_/-]+\.(tsx?|jsx?|md|json|sh|css|scss)' | sort -u
+
+  # Common patterns: "X component" -> X.tsx, "X file" -> X.*
+  echo "$TEXT" | grep -oiE '([a-zA-Z]+)\s+(component|file|page|hook|util)' | \
+    sed -E 's/\s+(component|file|page|hook|util)$//' | \
+    while read -r NAME; do
+      echo "${NAME}.tsx"
+    done
+}
+
+# Get skills from issue for overlap heuristic
+get_issue_skills_raw() {
+  local ISSUE_ID="$1"
+
+  local NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+
+  # Check prepared.skills first, then legacy skills:
+  local SKILLS=$(echo "$NOTES" | grep -oP '^prepared\.skills:\s*\K.*' | head -1)
+  if [ -z "$SKILLS" ]; then
+    SKILLS=$(echo "$NOTES" | grep -oP '^skills:\s*\K.*' | head -1)
+  fi
+
+  echo "$SKILLS" | tr ',' '\n' | tr -d ' ' | sort -u
+}
+
+# Check if two issues have file overlap
+check_file_overlap() {
+  local ISSUE1="$1"
+  local ISSUE2="$2"
+
+  local FILES1=$(get_issue_files "$ISSUE1" 2>/dev/null | sort -u)
+  local FILES2=$(get_issue_files "$ISSUE2" 2>/dev/null | sort -u)
+
+  # Check for exact file matches
+  local COMMON=$(comm -12 <(echo "$FILES1") <(echo "$FILES2") 2>/dev/null)
+
+  if [ -n "$COMMON" ]; then
+    echo "file:$(echo "$COMMON" | head -1)"
+    return 0
+  fi
+
+  # Check for skill overlap (heuristic - same frontend/backend skill = potential conflict)
+  local SKILLS1=$(get_issue_skills_raw "$ISSUE1" 2>/dev/null | sort -u)
+  local SKILLS2=$(get_issue_skills_raw "$ISSUE2" 2>/dev/null | sort -u)
+
+  local SKILL_COMMON=$(comm -12 <(echo "$SKILLS1") <(echo "$SKILLS2") 2>/dev/null | head -1)
+
+  if [ -n "$SKILL_COMMON" ]; then
+    echo "skill:$SKILL_COMMON"
+    return 0
+  fi
+
+  return 1
+}
+
+# Detect overlapping issue pairs from a list of issue IDs
+# Output format: issue1|issue2|reason (one per line)
+detect_file_overlap() {
+  local ISSUE_IDS="$1"  # Space-separated issue IDs
+
+  if [ -z "$ISSUE_IDS" ]; then
+    return 0
+  fi
+
+  # Convert to array
+  local IDS=($ISSUE_IDS)
+  local COUNT=${#IDS[@]}
+
+  if [ "$COUNT" -lt 2 ]; then
+    return 0
+  fi
+
+  # Compare all pairs
+  local i=0
+  while [ $i -lt $((COUNT - 1)) ]; do
+    local j=$((i + 1))
+    while [ $j -lt $COUNT ]; do
+      local ID1="${IDS[$i]}"
+      local ID2="${IDS[$j]}"
+
+      local REASON=$(check_file_overlap "$ID1" "$ID2" 2>/dev/null)
+      if [ -n "$REASON" ]; then
+        echo "$ID1|$ID2|$REASON"
+      fi
+
+      ((j++))
+    done
+    ((i++))
+  done
+}
+
+# Get overlap groups - issues that should be grouped together
+# Returns clusters of issues that have transitive overlap
+get_overlap_groups() {
+  local ISSUE_IDS="$1"
+
+  local OVERLAPS=$(detect_file_overlap "$ISSUE_IDS")
+
+  if [ -z "$OVERLAPS" ]; then
+    # No overlaps - each issue is its own group
+    for ID in $ISSUE_IDS; do
+      echo "$ID"
+    done
+    return 0
+  fi
+
+  # Build groups using union-find (simplified)
+  declare -A PARENT
+
+  # Initialize each issue as its own parent
+  for ID in $ISSUE_IDS; do
+    PARENT["$ID"]="$ID"
+  done
+
+  # Find root of a set
+  find_root() {
+    local ID="$1"
+    while [ "${PARENT[$ID]}" != "$ID" ]; do
+      ID="${PARENT[$ID]}"
+    done
+    echo "$ID"
+  }
+
+  # Union overlapping pairs
+  while IFS='|' read -r ID1 ID2 REASON; do
+    [ -z "$ID1" ] && continue
+    local ROOT1=$(find_root "$ID1")
+    local ROOT2=$(find_root "$ID2")
+    if [ "$ROOT1" != "$ROOT2" ]; then
+      PARENT["$ROOT1"]="$ROOT2"
+    fi
+  done <<< "$OVERLAPS"
+
+  # Collect groups
+  declare -A ISSUE_GROUPS
+  for ID in $ISSUE_IDS; do
+    local ROOT=$(find_root "$ID")
+    if [ -n "${ISSUE_GROUPS[$ROOT]}" ]; then
+      ISSUE_GROUPS["$ROOT"]="${ISSUE_GROUPS[$ROOT]} $ID"
+    else
+      ISSUE_GROUPS["$ROOT"]="$ID"
+    fi
+  done
+
+  # Output groups (one per line, space-separated IDs)
+  for ROOT in "${!ISSUE_GROUPS[@]}"; do
+    echo "${ISSUE_GROUPS[$ROOT]}"
+  done
+}
+
+# ============================================================================
 # CLI MODE
 # ============================================================================
 
@@ -550,6 +736,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       echo "  --batch-issues BATCH            Get all issues in a batch (sorted by position)"
       echo "  --all-batches                   List unique batch IDs from ready issues"
       echo ""
+      echo "Overlap Detection (prevent merge conflicts):"
+      echo "  --detect-overlap 'ID1 ID2 ...'  Find overlapping issue pairs"
+      echo "  --issue-files ID                List potential files an issue may touch"
+      echo "  --overlap-groups 'ID1 ID2 ...'  Group issues by overlap (same group = sequential)"
+      echo ""
       echo "Notes Format (prepared.* schema):"
       echo "  prepared.skills: ui-styling,backend-development"
       echo "  prepared.files: src/Button.tsx,src/utils.ts"
@@ -568,6 +759,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       echo "  match-skills.sh --persist TabzChrome-abc 'ui-styling,backend-development'"
       echo "  match-skills.sh --persist-batch TabzChrome-abc batch-001 2"
       echo "  match-skills.sh --batch-issues batch-001"
+      echo "  match-skills.sh --detect-overlap 'issue-1 issue-2 issue-3'"
+      echo "  match-skills.sh --overlap-groups 'issue-1 issue-2 issue-3'"
       ;;
     --json)
       shift
@@ -614,6 +807,47 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       ;;
     --all-batches)
       get_all_batches
+      ;;
+    --detect-overlap)
+      shift
+      OVERLAPS=$(detect_file_overlap "$*")
+      if [ -z "$OVERLAPS" ]; then
+        echo "No overlapping issues detected"
+      else
+        echo "Overlapping issue pairs (may conflict during merge):"
+        echo ""
+        while IFS='|' read -r ID1 ID2 REASON; do
+          [ -z "$ID1" ] && continue
+          echo "  $ID1 <-> $ID2 ($REASON)"
+        done <<< "$OVERLAPS"
+      fi
+      ;;
+    --issue-files)
+      shift
+      FILES=$(get_issue_files "$1" 2>/dev/null | sort -u)
+      if [ -z "$FILES" ]; then
+        echo "No files detected for $1"
+      else
+        echo "Potential files for $1:"
+        echo "$FILES" | sed 's/^/  /'
+      fi
+      ;;
+    --overlap-groups)
+      shift
+      OVERLAP_RESULT=$(get_overlap_groups "$*")
+      echo "Issue groups (issues in same group should run sequentially):"
+      echo ""
+      GROUP_NUM=1
+      while read -r GROUP_LINE; do
+        [ -z "$GROUP_LINE" ] && continue
+        COUNT=$(echo "$GROUP_LINE" | wc -w)
+        if [ "$COUNT" -gt 1 ]; then
+          echo "  Group $GROUP_NUM (overlapping - run sequentially): $GROUP_LINE"
+        else
+          echo "  Group $GROUP_NUM (isolated): $GROUP_LINE"
+        fi
+        ((GROUP_NUM++))
+      done <<< "$OVERLAP_RESULT"
       ;;
     *)
       match_skills "$*"
