@@ -38,16 +38,20 @@ find_conductor_root() {
     return 0
   fi
 
-  # 4. Find latest conductor in plugin cache
+  # 4. Find latest conductor in plugin cache (any marketplace, not just tabz-chrome)
   local CACHE_DIR="$HOME/.claude/plugins/cache"
   if [ -d "$CACHE_DIR" ]; then
-    # Find most recently modified conductor plugin
-    local LATEST=$(find "$CACHE_DIR" -type d -name "conductor" -path "*/tabz-chrome/*" 2>/dev/null | head -1)
+    # Find most recently modified conductor plugin in any marketplace
+    local LATEST=$(find "$CACHE_DIR" -type d -name "conductor" 2>/dev/null | head -1)
     if [ -n "$LATEST" ]; then
-      # Get the versioned subdirectory
+      # Check if this is a versioned directory structure
       local VERSIONED=$(ls -t "$LATEST" 2>/dev/null | head -1)
       if [ -n "$VERSIONED" ] && [ -d "$LATEST/$VERSIONED" ]; then
         echo "$LATEST/$VERSIONED"
+        return 0
+      elif [ -f "$LATEST/plugin.json" ]; then
+        # Direct plugin directory (no versioning)
+        echo "$LATEST"
         return 0
       fi
     fi
