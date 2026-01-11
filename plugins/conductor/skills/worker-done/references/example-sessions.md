@@ -1,11 +1,11 @@
 # Example Sessions - Worker Done
 
-Example output from `/conductor:worker-done` for different scenarios.
+Example output from `/conductor:bdw-worker-done` for different scenarios.
 
 ## Feature Implementation
 
 ```
-> /conductor:worker-done TabzChrome-hyo
+> /conductor:bdw-worker-done TabzChrome-hyo
 
 === Step 1: Build Verification ===
 Build passed
@@ -41,7 +41,7 @@ Documentation: CLAUDE.md
 ## Research Task (creates follow-ups)
 
 ```
-> /conductor:worker-done TabzChrome-abc
+> /conductor:bdw-worker-done TabzChrome-abc
 
 === Step 1: Build Verification ===
 Build passed (no code changes, research only)
@@ -76,7 +76,7 @@ Documentation: docs/research/youtube-api.md
 ## Bug Fix with Test Failures
 
 ```
-> /conductor:worker-done TabzChrome-bug
+> /conductor:bdw-worker-done TabzChrome-bug
 
 === Step 1: Build Verification ===
 Build passed
@@ -92,7 +92,7 @@ Pipeline stopped. Fix test failures and re-run.
 ## Code Review Blockers
 
 ```
-> /conductor:worker-done TabzChrome-feature
+> /conductor:bdw-worker-done TabzChrome-feature
 
 === Step 1: Build Verification ===
 Build passed

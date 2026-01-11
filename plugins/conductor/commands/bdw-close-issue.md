@@ -9,19 +9,19 @@ Close a beads issue after work is complete. This is a standalone atomic command.
 ## Usage
 
 ```
-/conductor:close-issue <issue-id>
-/conductor:close-issue <issue-id> <reason>
+/conductor:bdw-close-issue <issue-id>
+/conductor:bdw-close-issue <issue-id> <reason>
 ```
 
 ## Prerequisites
 
 Before closing, ensure:
-- Build passes (`/conductor:verify-build`)
-- Tests pass (`/conductor:run-tests`)
-- Code reviewed (`/conductor:code-review` or `/conductor:codex-review`)
-- Changes committed (`/conductor:commit-changes`)
-- Follow-ups created (`/conductor:create-followups`)
-- Docs updated (`/conductor:update-docs`)
+- Build passes (`/conductor:bdw-verify-build`)
+- Tests pass (`/conductor:bdw-run-tests`)
+- Code reviewed (`/conductor:bdw-code-review` or `/conductor:bdw-codex-review`)
+- Changes committed (`/conductor:bdw-commit-changes`)
+- Follow-ups created (`/conductor:bdw-create-followups`)
+- Docs updated (`/conductor:bdw-update-docs`)
 
 ## Execute
 
@@ -34,7 +34,7 @@ ISSUE_ID="${1:-$ISSUE_ID}"
 
 if [ -z "$ISSUE_ID" ]; then
   echo "ERROR: No issue ID provided"
-  echo "Usage: /conductor:close-issue <issue-id>"
+  echo "Usage: /conductor:bdw-close-issue <issue-id>"
   echo '{"closed": false, "error": "no issue ID"}'
   exit 1
 fi
@@ -115,7 +115,7 @@ If close fails:
 
 ## Composable With
 
-- `/conductor:commit-changes` - Run before closing
-- `/conductor:create-followups` - Run before closing
-- `/conductor:update-docs` - Run before closing
-- `/conductor:worker-done` - Full pipeline that includes this
+- `/conductor:bdw-commit-changes` - Run before closing
+- `/conductor:bdw-create-followups` - Run before closing
+- `/conductor:bdw-update-docs` - Run before closing
+- `/conductor:bdw-worker-done` - Full pipeline that includes this

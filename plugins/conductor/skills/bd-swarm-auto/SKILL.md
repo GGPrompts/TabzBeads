@@ -55,7 +55,7 @@ wait
 # ... see references/wave-execution.md
 
 # FULL CLOSEOUT: Use wave-done skill (recommended)
-/conductor:wave-done $READY
+/conductor:bdc-wave-done $READY
 # Runs: verify workers → kill sessions → merge → build → review → cleanup → push → summary
 
 # QUICK CLEANUP (alternative, skip review):
@@ -103,7 +103,7 @@ These load patterns and context you'll need.
 [Implementation guidance - what to do]
 
 ## When Done
-Run `/conductor:worker-done ISSUE-ID`
+Run `/conductor:bdw-worker-done ISSUE-ID`
 ```
 
 **CRITICAL: Use full `plugin:skill` format for skill invocation.**

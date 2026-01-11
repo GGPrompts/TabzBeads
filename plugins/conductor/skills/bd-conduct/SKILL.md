@@ -24,7 +24,7 @@ Spawn parallel workers with interactive configuration. You select issues, termin
 6. Spawn workers        → TabzChrome API
 7. Send prompts         → Skill-aware prompts
 8. Execute mode         → Interactive: monitor | Autonomous: wave loop
-9. Complete             → /conductor:wave-done
+9. Complete             → /conductor:bdc-wave-done
 ```
 
 ---
@@ -150,7 +150,7 @@ Worker prompt structure - see `references/worker-architecture.md`.
 When all selected issues are closed:
 
 ```bash
-/conductor:wave-done $SELECTED_ISSUES
+/conductor:bdc-wave-done $SELECTED_ISSUES
 ```
 
 This runs: verify → kill sessions → merge → build → review → cleanup → push → summary
@@ -175,7 +175,7 @@ This runs: verify → kill sessions → merge → build → review → cleanup �
 | `/conductor:bd-swarm-auto` | Fully autonomous, no prompts |
 | `/conductor:work` | Single-session, you do the work |
 | `/conductor:bd-work` | Spawn one visible worker |
-| `/conductor:wave-done` | Complete a wave of workers |
+| `/conductor:bdc-wave-done` | Complete a wave of workers |
 
 ---
 

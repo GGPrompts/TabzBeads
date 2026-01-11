@@ -11,28 +11,28 @@
 
 ### Standard Completion (with code review)
 ```bash
-/conductor:verify-build      # Build and check for errors
-/conductor:run-tests         # Run tests if available
-/conductor:code-review       # Opus review with auto-fix (high confidence)
-/conductor:commit-changes    # Stage + commit with conventional format
-/conductor:close-issue <id>  # Close the beads issue
+/conductor:bdw-verify-build      # Build and check for errors
+/conductor:bdw-run-tests         # Run tests if available
+/conductor:bdw-code-review       # Opus review with auto-fix (high confidence)
+/conductor:bdw-commit-changes    # Stage + commit with conventional format
+/conductor:bdw-close-issue <id>  # Close the beads issue
 bd sync && git push          # Push everything
 ```
 
 ### Quick Completion (skip review, for trivial changes)
 ```bash
-/conductor:verify-build
-/conductor:commit-changes
-/conductor:close-issue <id>
+/conductor:bdw-verify-build
+/conductor:bdw-commit-changes
+/conductor:bdw-close-issue <id>
 bd sync && git push
 ```
 
 ### Cost-Effective Review (use Codex instead of Opus)
 ```bash
-/conductor:verify-build
-/conductor:codex-review      # Cheaper read-only review via OpenAI Codex
-/conductor:commit-changes
-/conductor:close-issue <id>
+/conductor:bdw-verify-build
+/conductor:bdw-codex-review      # Cheaper read-only review via OpenAI Codex
+/conductor:bdw-commit-changes
+/conductor:bdw-close-issue <id>
 bd sync && git push
 ```
 
@@ -40,7 +40,7 @@ bd sync && git push
 
 If you were spawned by `/conductor:bd-swarm`, use worker-done and DO NOT push:
 ```bash
-/conductor:worker-done <id>  # Runs: verify → test → commit → close → NOTIFY
+/conductor:bdw-worker-done <id>  # Runs: verify → test → commit → close → NOTIFY
 # STOP HERE - conductor handles merge, review, and push
 ```
 
@@ -98,14 +98,14 @@ bd update <id> --status=in_progress  # Claim it
 **Completing work (standalone):**
 ```bash
 # Full pipeline with review
-/conductor:verify-build
-/conductor:code-review
-/conductor:commit-changes
-/conductor:close-issue <id>
+/conductor:bdw-verify-build
+/conductor:bdw-code-review
+/conductor:bdw-commit-changes
+/conductor:bdw-close-issue <id>
 bd sync && git push
 
 # Or use worker-done for quick path (skips review):
-/conductor:worker-done <id>  # verify → test → commit → close
+/conductor:bdw-worker-done <id>  # verify → test → commit → close
 bd sync && git push
 ```
 
@@ -137,10 +137,10 @@ These skills provide high-level orchestration for development workflows:
 ### Atomic Commands (used by completion pipelines)
 | Command | Purpose |
 |---------|---------|
-| `/conductor:verify-build` | Run build and report errors |
-| `/conductor:run-tests` | Run tests if available |
-| `/conductor:code-review` | Opus code review with auto-fix for high confidence issues |
-| `/conductor:codex-review` | Cost-effective read-only review via OpenAI Codex |
-| `/conductor:commit-changes` | Stage + commit with conventional format |
-| `/conductor:close-issue` | Close a beads issue with completion reason |
-| `/conductor:worker-done` | Full completion pipeline: verify → test → commit → close → notify |
+| `/conductor:bdw-verify-build` | Run build and report errors |
+| `/conductor:bdw-run-tests` | Run tests if available |
+| `/conductor:bdw-code-review` | Opus code review with auto-fix for high confidence issues |
+| `/conductor:bdw-codex-review` | Cost-effective read-only review via OpenAI Codex |
+| `/conductor:bdw-commit-changes` | Stage + commit with conventional format |
+| `/conductor:bdw-close-issue` | Close a beads issue with completion reason |
+| `/conductor:bdw-worker-done` | Full completion pipeline: verify → test → commit → close → notify |

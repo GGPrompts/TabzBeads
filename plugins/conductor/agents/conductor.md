@@ -178,7 +178,7 @@ Use the `/skill-name` skill for [specific aspect].
 Follow the pattern in [existing-file.ts] for consistency.
 
 ## When Done
-Run `/conductor:worker-done ISSUE-ID`
+Run `/conductor:bdw-worker-done ISSUE-ID`
 ```
 
 ### Skill Triggers
@@ -190,8 +190,8 @@ Run `/conductor:worker-done ISSUE-ID`
 | Complex reasoning | "use the sequential-thinking skill" |
 | Exploration | "use subagents in parallel to explore" |
 | Deep thinking | Prepend `ultrathink` |
-| Code review | Run `/conductor:code-review` |
-| Build verification | Run `/conductor:verify-build` |
+| Code review | Run `/conductor:bdw-code-review` |
+| Build verification | Run `/conductor:bdw-verify-build` |
 
 ### Prompt Guidelines (Lessons Learned)
 
@@ -200,7 +200,7 @@ Run `/conductor:worker-done ISSUE-ID`
 - **Reference patterns** - Point to existing code for consistency
 - **Avoid ALL CAPS** - Claude 4.x overtriggers on aggressive language
 - **File paths as text** - Workers read files on-demand, avoids bloat
-- **Include completion** - Always end with "Run `/conductor:worker-done ISSUE-ID`"
+- **Include completion** - Always end with "Run `/conductor:bdw-worker-done ISSUE-ID`"
 
 ---
 
@@ -210,7 +210,7 @@ Workers should complete their tasks with the full pipeline:
 
 ```markdown
 ## When Done
-Run `/conductor:worker-done ISSUE-ID`
+Run `/conductor:bdw-worker-done ISSUE-ID`
 ```
 
 This executes: verify-build → run-tests → commit → close-issue → notify-conductor
@@ -279,11 +279,11 @@ tmux capture-pane -t "$SESSION" -p -S -50 | tail -20
 
 ## Wave Completion
 
-After a wave of parallel workers finishes, use `/conductor:wave-done` to orchestrate completion:
+After a wave of parallel workers finishes, use `/conductor:bdc-wave-done` to orchestrate completion:
 
 ```bash
 # Complete a wave with specific issues
-/conductor:wave-done TabzChrome-abc TabzChrome-def TabzChrome-ghi
+/conductor:bdc-wave-done TabzChrome-abc TabzChrome-def TabzChrome-ghi
 ```
 
 **Pipeline:**
@@ -357,7 +357,7 @@ Users are reporting they can submit empty forms.
 Follow the validation pattern in src/components/RegisterForm.tsx
 
 ## When Done
-Run /conductor:worker-done TabzChrome-xxx'
+Run /conductor:bdw-worker-done TabzChrome-xxx'
 sleep 0.3
 tmux send-keys -t "$SESSION" C-m
 ```
@@ -406,7 +406,7 @@ done
 ## Best Practices
 
 1. **Use skill triggers** - Workers need explicit skill activation
-2. **Include completion command** - Always end prompts with `/conductor:worker-done`
+2. **Include completion command** - Always end prompts with `/conductor:bdw-worker-done`
 3. **Include conductor session in prompt** - Workers need this to notify completion
 4. **Set BD_SOCKET per worker** - Isolates beads daemon, prevents conflicts
 5. **Max 4 terminals** - Prevents statusline chaos

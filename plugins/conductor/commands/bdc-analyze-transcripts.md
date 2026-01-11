@@ -14,13 +14,13 @@ Review captured worker session transcripts to identify:
 
 ```bash
 # Analyze all transcripts
-/conductor:analyze-transcripts
+/conductor:bdc-analyze-transcripts
 
 # Analyze specific issue(s)
-/conductor:analyze-transcripts TabzChrome-abc TabzChrome-def
+/conductor:bdc-analyze-transcripts TabzChrome-abc TabzChrome-def
 
 # Analyze recent transcripts (last N)
-/conductor:analyze-transcripts --recent 5
+/conductor:bdc-analyze-transcripts --recent 5
 ```
 
 ## Transcript Location
@@ -200,6 +200,6 @@ Based on analysis, update:
 
 ## Related
 
-- `/conductor:wave-done` - Captures transcripts before killing sessions
-- `/conductor:create-followups` - Track discovered work
+- `/conductor:bdc-wave-done` - Captures transcripts before killing sessions
+- `/conductor:bdw-create-followups` - Track discovered work
 - `.beads/transcripts/` - Transcript storage location

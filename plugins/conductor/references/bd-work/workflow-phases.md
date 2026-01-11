@@ -181,7 +181,7 @@ Match issue keywords to relevant skills:
 | style, CSS, tailwind | `/tailwindcss` or `/ui-styling:ui-styling` |
 | MCP, tools, server | `/mcp-builder:mcp-builder` |
 | docs, documentation | `/docs-seeker:docs-seeker` |
-| code review, quality | `/conductor:code-review` |
+| code review, quality | `/conductor:bdw-code-review` |
 
 **Invocation formats:**
 - User/project skills: `/skill-name`
@@ -230,7 +230,7 @@ done | head -10
 
 ## Phase 8: Completion
 
-Run `/conductor:worker-done <issue-id>` which handles:
+Run `/conductor:bdw-worker-done <issue-id>` which handles:
 
 1. Build verification (npm run build)
 2. Test verification (npm test)
@@ -238,4 +238,4 @@ Run `/conductor:worker-done <issue-id>` which handles:
 4. Commit with proper format
 5. Close beads issue
 
-If any step fails, fix the issue and run `/conductor:worker-done` again.
+If any step fails, fix the issue and run `/conductor:bdw-worker-done` again.

@@ -1,5 +1,5 @@
 ---
-description: "Complete a wave of parallel workers: verify all workers finished, merge branches, run unified review, cleanup worktrees. Invoke with /conductor:wave-done <issue-ids>"
+description: "Complete a wave of parallel workers: verify all workers finished, merge branches, run unified review, cleanup worktrees. Invoke with /conductor:bdc-wave-done <issue-ids>"
 ---
 
 # Wave Done - Wave Completion Orchestrator
@@ -10,10 +10,10 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. H
 
 ```bash
 # Complete a wave with specific issues
-/conductor:wave-done TabzChrome-abc TabzChrome-def TabzChrome-ghi
+/conductor:bdc-wave-done TabzChrome-abc TabzChrome-def TabzChrome-ghi
 
 # Or use environment variable set by bd-swarm
-/conductor:wave-done $WAVE_ISSUES
+/conductor:bdc-wave-done $WAVE_ISSUES
 ```
 
 ## Pipeline Overview
@@ -169,7 +169,7 @@ echo "Transcripts saved to .beads/transcripts/"
 **Important:**
 - Transcripts are captured BEFORE killing sessions to preserve context
 - Sessions MUST be killed before removing worktrees to release file locks
-- Transcripts can be analyzed later with `/conductor:analyze-transcripts`
+- Transcripts can be analyzed later with `/conductor:bdc-analyze-transcripts`
 
 ---
 
@@ -247,7 +247,7 @@ rmdir "$WORKTREE_DIR" 2>/dev/null || true
 echo "=== Step 5: Build Verification ==="
 ```
 
-Run `/conductor:verify-build`. If `passed: false` -> **STOP**, fix errors, re-run.
+Run `/conductor:bdw-verify-build`. If `passed: false` -> **STOP**, fix errors, re-run.
 
 This verifies the merged code builds correctly with all workers' changes combined. Worktrees are already cleaned up, so the build runs on a clean directory.
 
@@ -259,7 +259,7 @@ This verifies the merged code builds correctly with all workers' changes combine
 echo "=== Step 6: Unified Code Review ==="
 ```
 
-Run `/conductor:code-review`. This reviews all merged changes together to catch:
+Run `/conductor:bdw-code-review`. This reviews all merged changes together to catch:
 - Cross-worker interactions
 - Combined code patterns
 - Architectural consistency
@@ -356,7 +356,7 @@ This generates a detailed summary including:
 If the pipeline stopped at merge, build, or review:
 
 1. Fix the issues in the main branch
-2. Re-run `/conductor:wave-done <issues>`
+2. Re-run `/conductor:bdc-wave-done <issues>`
 
 The pipeline will skip already-completed steps (sessions already killed, worktrees already cleaned).
 

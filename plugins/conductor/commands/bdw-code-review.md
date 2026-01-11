@@ -9,10 +9,10 @@ Automated code review with confidence-based filtering and test coverage assessme
 ## Invocation
 
 ```bash
-/conductor:code-review                    # Standard review (Opus)
-/conductor:code-review --quick            # Fast: lint + types + secrets only
-/conductor:code-review --thorough         # Deep: parallel specialized reviewers
-/conductor:code-review <issue-id>         # Review for specific issue
+/conductor:bdw-code-review                    # Standard review (Opus)
+/conductor:bdw-code-review --quick            # Fast: lint + types + secrets only
+/conductor:bdw-code-review --thorough         # Deep: parallel specialized reviewers
+/conductor:bdw-code-review <issue-id>         # Review for specific issue
 ```
 
 ## Core Capabilities
@@ -157,7 +157,7 @@ Parallel specialized reviewers:
 
 ### Worker Done Pipeline
 
-The `/conductor:worker-done` pipeline uses test assessment:
+The `/conductor:bdw-worker-done` pipeline uses test assessment:
 
 1. **Code review** runs with test assessment
 2. If `needs_tests: true` and `recommendation: required`:
@@ -214,5 +214,5 @@ Task(
 |----------|---------|
 | `plugins/conductor/agents/code-reviewer.md` | Agent implementation |
 | `plugins/conductor/commands/code-review.md` | Command definition |
-| `/conductor:worker-done` | Full completion pipeline |
-| `/conductor:run-tests` | Test execution |
+| `/conductor:bdw-worker-done` | Full completion pipeline |
+| `/conductor:bdw-run-tests` | Test execution |

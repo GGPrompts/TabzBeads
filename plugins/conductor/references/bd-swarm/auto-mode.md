@@ -117,7 +117,7 @@ After implementation, verify the build passes and test the changes work as expec
 - If truly blocked, close issue with reason 'needs-clarification'
 
 ## When Done
-Run: /conductor:worker-done ${ISSUE_ID}
+Run: /conductor:bdw-worker-done ${ISSUE_ID}
 
 This command will: build, run code review, commit changes, and close the issue.
 EOF

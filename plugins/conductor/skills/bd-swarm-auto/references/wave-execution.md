@@ -93,7 +93,7 @@ $(bd show $ISSUE_ID --json | jq -r '.[0].description // "No description"')
 Use the \`${SKILL_HINT}\` skill for guidance.
 
 ## When Done
-Run \`/conductor:worker-done ${ISSUE_ID}\`"
+Run \`/conductor:bdw-worker-done ${ISSUE_ID}\`"
 
 sleep 0.3
 tmux send-keys -t "$SESSION" C-m

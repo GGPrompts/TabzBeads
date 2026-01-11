@@ -190,7 +190,7 @@ Reference existing patterns in the codebase for consistency.
 After implementation, verify the build passes and test the changes work as expected.
 
 ## When Done
-Run: /conductor:worker-done ${ISSUE_ID}
+Run: /conductor:bdw-worker-done ${ISSUE_ID}
 
 This command will: build, run code review, commit changes, and close the issue.
 The worker-done command notifies the conductor via API automatically.
@@ -213,9 +213,9 @@ tmux send-keys -t "$SESSION" C-m
 | Context | Description + WHY this matters |
 | Key Files | Starting points (optional) |
 | Approach | Implementation guidance |
-| When Done | **Mandatory** `/conductor:worker-done` instruction |
+| When Done | **Mandatory** `/conductor:bdw-worker-done` instruction |
 
-**Note:** The `/conductor:worker-done` command automatically notifies the conductor via API.
+**Note:** The `/conductor:bdw-worker-done` command automatically notifies the conductor via API.
 
 ## 6. Start Monitor & Poll
 
@@ -256,7 +256,7 @@ When all workers done, run the full closeout workflow:
 
 ```bash
 # Full pipeline with code review and summary
-/conductor:wave-done $ISSUES
+/conductor:bdc-wave-done $ISSUES
 ```
 
 This runs all 9 steps:

@@ -9,7 +9,7 @@ Run project tests if a test script exists. This is a standalone atomic command.
 ## Usage
 
 ```
-/conductor:run-tests
+/conductor:bdw-run-tests
 ```
 
 ## Execute
@@ -81,10 +81,10 @@ Returns JSON on last line:
 
 If tests fail:
 1. Fix the failing tests
-2. Re-run `/conductor:run-tests`
+2. Re-run `/conductor:bdw-run-tests`
 
 ## Composable With
 
-- `/conductor:verify-build` - Run build before tests
-- `/conductor:commit-changes` - Run after tests pass
-- `/conductor:worker-done` - Full pipeline that includes this
+- `/conductor:bdw-verify-build` - Run build before tests
+- `/conductor:bdw-commit-changes` - Run after tests pass
+- `/conductor:bdw-worker-done` - Full pipeline that includes this

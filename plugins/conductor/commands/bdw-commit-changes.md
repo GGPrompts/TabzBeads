@@ -9,9 +9,9 @@ Stage all changes and commit with conventional commit format. This is a standalo
 ## Usage
 
 ```
-/conductor:commit-changes
-/conductor:commit-changes <issue-id>
-/conductor:commit-changes <issue-id> <commit-type>
+/conductor:bdw-commit-changes
+/conductor:bdw-commit-changes <issue-id>
+/conductor:bdw-commit-changes <issue-id> <commit-type>
 ```
 
 **Commit types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
@@ -19,9 +19,9 @@ Stage all changes and commit with conventional commit format. This is a standalo
 ## Prerequisites
 
 Run these first:
-- `/conductor:verify-build` - Ensure build passes
-- `/conductor:run-tests` - Ensure tests pass
-- `/conductor:code-review` or `/conductor:codex-review` - Ensure review passes
+- `/conductor:bdw-verify-build` - Ensure build passes
+- `/conductor:bdw-run-tests` - Ensure tests pass
+- `/conductor:bdw-code-review` or `/conductor:bdw-codex-review` - Ensure review passes
 
 ## Execute
 
@@ -123,12 +123,12 @@ Returns JSON on last line:
 If commit fails:
 1. Check `git status` for issues
 2. Resolve any conflicts
-3. Re-run `/conductor:commit-changes`
+3. Re-run `/conductor:bdw-commit-changes`
 
 ## Composable With
 
-- `/conductor:verify-build` - Run before commit
-- `/conductor:run-tests` - Run before commit
-- `/conductor:code-review` - Run before commit
-- `/conductor:close-issue` - Run after commit
-- `/conductor:worker-done` - Full pipeline that includes this
+- `/conductor:bdw-verify-build` - Run before commit
+- `/conductor:bdw-run-tests` - Run before commit
+- `/conductor:bdw-code-review` - Run before commit
+- `/conductor:bdw-close-issue` - Run after commit
+- `/conductor:bdw-worker-done` - Full pipeline that includes this

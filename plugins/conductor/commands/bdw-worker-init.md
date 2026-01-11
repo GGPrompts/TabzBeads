@@ -103,7 +103,7 @@ Use the xterm-js skill for terminal rendering. Reference existing patterns in Te
 After implementation, verify the build passes and test the changes work as expected.
 
 ## When Done
-Run: /conductor:worker-done ISSUE-ID
+Run: /conductor:bdw-worker-done ISSUE-ID
 
 This command will: build, run code review, commit changes, and close the issue.
 ```
@@ -199,7 +199,7 @@ Use the xterm-js skill for terminal rendering and resize handling. Focus on debo
 After implementation, verify the build passes and test rapid sidebar resizing with heavy output.
 
 ## When Done
-Run: /conductor:worker-done TabzChrome-xyz
+Run: /conductor:bdw-worker-done TabzChrome-xyz
 ```
 
 ## When NOT to Use

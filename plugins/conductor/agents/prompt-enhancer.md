@@ -96,7 +96,7 @@ Use the xterm-js skill for terminal patterns. Reference existing code in Termina
 After implementation, verify build passes and changes work as expected.
 
 ## When Done
-Run: /conductor:worker-done ISSUE-ID
+Run: /conductor:bdw-worker-done ISSUE-ID
 
 This command will: build, run code review, commit changes, and close the issue.
 ```
@@ -131,7 +131,7 @@ Use the xterm-js skill for terminal rendering and resize handling. Focus on impl
 After implementation, verify build passes and test rapid sidebar resizing.
 
 ## When Done
-Run: /conductor:worker-done TabzChrome-k2m
+Run: /conductor:bdw-worker-done TabzChrome-k2m
 ```
 
 ## What NOT To Do

@@ -1,6 +1,6 @@
 ---
 name: worker-done
-description: "Complete worker task: verify build, run tests, commit, and close issue. Code review happens at conductor level after merge. Invoke with /conductor:worker-done <issue-id>"
+description: "Complete worker task: verify build, run tests, commit, and close issue. Code review happens at conductor level after merge. Invoke with /conductor:bdw-worker-done <issue-id>"
 ---
 
 # Worker Done - Task Completion Orchestrator
@@ -10,10 +10,10 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 ## Usage
 
 ```bash
-/conductor:worker-done TabzChrome-abc
+/conductor:bdw-worker-done TabzChrome-abc
 
 # Or if issue ID is in your task header:
-/conductor:worker-done
+/conductor:bdw-worker-done
 ```
 
 ## Pipeline Overview
@@ -22,14 +22,14 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 |------|---------|-----------|-------------------|
 | 0 | Detect change types | No | - |
 | 0.5 | Detect complexity | No | Sets COMPLEXITY |
-| 1 | `/conductor:verify-build` | Yes - stop on failure | Yes |
+| 1 | `/conductor:bdw-verify-build` | Yes - stop on failure | Yes |
 | 1a | `plugin-validator` agent | Yes - stop on failure | ONLY if DOCS_ONLY |
-| 2 | `/conductor:run-tests` | Yes - stop on failure | Yes |
-| 3 | `/conductor:commit-changes` | Yes - stop on failure | No |
-| 4 | `/conductor:create-followups` | No - log and continue | No |
-| 5 | `/conductor:update-docs` | No - log and continue | No |
+| 2 | `/conductor:bdw-run-tests` | Yes - stop on failure | Yes |
+| 3 | `/conductor:bdw-commit-changes` | Yes - stop on failure | No |
+| 4 | `/conductor:bdw-create-followups` | No - log and continue | No |
+| 5 | `/conductor:bdw-update-docs` | No - log and continue | No |
 | 5.5 | Record completion info | No - best effort | Includes COMPLEXITY |
-| 6 | `/conductor:close-issue` | Yes - report result | No |
+| 6 | `/conductor:bdw-close-issue` | Yes - report result | No |
 | 6.5 | Complexity-aware review | No - standalone only | Standalone only |
 | 7 | Notify conductor | No - best effort | Worker only |
 
@@ -37,7 +37,7 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 
 **DOCS_ONLY mode:** When all changes are markdown files (`.md`, `.markdown`), steps 1-2 are replaced with the `plugin-validator` agent. This validates markdown structure and content without running expensive build/test steps.
 
-**Code review happens at conductor level:** Workers do NOT run code review. The conductor runs unified code review after merging all worker branches (see `/conductor:wave-done`). This prevents conflicts when multiple workers run in parallel.
+**Code review happens at conductor level:** Workers do NOT run code review. The conductor runs unified code review after merging all worker branches (see `/conductor:bdc-wave-done`). This prevents conflicts when multiple workers run in parallel.
 
 ---
 
@@ -105,7 +105,7 @@ Workers don't run code review - conductor handles unified review after merge.
 ```bash
 echo "=== Step 1: Build Verification ==="
 ```
-Run `/conductor:verify-build`. If `passed: false` -> **STOP**, fix errors, re-run.
+Run `/conductor:bdw-verify-build`. If `passed: false` -> **STOP**, fix errors, re-run.
 
 ### Step 1a: Plugin Validator (ONLY if DOCS_ONLY)
 
@@ -134,20 +134,20 @@ If validation passes -> Skip to **Step 3** (commit).
 ```bash
 echo "=== Step 2: Test Verification ==="
 ```
-Run `/conductor:run-tests`. If `passed: false` -> **STOP**, fix tests, re-run.
+Run `/conductor:bdw-run-tests`. If `passed: false` -> **STOP**, fix tests, re-run.
 
 ### Step 3: Commit Changes
 ```bash
 echo "=== Step 3: Commit ==="
 ```
-Run `/conductor:commit-changes <issue-id>`. Creates conventional commit with Claude signature.
+Run `/conductor:bdw-commit-changes <issue-id>`. Creates conventional commit with Claude signature.
 
 ### Step 4-5: Non-blocking
 ```bash
 echo "=== Step 4: Follow-up Tasks ==="
 echo "=== Step 5: Documentation Check ==="
 ```
-Run `/conductor:create-followups` and `/conductor:update-docs`. Log and continue.
+Run `/conductor:bdw-create-followups` and `/conductor:bdw-update-docs`. Log and continue.
 
 ### Step 5.5: Record Completion Info
 ```bash
@@ -171,7 +171,7 @@ This creates an audit trail with start time (from spawn) and completion time + c
 ```bash
 echo "=== Step 6: Close Issue ==="
 ```
-Run `/conductor:close-issue <issue-id>`. Reports final status.
+Run `/conductor:bdw-close-issue <issue-id>`. Reports final status.
 
 ### Step 7: Notify Conductor (REQUIRED)
 
@@ -210,14 +210,14 @@ fi
 
 | Command | Description |
 |---------|-------------|
-| `/conductor:verify-build` | Run build, report errors |
-| `/conductor:run-tests` | Run tests if available |
-| `/conductor:commit-changes` | Stage + commit with conventional format |
-| `/conductor:create-followups` | Create follow-up beads issues |
-| `/conductor:update-docs` | Check/update documentation |
-| `/conductor:close-issue` | Close beads issue |
+| `/conductor:bdw-verify-build` | Run build, report errors |
+| `/conductor:bdw-run-tests` | Run tests if available |
+| `/conductor:bdw-commit-changes` | Stage + commit with conventional format |
+| `/conductor:bdw-create-followups` | Create follow-up beads issues |
+| `/conductor:bdw-update-docs` | Check/update documentation |
+| `/conductor:bdw-close-issue` | Close beads issue |
 
-**Note:** `/conductor:code-review` is NOT used by workers. Code review runs at conductor level after merge (see `/conductor:wave-done`).
+**Note:** `/conductor:bdw-code-review` is NOT used by workers. Code review runs at conductor level after merge (see `/conductor:bdc-wave-done`).
 
 ---
 
@@ -227,17 +227,17 @@ Compose commands for custom workflows:
 
 **Standard worker completion:**
 ```
-/conductor:verify-build
-/conductor:run-tests
-/conductor:commit-changes
-/conductor:close-issue <id>
+/conductor:bdw-verify-build
+/conductor:bdw-run-tests
+/conductor:bdw-commit-changes
+/conductor:bdw-close-issue <id>
 ```
 
 **Quick commit (skip tests):**
 ```
-/conductor:verify-build
-/conductor:commit-changes
-/conductor:close-issue <id>
+/conductor:bdw-verify-build
+/conductor:bdw-commit-changes
+/conductor:bdw-close-issue <id>
 ```
 
 ---
@@ -260,7 +260,7 @@ Compose commands for custom workflows:
 
 If the pipeline stopped:
 1. Fix the issues
-2. Run `/conductor:worker-done` again
+2. Run `/conductor:bdw-worker-done` again
 
 The pipeline is idempotent - safe to re-run.
 
@@ -268,7 +268,7 @@ The pipeline is idempotent - safe to re-run.
 
 ## After Notification
 
-When `/conductor:worker-done` succeeds:
+When `/conductor:bdw-worker-done` succeeds:
 - Issue is closed in beads
 - Commit is on the feature branch
 - Conductor notified (if CONDUCTOR_SESSION set)
@@ -306,7 +306,7 @@ Workers do NOT kill their own session - the conductor handles cleanup after rece
 
 **Conductor handles:** Merge → Unified Code Review → Visual QA → Final Push
 
-See `/conductor:wave-done` for the full conductor pipeline.
+See `/conductor:bdc-wave-done` for the full conductor pipeline.
 
 ---
 

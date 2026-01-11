@@ -108,13 +108,29 @@ plugins/conductor/
 │   └── bdw-*.md                 # Worker steps (bdw-verify-build, bdw-commit-changes)
 ├── agents/                      # Spawnable subagents
 │   ├── conductor.md             # Main orchestrator
-│   ├── code-reviewer.md
-│   └── ...
+│   ├── code-reviewer.md         # Autonomous code review
+│   ├── docs-updater.md          # Update documentation
+│   ├── skill-picker.md          # Find skills for issues
+│   └── prompt-enhancer.md       # Optimize prompts
 ├── skills/
-│   └── bd-conduct/              # Interactive orchestration
-│       └── SKILL.md
+│   ├── bd-conduct/              # Interactive orchestration
+│   ├── bd-swarm-auto/           # Autonomous swarm execution
+│   ├── code-review/             # Code review patterns
+│   ├── new-project/             # Project scaffolding
+│   ├── orchestration/           # Multi-session coordination
+│   ├── tabz-artist/             # Visual asset generation
+│   ├── tabz-mcp/                # Browser automation
+│   ├── terminal-tools/          # TUI tool control
+│   ├── wave-done/               # Wave completion
+│   └── worker-done/             # Worker completion
 └── scripts/                     # Shell automation
-    └── setup-worktree.sh
+    ├── setup-worktree.sh        # Git worktree creation
+    ├── match-skills.sh          # Issue-to-skill matching
+    ├── lookahead-enhancer.sh    # Parallel prompt preparation
+    ├── completion-pipeline.sh   # Automated wave completion
+    ├── wave-summary.sh          # Generate wave summaries
+    ├── capture-session.sh       # Capture session transcripts
+    └── discover-skills.sh       # Runtime skill discovery
 ```
 
 ---
@@ -146,6 +162,18 @@ bd-*    = User entry points (visible in menu)
 bdc-*   = Conductor internal (orchestration)
 bdw-*   = Worker internal (execution steps)
 ```
+
+### Skill Invocation Formats
+
+Skills use different invocation formats depending on their scope:
+
+| Scope | Format | Example |
+|-------|--------|---------|
+| Conductor skills | `/conductor:skill-name` | `/conductor:tabz-mcp` |
+| Plugin skills | `/plugin-name:skill-name` | `/frontend:ui-styling` |
+| Project skills | `/skill-name` | `/tabz-guide` |
+
+When matching skills to issues (via `match-skills.sh`), the script outputs explicit invocation commands that workers can use directly.
 
 ### Completion Pipeline
 ```
@@ -206,6 +234,7 @@ bd mol pour conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
 | `/conductor:bdc-wave-done` | Merge branches, unified review, cleanup |
 | `/conductor:bdc-run-wave` | Run wave from conductor-wave template |
 | `/conductor:bdc-orchestration` | Multi-session coordination |
+| `/conductor:bdc-analyze-transcripts` | Review worker session transcripts |
 
 ### Worker Internal (bdw-)
 | Command | Purpose |
@@ -213,9 +242,21 @@ bd mol pour conductor-wave --var issues="TabzBeads-abc TabzBeads-def"
 | `/conductor:bdw-verify-build` | Run build, report errors |
 | `/conductor:bdw-run-tests` | Run tests if available |
 | `/conductor:bdw-code-review` | Opus review with auto-fix |
+| `/conductor:bdw-codex-review` | Cost-effective Codex review (read-only) |
 | `/conductor:bdw-commit-changes` | Stage + commit |
 | `/conductor:bdw-close-issue` | Close beads issue |
+| `/conductor:bdw-create-followups` | Create follow-up beads issues |
+| `/conductor:bdw-update-docs` | Check and update documentation |
+| `/conductor:bdw-worker-init` | Initialize worker context |
 | `/conductor:bdw-worker-done` | Full completion pipeline |
+
+### Additional Commands
+| Command | Purpose |
+|---------|---------|
+| `/conductor:new-project` | Multi-phase project scaffolding |
+| `/conductor:tabz-artist` | Generate images via DALL-E and videos via Sora |
+| `/conductor:tabz-mcp` | Browser automation MCP tool discovery |
+| `/conductor:terminal-tools` | Reference for tmux and TUI tool control |
 
 ---
 

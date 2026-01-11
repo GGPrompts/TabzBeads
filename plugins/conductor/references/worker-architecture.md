@@ -9,7 +9,7 @@ Worker (vanilla Claude via tmux/TabzChrome)
   ├─> Gets context from `bd show <issue-id>`
   ├─> Receives explicit skill invocations in prompt (e.g., "/xterm-js:xterm-js")
   ├─> Invokes skills FIRST before starting work
-  └─> Completes with /conductor:worker-done
+  └─> Completes with /conductor:bdw-worker-done
 ```
 
 ## What Workers ARE
@@ -50,7 +50,7 @@ The conductor matches issue keywords to skill hints for worker prompts:
 1. Spawn      → TabzChrome API or tmux creates session
 2. Prompt     → Worker receives issue context + skill hint via tmux send-keys
 3. Work       → Worker invokes skill when needed, reads files on-demand
-4. Complete   → Worker runs /conductor:worker-done
+4. Complete   → Worker runs /conductor:bdw-worker-done
 5. Cleanup    → Session killed, worktree merged/removed
 ```
 
@@ -125,7 +125,7 @@ These load patterns and context you'll need.
 [Implementation guidance - what to do, not which skills to use]
 
 ## When Done
-Run `/conductor:worker-done ISSUE-ID`
+Run `/conductor:bdw-worker-done ISSUE-ID`
 ```
 
 ### Skill Invocation: Explicit Commands

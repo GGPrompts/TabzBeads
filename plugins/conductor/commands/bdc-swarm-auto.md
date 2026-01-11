@@ -152,9 +152,9 @@ if [ "$IS_BATCH_MODE" = true ]; then
     BATCH_ISSUES=$($MATCH_SCRIPT --batch-issues "$BATCH_ID")
     ALL_ISSUES="$ALL_ISSUES $BATCH_ISSUES"
   done
-  /conductor:wave-done $ALL_ISSUES
+  /conductor:bdc-wave-done $ALL_ISSUES
 else
-  /conductor:wave-done $READY
+  /conductor:bdc-wave-done $READY
 fi
 # Runs: verify workers → kill sessions → merge → build → review → cleanup → push → summary
 
@@ -279,7 +279,7 @@ These load patterns and context you'll need.
 [Implementation guidance - what to do]
 
 ## When Done
-Run `/conductor:worker-done ISSUE-ID`
+Run `/conductor:bdw-worker-done ISSUE-ID`
 ```
 
 **CRITICAL: Use full `plugin:skill` format for skill invocation.**

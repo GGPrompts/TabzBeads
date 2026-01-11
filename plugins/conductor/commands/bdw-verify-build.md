@@ -9,7 +9,7 @@ Run the project build and report any errors. This is a standalone atomic command
 ## Usage
 
 ```
-/conductor:verify-build
+/conductor:bdw-verify-build
 ```
 
 ## Execute
@@ -72,10 +72,10 @@ Returns JSON on last line:
 
 If build fails:
 1. Fix the errors shown
-2. Re-run `/conductor:verify-build`
+2. Re-run `/conductor:bdw-verify-build`
 
 ## Composable With
 
-- `/conductor:run-tests` - Run after build passes
-- `/conductor:commit-changes` - Run after build + tests pass
-- `/conductor:worker-done` - Full pipeline that includes this
+- `/conductor:bdw-run-tests` - Run after build passes
+- `/conductor:bdw-commit-changes` - Run after build + tests pass
+- `/conductor:bdw-worker-done` - Full pipeline that includes this

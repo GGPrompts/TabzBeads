@@ -9,8 +9,8 @@ Run a fast, read-only code review using the Codex MCP server. Cheaper and faster
 ## Usage
 
 ```
-/conductor:codex-review
-/conductor:codex-review <issue-id>
+/conductor:bdw-codex-review
+/conductor:bdw-codex-review <issue-id>
 ```
 
 ## When to Use
@@ -20,7 +20,7 @@ Run a fast, read-only code review using the Codex MCP server. Cheaper and faster
 - Cost-conscious workflows
 - As a second opinion
 
-**For thorough review with auto-fix:** Use `/conductor:code-review` instead.
+**For thorough review with auto-fix:** Use `/conductor:bdw-code-review` instead.
 
 ## Execute
 
@@ -92,18 +92,18 @@ Or with issues:
 If `passed: false`:
 1. Review the issues listed
 2. Fix critical/important issues
-3. Re-run `/conductor:codex-review`
+3. Re-run `/conductor:bdw-codex-review`
 
 ## Limitations
 
-Unlike `/conductor:code-review`:
+Unlike `/conductor:bdw-code-review`:
 - No auto-fixes (read-only)
 - Less context about project conventions
 - May miss subtle issues
 
 ## Composable With
 
-- `/conductor:verify-build` - Run build before review
-- `/conductor:run-tests` - Run tests before review
-- `/conductor:commit-changes` - Run after review passes
-- `/conductor:worker-done` - Can use this instead of code-review
+- `/conductor:bdw-verify-build` - Run build before review
+- `/conductor:bdw-run-tests` - Run tests before review
+- `/conductor:bdw-commit-changes` - Run after review passes
+- `/conductor:bdw-worker-done` - Can use this instead of code-review

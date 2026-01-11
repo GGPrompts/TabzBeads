@@ -9,8 +9,8 @@ Analyze completed work and create follow-up beads issues for discovered work. Th
 ## Usage
 
 ```
-/conductor:create-followups
-/conductor:create-followups <parent-issue-id>
+/conductor:bdw-create-followups
+/conductor:bdw-create-followups <parent-issue-id>
 ```
 
 ## When to Use
@@ -147,7 +147,7 @@ AskUserQuestion: "Should I create follow-up issues for: [list items]?"
 
 ## Composable With
 
-- `/conductor:commit-changes` - Run after commit
-- `/conductor:update-docs` - Run before or after
-- `/conductor:close-issue` - Run before closing
-- `/conductor:worker-done` - Full pipeline that includes this
+- `/conductor:bdw-commit-changes` - Run after commit
+- `/conductor:bdw-update-docs` - Run before or after
+- `/conductor:bdw-close-issue` - Run before closing
+- `/conductor:bdw-worker-done` - Full pipeline that includes this

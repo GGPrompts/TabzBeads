@@ -9,7 +9,7 @@ Check if documentation needs updating and apply minimal LLM-friendly updates. Th
 ## Usage
 
 ```
-/conductor:update-docs
+/conductor:bdw-update-docs
 ```
 
 ## When to Use
@@ -112,7 +112,7 @@ fi
 
 ## Composable With
 
-- `/conductor:commit-changes` - Doc updates included in commit
-- `/conductor:create-followups` - Run before or after
-- `/conductor:close-issue` - Run before closing
-- `/conductor:worker-done` - Full pipeline that includes this
+- `/conductor:bdw-commit-changes` - Doc updates included in commit
+- `/conductor:bdw-create-followups` - Run before or after
+- `/conductor:bdw-close-issue` - Run before closing
+- `/conductor:bdw-worker-done` - Full pipeline that includes this
