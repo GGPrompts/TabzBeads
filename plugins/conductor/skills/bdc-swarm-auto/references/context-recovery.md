@@ -10,14 +10,14 @@ Your context percentage is visible in your status bar.
 - **Below 70%:** Continue normally
 - **At 70% or above:** IMMEDIATELY trigger restart
 
-## Why /tmux:restart Instead of /wipe
+## Why /restart Instead of /wipe
 
 `/wipe` uses `/clear` which does NOT re-trigger SessionStart hooks. After `/clear`:
 - PRIME.md is NOT re-injected
 - Beads workflow context is NOT re-injected
 - Skill-eval hook still works, but you lose project context
 
-`/tmux:restart` exits and restarts Claude entirely, which DOES trigger SessionStart hooks.
+`/restart` exits and restarts Claude entirely, which DOES trigger SessionStart hooks.
 
 ## How to Restart with Recovery
 
@@ -27,10 +27,10 @@ Your context percentage is visible in your status bar.
 bd list --status=in_progress --json | jq -r '.[].id'
 ```
 
-2. Then invoke `/tmux:restart`:
+2. Then invoke `/restart`:
 
 ```
-/tmux:restart
+/restart
 ```
 
 This will:

@@ -79,7 +79,7 @@ NEXT=$(bd ready --json | jq 'length')
 4. **YOU MUST POLL** - Check issue status every 2 minutes
 5. **LOOP UNTIL EMPTY** - Keep running waves until `bd ready` is empty
 6. **VISUAL QA** - Spawn tabz-manager after UI waves
-7. **MONITOR CONTEXT** - At 70%+, trigger `/tmux:restart` (NOT /wipe - needs hooks)
+7. **MONITOR CONTEXT** - At 70%+, trigger `/restart` (NOT /wipe - needs hooks)
 
 ---
 
@@ -151,7 +151,7 @@ tabz-manager can take screenshots, click elements, and verify UI changes work co
 
 ## Context Recovery
 
-At 70% context, use `/tmux:restart` (NOT `/wipe` - restart triggers session hooks that re-inject PRIME.md and beads context).
+At 70% context, use `/restart` (NOT `/wipe` - restart triggers session hooks that re-inject PRIME.md and beads context).
 
 Before restarting, note the active state:
 ```bash
