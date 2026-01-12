@@ -89,29 +89,13 @@ TabzBeads/
 | `backend` | Node.js, Python, databases, DevOps |
 | `visual` | Canvas, Gemini multimodal, FFmpeg |
 | `docs` | PDF, Word, PowerPoint, Excel |
-| `meta` | Plugin/skill creation, MCP builders, validation agents |
 | `tools` | Debugging, code review, problem solving, Codex integration |
 | `tmux` | Terminal session management |
 | `specialized` | Shopify, Bubble Tea, xterm.js |
 
 > **Note:** Browser automation (tabz-manager, tabz-mcp) is now part of conductor for visual QA in workflows.
 
-### Meta Plugin Resources
-
-The `meta` plugin provides plugin development tools:
-
-| Resource | Type | Purpose |
-|----------|------|---------|
-| `/meta:create-plugin` | Command | Guided 8-phase plugin creation workflow |
-| `/meta:verify-plugin` | Command | Validate plugin structure and manifests |
-| `plugin-validator` | Agent | Autonomous plugin validation (sonnet) |
-| `skill-reviewer` | Agent | Review skill quality and best practices (sonnet) |
-| `agent-creator` | Agent | AI-assisted agent generation (sonnet) |
-| `plugin-development` | Skill | Complete plugin creation guidance |
-| `skill-creator` | Skill | Skill development patterns |
-| `agent-creator` | Skill | Agent development patterns |
-| `mcp-builder` | Skill | MCP server development |
-| `context-engineering` | Skill | Context optimization patterns |
+> **Note:** Meta development skills (plugin-development, skill-creator, agent-creator, mcp-builder, claude-code, context-engineering) have been migrated to my-plugins as granular plugins.
 
 ---
 
