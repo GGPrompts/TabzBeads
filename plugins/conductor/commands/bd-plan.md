@@ -152,12 +152,23 @@ bd update <issue-id> --priority 1
 
 Find relevant files and skills for ready issues, then **store prepared prompts in notes**.
 
+> **Guidance:** Follow the `bdc-prompt-enhancer` skill for the structured enhancement process.
+
+### Process
+
+For each ready issue:
+
+1. **Get issue details** - title, description, labels from `bd show`
+2. **Match skills** - Use `scripts/match-skills.sh` for keyword phrases
+3. **Find key files** - Quick grep for 5 keywords, max 10 files
+4. **Build prompt** - Structure with Context, Skills, Files, When Done
+5. **Store in notes** - Persist as `prepared.prompt` for workers
+
 ### Commands
 
 ```bash
 MATCH_SCRIPT="${CLAUDE_PLUGIN_ROOT:-./plugins/conductor}/scripts/match-skills.sh"
 
-# For each ready issue, find skills, key files, and store prepared prompt
 for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
   ISSUE_JSON=$(bd show "$ISSUE_ID" --json)
   TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
@@ -166,31 +177,27 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
 
   echo "=== $ISSUE_ID: $TITLE ==="
 
-  # Match skills (keyword phrases for skill-eval hook activation)
+  # Step 2: Match skills
   SKILL_KEYWORDS=$($MATCH_SCRIPT --verify "$TITLE $DESC $LABELS" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//')
-  if [ -n "$SKILL_KEYWORDS" ]; then
-    echo "Skills: $SKILL_KEYWORDS"
-  fi
+  [ -n "$SKILL_KEYWORDS" ] && echo "Skills: $SKILL_KEYWORDS"
 
-  # Find key files (based on keywords in title/description)
+  # Step 3: Find key files (max 30 seconds)
   KEY_FILES=""
   for keyword in $(echo "$TITLE $DESC" | tr ' ' '\n' | grep -E '^[a-z]{4,}$' | head -5); do
-    FOUND=$(find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.md" \) 2>/dev/null | xargs grep -l "$keyword" 2>/dev/null | head -3)
-    if [ -n "$FOUND" ]; then
-      KEY_FILES="$KEY_FILES $FOUND"
-    fi
+    FOUND=$(find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.md" -o -name "*.json" \) \
+      -not -path "*/node_modules/*" 2>/dev/null | xargs grep -l "$keyword" 2>/dev/null | head -3)
+    [ -n "$FOUND" ] && KEY_FILES="$KEY_FILES $FOUND"
   done
   KEY_FILES=$(echo "$KEY_FILES" | tr ' ' '\n' | sort -u | head -10 | tr '\n' ',' | sed 's/,$//')
   [ -n "$KEY_FILES" ] && echo "Files: $KEY_FILES"
 
-  # Build skill context for prompt (uses keyword phrases directly)
+  # Step 4: Build enhanced prompt
   SKILL_CONTEXT=""
   [ -n "$SKILL_KEYWORDS" ] && SKILL_CONTEXT="
 
 ## Relevant Skills
 $SKILL_KEYWORDS"
 
-  # Craft prepared prompt (keyword phrases help skill-eval hook identify relevant skills)
   PREPARED_PROMPT="Fix beads issue $ISSUE_ID: \"$TITLE\"
 
 ## Context
@@ -202,8 +209,7 @@ $KEY_FILES
 ## When Done
 Run: /conductor:bdw-worker-done $ISSUE_ID"
 
-  # Store prepared data in issue notes (YAML-like format)
-  # Skills stored as keyword phrases (hook handles activation via natural language)
+  # Step 5: Store in notes
   NOTES="prepared.skills: $SKILL_KEYWORDS
 prepared.files: $KEY_FILES
 prepared.prompt: |
@@ -217,12 +223,12 @@ done
 
 ### Output
 
-For each issue:
-- Matched skills to load (verified available)
-- Key files relevant to the task
-- **Stored in notes**: `prepared.skills`, `prepared.files`, `prepared.prompt`
+Each issue gets in its notes:
+- `prepared.skills` - Keyword phrases for skill activation
+- `prepared.files` - Key files to read first
+- `prepared.prompt` - Full prompt ready for worker
 
-Workers read `prepared.prompt` directly from notes - no exploration needed.
+Workers read `prepared.prompt` directly - no exploration needed.
 
 ---
 

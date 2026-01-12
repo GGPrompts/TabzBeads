@@ -17,8 +17,9 @@ Vanilla Claude Session (you)
 ├── Task tool -> can spawn subagents
 │   ├── conductor:code-reviewer (sonnet) - autonomous review
 │   ├── conductor:skill-picker (haiku) - find/install skills
-│   ├── conductor:prompt-enhancer (haiku) - enhance prompts for workers
 │   └── conductor:docs-updater (opus) - update docs after merges
+├── Skills for guidance (loaded into context)
+│   └── bdc-prompt-enhancer - enhance prompts for workers
 ├── Worktree setup via scripts/setup-worktree.sh
 ├── Monitoring via beads agent tracking
 └── Terminal Workers via TabzChrome spawn API
@@ -201,14 +202,16 @@ The pipeline sends notifications to the conductor via tmux.
 | Code review | Run `/conductor:bdw-code-review` |
 | Build verification | Run `/conductor:bdw-verify-build` |
 
-### Prompt Guidelines (Lessons Learned)
+### Prompt Guidelines
 
-- **Be explicit** - "Fix null reference on line 45" not "fix the bug"
-- **Add context** - Explain WHY to help Claude make good decisions
-- **Reference patterns** - Point to existing code for consistency
-- **Avoid ALL CAPS** - Claude 4.x overtriggers on aggressive language
-- **File paths as text** - Workers read files on-demand, avoids bloat
-- **Include completion** - Always end with "Run `/conductor:bdw-worker-done ISSUE-ID`"
+See [../../references/worker-prompt-guidelines.md](../../references/worker-prompt-guidelines.md) for detailed best practices.
+
+**Quick reference:**
+- Be explicit ("Fix X on line Y" not "fix the bug")
+- Add context (explain WHY)
+- Avoid ALL CAPS (causes overtriggering)
+- File paths as text (workers read on-demand)
+- Always end with `/conductor:bdw-worker-done ISSUE-ID`
 
 ---
 
@@ -294,8 +297,9 @@ After a wave of parallel workers finishes, use `/conductor:bdc-wave-done` to orc
 |----------|-------|---------|
 | `conductor:code-reviewer` | sonnet | Autonomous review, quality gate |
 | `conductor:skill-picker` | haiku | Search/install skills |
-| `conductor:prompt-enhancer` | haiku | Enhance prompts for workers |
 | `conductor:docs-updater` | opus | Update docs after merges |
+
+> **Note:** Prompt enhancement is now a skill (`bdc-prompt-enhancer`) loaded into context, not a spawnable agent.
 
 **Example:**
 ```

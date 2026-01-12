@@ -69,9 +69,56 @@ if echo "$NOTES" | grep -q "prepared.prompt"; then
   # Extract and display the prepared prompt
   echo "$NOTES" | sed -n '/prepared.prompt:/,/^[a-z_]*:/p' | sed '1d;$d'
 else
-  echo "No prepared prompt - work from issue description"
+  echo "No prepared prompt found"
 fi
 ```
+
+### If No Prepared Prompt
+
+When no prepared prompt exists, you have options:
+
+**Option A: Fork Enhancement (Recommended)**
+
+Spawn a background sonnet Task to enhance while you continue:
+
+```
+Task(
+  subagent_type: "general-purpose",
+  model: "sonnet",
+  run_in_background: true,
+  description: "Enhance issue prompt",
+  prompt: "Enhance beads issue $ISSUE_ID following the bdc-prompt-enhancer skill.
+    1. Get issue details: bd show $ISSUE_ID
+    2. Match skills using scripts/match-skills.sh
+    3. Find key files (max 10)
+    4. Build structured prompt with Context, Skills, Files, When Done
+    5. Store in notes as prepared.prompt
+    Return 'Enhanced' when done."
+)
+```
+
+Continue reading issue details while enhancement runs. Check notes after ~60s.
+
+**Option B: Haiku Explorers (Complex Tasks)**
+
+For tasks needing extensive codebase exploration:
+
+```
+Task(
+  subagent_type: "Explore",
+  model: "haiku",
+  description: "Find relevant files for $ISSUE_ID",
+  prompt: "Find all files relevant to: [issue title/description].
+    Focus on: implementation files, tests, related components.
+    Return file paths with brief explanations."
+)
+```
+
+Use Explore agents when the issue spans multiple domains or you need deep codebase understanding before starting.
+
+**Option C: Work from Description**
+
+Skip enhancement and work directly from `bd show` output. Best for simple, well-described issues.
 
 ---
 

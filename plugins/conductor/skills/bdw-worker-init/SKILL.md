@@ -10,6 +10,7 @@ Workers call this command to optimize their context before starting real work.
 
 **Flow:**
 ```
+0. Check for prepared.prompt in notes → if found, USE IT and skip
 1. Analyze current issue (from bd show or provided ID)
 2. Identify relevant skills based on keywords
 3. Find key files (quick search, size-checked)
@@ -19,10 +20,35 @@ Workers call this command to optimize their context before starting real work.
 
 ## When to Use
 
-Use `/conductor:worker-init` when:
+Use `/conductor:bdw-worker-init` when:
 - You're a newly spawned worker with a basic prompt
 - You want to start fresh with an optimized, skill-aware prompt
 - Your context is getting heavy and you need to reset
+
+## Step 0: Check for Prepared Prompt First
+
+**Before doing anything else**, check if the conductor already prepared a prompt:
+
+```bash
+ISSUE_ID="TabzChrome-xxx"  # From your initial prompt
+NOTES=$(bd show "$ISSUE_ID" --json 2>/dev/null | jq -r '.[0].notes // ""')
+
+if echo "$NOTES" | grep -q "prepared.prompt"; then
+  echo "=== Prepared Prompt Found ==="
+  echo "Conductor already enhanced this issue via bd-plan."
+  echo "Extract and use the prepared prompt from notes:"
+  echo ""
+  echo "$NOTES" | sed -n '/prepared.prompt:/,/^[a-z_]*\.\?[a-z]*:/p' | sed '1d;$d' | sed 's/^  //'
+  echo ""
+  echo "Use this prompt directly - no need to regenerate."
+  echo "SKIP worker-init and start working."
+  exit 0
+fi
+
+echo "No prepared prompt - proceeding with worker-init..."
+```
+
+If a prepared prompt exists, **use it directly** and skip the rest of worker-init. The conductor already did the enhancement work.
 
 ## Step 1: Get Issue Context
 
@@ -207,6 +233,7 @@ Run: /conductor:bdw-worker-done TabzChrome-xyz
 ## When NOT to Use
 
 Skip worker-init if:
+- **prepared.prompt exists in notes** (conductor already enhanced via bd-plan)
 - Your initial prompt is already detailed and skill-aware
 - The task is trivial (single-file fix)
 - You're already mid-implementation with good context
@@ -214,7 +241,16 @@ Skip worker-init if:
 
 ## Important Notes
 
+- **Check Step 0 first** - if prepared.prompt exists, use it and skip worker-init
 - This only works inside tmux
 - Enhanced prompt is backed up to clipboard
 - If timing fails, paste manually after /clear
 - The 8-second wait for /clear is important - don't shorten it
+
+## Related
+
+| Resource | Purpose |
+|----------|---------|
+| `bdc-prompt-enhancer` | Conductor-side enhancement (prepares prompts in advance) |
+| `/conductor:bd-plan` | Batch enhancement during planning phase |
+| `prepared.prompt` in notes | Pre-enhanced prompts stored by conductor |

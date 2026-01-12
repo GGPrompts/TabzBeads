@@ -18,13 +18,14 @@ Spawn parallel workers with interactive configuration. You select issues, termin
 ```
 1. Get ready issues     → bd ready
 2. Select issues        → AskUserQuestion (multiSelect)
-3. Choose terminals     → AskUserQuestion (2-4)
+3. Choose terminals     → AskUserQuestion (1-4)
 4. Choose mode          → AskUserQuestion (Interactive/Autonomous)
-5. Create worktrees     → scripts/setup-worktree.sh (parallel)
-6. Spawn workers        → TabzChrome API
-7. Send prompts         → Skill-aware prompts
-8. Execute mode         → Interactive: monitor | Autonomous: wave loop
-9. Complete             → /conductor:bdc-wave-done
+5. Ensure enhanced      → Check/run bdc-prompt-enhancer for unprepared issues
+6. Create worktrees     → scripts/setup-worktree.sh (parallel)
+7. Spawn workers        → TabzChrome API
+8. Send prompts         → Skill-aware prompts from prepared.prompt
+9. Execute mode         → Interactive: monitor | Autonomous: wave loop
+10. Complete            → /conductor:bdc-wave-done
 ```
 
 ---
@@ -78,6 +79,54 @@ options: [
   { label: "Autonomous", description: "Runs waves until backlog empty" }
 ]
 ```
+
+---
+
+## Phase 2.5: Ensure Prompts Enhanced
+
+Before spawning workers, check if selected issues have prepared prompts:
+
+```bash
+UNPREPARED=""
+for ISSUE_ID in $SELECTED_ISSUES; do
+  NOTES=$(bd show "$ISSUE_ID" --json | jq -r '.[0].notes // ""')
+  if ! echo "$NOTES" | grep -q "prepared.prompt"; then
+    UNPREPARED="$UNPREPARED $ISSUE_ID"
+  fi
+done
+```
+
+If any unprepared, enhance them:
+
+**Option A: Batch Enhancement (Recommended)**
+
+```bash
+if [ -n "$UNPREPARED" ]; then
+  echo "Enhancing $UNPREPARED..."
+  ${CLAUDE_PLUGIN_ROOT}/scripts/lookahead-enhancer.sh --once --batch 4
+fi
+```
+
+**Option B: Parallel Task Agents**
+
+For faster parallel enhancement, spawn sonnet Tasks:
+
+```
+for ISSUE_ID in $UNPREPARED:
+  Task(
+    subagent_type: "general-purpose",
+    model: "sonnet",
+    run_in_background: true,
+    description: "Enhance $ISSUE_ID",
+    prompt: "Enhance beads issue $ISSUE_ID following bdc-prompt-enhancer skill..."
+  )
+```
+
+Wait for all Tasks to complete before proceeding.
+
+**Option C: Skip Enhancement**
+
+Proceed without enhancement - workers will craft prompts dynamically from issue description. Less efficient but works for well-described issues.
 
 ---
 

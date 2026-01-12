@@ -201,20 +201,18 @@ flowchart LR
     subgraph "Spawned by Conductor"
         AG1["code-reviewer"]
         AG2["docs-updater"]
-        AG3["prompt-enhancer"]
-        AG4["skill-picker"]
-        AG5["tabz-artist"]
-        AG6["tabz-manager"]
+        AG3["skill-picker"]
+        AG4["tabz-artist"]
+        AG5["tabz-manager"]
     end
 
-    conductor["Conductor"] --> AG1 & AG2 & AG3 & AG4 & AG5 & AG6
+    conductor["Conductor"] --> AG1 & AG2 & AG3 & AG4 & AG5
 
     click AG1 "agents/code-reviewer.md"
     click AG2 "agents/docs-updater.md"
-    click AG3 "agents/prompt-enhancer.md"
-    click AG4 "agents/skill-picker.md"
-    click AG5 "agents/tabz-artist.md"
-    click AG6 "agents/tabz-manager.md"
+    click AG3 "agents/skill-picker.md"
+    click AG4 "agents/tabz-artist.md"
+    click AG5 "agents/tabz-manager.md"
 ```
 
 **Visual QA:** The `tabz-manager` agent is spawned by `bdc-wave-done` for browser console error checking and screenshot verification after wave merges.
@@ -224,11 +222,12 @@ flowchart LR
 | [conductor](agents/conductor.md) | Opus | Main orchestration |
 | [code-reviewer](agents/code-reviewer.md) | Sonnet | Autonomous code review |
 | [docs-updater](agents/docs-updater.md) | Opus | Update documentation |
-| [prompt-enhancer](agents/prompt-enhancer.md) | Haiku | Optimize worker prompts |
 | [skill-picker](agents/skill-picker.md) | Haiku | Find/install skills |
 | [tabz-artist](agents/tabz-artist.md) | Sonnet | Visual asset generation |
 | [tabz-manager](agents/tabz-manager.md) | Opus | Browser automation & Visual QA |
 | [silent-failure-hunter](agents/silent-failure-hunter.md) | Sonnet | Error handling audit |
+
+> **Note:** Prompt enhancement is now a skill (`bdc-prompt-enhancer`) loaded into context, not a spawnable agent.
 
 ---
 
@@ -248,9 +247,10 @@ plugins/conductor/
 │
 ├── skills/                  ← Workflow steps (hidden: user-invocable: false)
 │   ├── bdc-orchestration/   ┐
-│   ├── bdc-swarm-auto/      │ Conductor internal
-│   ├── bdc-wave-done/       │
+│   ├── bdc-swarm-auto/      │
+│   ├── bdc-wave-done/       │ Conductor internal
 │   ├── bdc-run-wave/        │
+│   ├── bdc-prompt-enhancer/ │
 │   ├── bdc-analyze-transcripts/ ┘
 │   │
 │   ├── bdw-worker-init/     ┐
@@ -272,7 +272,6 @@ plugins/conductor/
 │   ├── conductor.md
 │   ├── code-reviewer.md
 │   ├── docs-updater.md
-│   ├── prompt-enhancer.md
 │   ├── skill-picker.md
 │   ├── tabz-artist.md
 │   ├── tabz-manager.md      ← Visual QA for wave-done
