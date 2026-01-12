@@ -3,6 +3,26 @@
 > **Context Recovery**: Run `bd prime` after compaction, clear, or new session
 > Hooks auto-call this in Claude Code when .beads/ detected
 
+## Prefer MCP Over CLI
+
+**Use beads MCP tools instead of `bd` CLI when available:**
+
+```bash
+# Preferred: MCP (structured JSON, better integration)
+mcp-cli call beads/ready '{"limit": 5}'
+mcp-cli call beads/create '{"title": "...", "type": "task", "priority": 2}'
+mcp-cli call beads/close '{"issue_id": "TabzBeads-xxx", "reason": "..."}'
+
+# Fallback: CLI (if MCP unavailable)
+bd ready
+bd create --title="..." --type=task --priority=2
+bd close TabzBeads-xxx --reason="..."
+```
+
+**Available MCP tools:** `beads/ready`, `beads/list`, `beads/show`, `beads/create`, `beads/update`, `beads/close`, `beads/reopen`, `beads/dep`, `beads/stats`, `beads/blocked`
+
+**Check MCP availability:** `mcp-cli tools beads`
+
 # 🚨 SESSION CLOSE PROTOCOL 🚨
 
 **CRITICAL**: Before saying "done" or "complete", run the appropriate completion pipeline.
