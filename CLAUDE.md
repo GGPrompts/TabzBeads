@@ -8,7 +8,7 @@ TabzBeads is a **Claude Code plugin marketplace** - a collection of plugins for 
 |--|--|
 | **Type** | Plugin Marketplace (multiple plugins) |
 | **Core Tool** | beads (bd) - AI-native issue tracking |
-| **Key Command** | `/conductor:bd-work` - single-session workflow entry point |
+| **Key Command** | `/conductor:bd-conduct` - interactive multi-session orchestration |
 
 ---
 
@@ -122,12 +122,10 @@ The conductor plugin orchestrates multi-session Claude workflows:
 plugins/conductor/
 ├── plugin.json
 ├── commands/                    # User entry points (bd-*)
-│   ├── bd-work.md               # Single-session workflow
 │   ├── bd-plan.md               # Prepare backlog
-│   ├── bd-swarm.md              # Spawn parallel workers
+│   ├── bd-start.md              # YOU work directly (no spawn)
 │   ├── bd-status.md             # View issue state
-│   ├── bd-start.md              # Grab issue and start
-│   ├── bd-conduct.md            # Interactive orchestration
+│   ├── bd-conduct.md            # Interactive orchestration (1-4 workers)
 │   └── bd-new-project.md        # Project scaffolding
 ├── agents/                      # Spawnable subagents
 │   ├── conductor.md             # Main orchestrator
@@ -172,7 +170,7 @@ plugins/conductor/
 
 ### Phase 1: Consolidation ✅
 - Prefix-based taxonomy: `bd-` (user), `bdc-` (conductor), `bdw-` (worker)
-- User entry points: bd-work, bd-plan, bd-swarm, bd-status
+- User entry points: bd-plan, bd-start, bd-status, bd-conduct, bd-new-project
 - Internal steps clearly namespaced (no hiding needed during testing)
 
 ### Phase 2: Beads-Native Integration
@@ -258,12 +256,10 @@ These are user entry points in `commands/`. Invoke with `/conductor:bd-*`.
 
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bd-work` | Single-session: you implement an issue |
 | `/conductor:bd-plan` | Prepare backlog: refine, enhance, match skills |
-| `/conductor:bd-swarm` | Multi-session: spawn parallel workers (uses multi-select) |
+| `/conductor:bd-start` | YOU work directly on an issue (no spawn) |
 | `/conductor:bd-status` | View issue state (open, blocked, ready) |
-| `/conductor:bd-start` | Grab a ready issue and start working |
-| `/conductor:bd-conduct` | Interactive multi-session orchestration |
+| `/conductor:bd-conduct` | Interactive orchestration: select issues, terminals (1-4), mode |
 | `/conductor:bd-new-project` | Multi-phase project scaffolding |
 
 ### Internal Skills (bdc-*, bdw-*)

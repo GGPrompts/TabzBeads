@@ -1,4 +1,5 @@
 ---
+name: "pmux"
 description: "Interactive Prompt Engineer with tmux send-keys - directly send prompts to Claude Code sessions"
 args: "[--batch] [issue-id...]"
 ---

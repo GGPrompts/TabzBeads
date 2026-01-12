@@ -1,4 +1,5 @@
 ---
+name: "bdc-run-wave"
 description: "Run a conductor wave from the conductor-wave molecule template"
 user-invocable: false
 keywords:

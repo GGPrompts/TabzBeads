@@ -1,4 +1,5 @@
 ---
+name: "bdc-analyze-transcripts"
 description: "Analyze worker session transcripts to find patterns, missed opportunities, and improvement areas"
 user-invocable: false
 keywords:

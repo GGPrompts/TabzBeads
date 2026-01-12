@@ -1,10 +1,11 @@
 ---
+name: "bd-start"
 description: "Grab a ready issue and start working on it directly (no worker spawn)"
 ---
 
 # Beads Start - Standalone Issue Pickup
 
-Grab a ready issue and start working on it directly in this session. Unlike `bd-work`, this doesn't spawn a worker - YOU are the worker.
+Grab a ready issue and start working on it directly in this session. Unlike `bd-conduct`, this doesn't spawn a worker - YOU are the worker.
 
 ## Quick Start
 
@@ -126,8 +127,8 @@ bd sync && git push
 | Command | Who Works | Spawns Terminal | Use Case |
 |---------|-----------|-----------------|----------|
 | `/conductor:bd-start` | You | No | Standalone work in current session |
-| `/conductor:bd-work` | Spawned worker | Yes | Conductor delegates to visible worker |
-| `/conductor:bd-swarm` | Multiple workers | Yes | Parallel batch processing |
+| `/conductor:bd-conduct` | Spawned worker(s) | Yes | Interactive orchestration (1-4 workers) |
+| `/conductor:bdc-swarm-auto` | Spawned workers | Yes | Fully autonomous parallel processing |
 
 ---
 

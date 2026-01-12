@@ -1,4 +1,5 @@
 ---
+name: "bdw-run-tests"
 user-invocable: false
 description: "Run tests if available. Standalone command for test verification."
 ---

@@ -1,3 +1,8 @@
+---
+name: "terminal-tools"
+description: "TODO: Add description"
+---
+
 # Terminal Tools Skill
 
 Reference knowledge for tmux mastery and TUI tool control.

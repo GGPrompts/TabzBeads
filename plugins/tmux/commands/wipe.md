@@ -1,4 +1,5 @@
 ---
+name: "wipe"
 description: Generate handoff, clear context, and auto-continue in fresh session
 ---
 

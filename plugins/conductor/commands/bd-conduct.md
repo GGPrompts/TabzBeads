@@ -1,5 +1,6 @@
 ---
-description: "Interactive multi-session orchestration. Select issues, choose terminal count, pick mode (interactive/autonomous), then spawn workers. Use when you want guided parallel issue processing."
+name: "bd-conduct"
+description: "Interactive multi-session orchestration. Select issues, choose terminal count (1-4), pick mode (interactive/autonomous), then spawn workers. Main entry point for spawning workers."
 ---
 
 # BD Conduct - Interactive Multi-Session Orchestration
@@ -58,11 +59,14 @@ options: [
 question: "How many worker terminals should I spawn?"
 header: "Terminals"
 options: [
+  { label: "1 terminal", description: "Single worker - focused execution (like old bd-work)" },
   { label: "2 terminals", description: "Conservative - less resource usage" },
   { label: "3 terminals (Recommended)", description: "Balanced performance" },
   { label: "4 terminals", description: "Maximum parallelism" }
 ]
 ```
+
+**Note:** With 1 terminal selected, behavior is identical to the deprecated `bd-work` command - a single worker handles one issue at a time.
 
 ### Execution Mode
 
@@ -156,14 +160,15 @@ This runs: verify → kill sessions → merge → build → review → cleanup �
 
 ---
 
-## Key Differences from bd-swarm-auto
+## Key Differences from Other Commands
 
-| Aspect | bd-conduct | bd-swarm-auto |
-|--------|------------|---------------|
-| Issue selection | User picks (multiSelect) | All ready issues |
-| Terminal count | User chooses (2-4) | Auto-calculated |
-| Mode | User chooses | Always autonomous |
-| Entry point | Interactive prompts first | Immediate execution |
+| Aspect | bd-conduct | bdc-swarm-auto | bd-start |
+|--------|------------|----------------|----------|
+| Issue selection | User picks (multiSelect) | All ready issues | Top ready or specified |
+| Terminal count | User chooses (1-4) | Auto-calculated | N/A (you work) |
+| Mode | User chooses | Always autonomous | N/A |
+| Who works? | Spawned workers | Spawned workers | YOU directly |
+| Entry point | Interactive prompts | Immediate execution | Immediate |
 
 ---
 
@@ -171,8 +176,9 @@ This runs: verify → kill sessions → merge → build → review → cleanup �
 
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bdc-swarm-auto` | Fully autonomous, no prompts |
-| `/conductor:bd-work` | Single-session, YOU implement the issue |
+| `/conductor:bd-start` | YOU work on issue directly (no spawn) |
+| `/conductor:bd-plan` | Prepare backlog before spawning |
+| `/conductor:bdc-swarm-auto` | Fully autonomous waves, no prompts |
 | `/conductor:bdc-wave-done` | Complete a wave of workers |
 
 ---

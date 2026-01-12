@@ -1,4 +1,5 @@
 ---
+name: "verify-plugin"
 description: "Validate plugin structure, manifests, and references. Use instead of full code review for plugin-only changes."
 ---
 

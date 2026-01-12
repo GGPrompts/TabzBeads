@@ -31,10 +31,10 @@ This document maps all conductor plugin workflows, their components, and relatio
 │            (orchestrates multi-session Claude work)                  │
 │                                                                      │
 │  Entry Points (bd-*):                                                │
-│    /conductor:bd-work      - Single session (YOU do the work)       │
 │    /conductor:bd-plan      - Prepare backlog                        │
-│    /conductor:bd-swarm     - Spawn parallel workers                 │
+│    /conductor:bd-start     - YOU work directly (no spawn)           │
 │    /conductor:bd-status    - View issue state                       │
+│    /conductor:bd-conduct   - Interactive orchestration (1-4 workers)│
 └─────────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -90,20 +90,23 @@ Skills have `user-invocable: false` so they don't appear in the slash command me
 │                        USER ENTRY POINTS (bd-*)                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  /conductor:bd-work [issue-id]                                      │
-│       Single session - YOU do the work                              │
-│       Full pipeline: build → test → commit → push                   │
-│                                                                     │
 │  /conductor:bd-plan                                                 │
 │       Prepare backlog: refine, enhance prompts, match skills        │
 │       Stores prepared.* in issue notes                              │
 │                                                                     │
-│  /conductor:bd-swarm                                                │
-│       Multi-session: spawn parallel workers                         │
-│       Interactive issue selection and worker count                  │
+│  /conductor:bd-start [issue-id]                                     │
+│       Single session - YOU do the work directly (no spawn)          │
+│       Full pipeline: build → test → commit → push                   │
 │                                                                     │
 │  /conductor:bd-status                                               │
 │       View issue state (open, blocked, ready, in-progress)          │
+│                                                                     │
+│  /conductor:bd-conduct                                              │
+│       Interactive multi-session orchestration                       │
+│       Select issues, terminal count (1-4), execution mode           │
+│                                                                     │
+│  /conductor:bd-new-project                                          │
+│       Template-based project scaffolding                            │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -112,20 +115,21 @@ Skills have `user-invocable: false` so they don't appear in the slash command me
 
 | Entry Point | Use Case | Who Works? | Code Review By |
 |-------------|----------|------------|----------------|
-| `bd-work` | Single issue, you working | You | You (optional) |
 | `bd-plan` | Prepare before execution | You (prep only) | N/A |
-| `bd-swarm` | Parallel worker spawning | Spawned workers | Conductor (unified) |
+| `bd-start` | Single issue, you working | You | You (optional) |
 | `bd-status` | Check project state | N/A | N/A |
+| `bd-conduct` | Spawn 1-4 workers | Spawned workers | Conductor (unified) |
+| `bd-new-project` | Create new project | You | N/A |
 
 ---
 
-## Single-Session Workflow (bd-work)
+## Single-Session Workflow (bd-start)
 
-**Command**: `/conductor:bd-work`
+**Command**: `/conductor:bd-start`
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    /conductor:bd-work [issue-id]                    │
+│                    /conductor:bd-start [issue-id]                   │
 │                    (YOU are the worker)                              │
 └─────────────────────────────────────────────────────────────────────┘
                               │
@@ -506,16 +510,16 @@ bd show <id> --json | jq -r '.[0].notes'
 ### For Standalone Work (you're the worker)
 
 ```bash
-/conductor:bd-work [issue-id]
+/conductor:bd-start [issue-id]
 # Does: select → claim → implement → verify → test → commit → close → push
 ```
 
-### For Parallel Work (spawning workers)
+### For Interactive Orchestration (spawning workers)
 
 ```bash
-/conductor:bd-swarm
-# Interactive: select issues, worker count
-# Then spawns workers in parallel
+/conductor:bd-conduct
+# Interactive: select issues, terminal count (1-4), mode
+# Then spawns workers
 ```
 
 ### For Autonomous Waves
@@ -554,6 +558,16 @@ bd show <id> --json | jq -r '.[0].notes'
 | Agents | `plugins/conductor/agents/*.md` |
 | Scripts | `plugins/conductor/scripts/*.sh` |
 
+### Current Commands
+
+| Command | Purpose |
+|---------|---------|
+| `bd-plan.md` | Prepare backlog |
+| `bd-start.md` | YOU work directly |
+| `bd-status.md` | View issue state |
+| `bd-conduct.md` | Interactive orchestration (1-4 workers) |
+| `bd-new-project.md` | Project scaffolding |
+
 ---
 
 ## Implementation Status
@@ -563,9 +577,11 @@ bd show <id> --json | jq -r '.[0].notes'
 | Feature | Status |
 |---------|--------|
 | Prefix taxonomy (bd-, bdc-, bdw-) | ✅ |
-| `/conductor:bd-work` command | ✅ |
+| `/conductor:bd-start` command | ✅ |
 | `/conductor:bd-plan` command | ✅ |
-| `/conductor:bd-swarm` command | ✅ |
+| `/conductor:bd-conduct` command | ✅ |
+| `/conductor:bd-status` command | ✅ |
+| `/conductor:bd-new-project` command | ✅ |
 | Auto-detect worker vs standalone | ✅ |
 | `bd worktree` integration | ✅ |
 | Agent bead tracking | ✅ |

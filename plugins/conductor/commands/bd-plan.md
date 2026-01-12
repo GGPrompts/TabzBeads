@@ -1,5 +1,6 @@
 ---
-description: "Prepare beads backlog before work: refine priorities, enhance prompts with skill hints, match skills to issues, review ready tasks. Optional preparation phase before /conductor:bd-work or /conductor:bdc-swarm-auto."
+name: "bd-plan"
+description: "Prepare beads backlog before work: refine priorities, enhance prompts with skill hints, match skills to issues, review ready tasks. Optional preparation phase before /conductor:bd-conduct or /conductor:bdc-swarm-auto."
 ---
 
 # Plan - Backlog Preparation
