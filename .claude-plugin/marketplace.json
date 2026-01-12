@@ -35,13 +35,6 @@
       "source": "./plugins/tools",
       "category": "tools",
       "keywords": ["tools", "debug", "review", "thinking", "problem", "solving", "docs", "search"]
-    },
-    {
-      "name": "specialized",
-      "description": "Specialized skills - Shopify, Bubble Tea TUI, Google ADK, git shortcuts",
-      "source": "./plugins/specialized",
-      "category": "specialized",
-      "keywords": ["shopify", "bubbletea", "tui", "google", "adk", "git"]
     }
   ]
 }
