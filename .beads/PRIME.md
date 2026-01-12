@@ -36,9 +36,9 @@ bd sync && git push
 bd sync && git push
 ```
 
-## BD-Swarm Worker (spawned by /conductor:bd-swarm)
+## BD-Conduct Worker (spawned by /conductor:bd-conduct)
 
-If you were spawned by `/conductor:bd-swarm`, use worker-done and DO NOT push:
+If you were spawned by `/conductor:bd-conduct`, use worker-done and DO NOT push:
 ```bash
 /conductor:bdw-worker-done <id>  # Runs: verify → test → commit → close → NOTIFY
 # STOP HERE - conductor handles merge, review, and push
@@ -127,10 +127,11 @@ Commands use prefixes to indicate their purpose:
 ### User Entry Points (bd-)
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bd-work` | Single-session: you implement an issue |
 | `/conductor:bd-plan` | Prepare backlog: refine, enhance prompts, match skills |
-| `/conductor:bd-swarm` | Multi-session: spawn parallel workers |
+| `/conductor:bd-start` | YOU work directly on an issue (no spawn) |
 | `/conductor:bd-status` | View issue state (open, blocked, ready) |
+| `/conductor:bd-conduct` | Interactive orchestration: select issues, terminals (1-4), mode |
+| `/conductor:bd-new-project` | Template-based project scaffolding |
 
 ### Conductor Internal (bdc-)
 | Command | Purpose |
