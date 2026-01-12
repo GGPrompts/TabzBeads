@@ -23,13 +23,6 @@
       "keywords": ["visual", "canvas", "gemini", "multimodal", "ffmpeg", "imagemagick", "video", "audio", "image"]
     },
     {
-      "name": "docs",
-      "description": "Document creation - PDFs, Word docs, presentations, spreadsheets, reports",
-      "source": "./plugins/docs",
-      "category": "productivity",
-      "keywords": ["docs", "pdf", "word", "docx", "presentation", "spreadsheet", "excel", "report"]
-    },
-    {
       "name": "tools",
       "description": "Development tools - debugging, code review, sequential thinking, problem solving, documentation search",
       "source": "./plugins/tools",
