@@ -16,13 +16,6 @@
       "keywords": ["conductor", "orchestrate", "workflow", "multi-session", "parallel", "worker", "spawn", "swarm", "beads", "issues", "tabz", "browser", "visual-qa"]
     },
     {
-      "name": "frontend",
-      "description": "Frontend development - React, TypeScript, Tailwind, shadcn/ui, Next.js, Remix, design systems",
-      "source": "./plugins/frontend",
-      "category": "development",
-      "keywords": ["frontend", "react", "typescript", "tailwind", "shadcn", "nextjs", "remix", "ui", "design"]
-    },
-    {
       "name": "backend",
       "description": "Backend development - Node.js, Python, Go, databases, authentication, DevOps, Docker",
       "source": "./plugins/backend",
