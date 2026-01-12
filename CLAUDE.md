@@ -47,8 +47,10 @@ TabzBeads/
 1. **Marketplace root has `.claude-plugin/marketplace.json`** - Lists all available plugins
 2. **Each plugin has `plugin.json` at its root** - NOT in `.claude-plugin/` subfolder
 3. **Skills are `skills/<name>/SKILL.md`** - One level deep, NOT nested skills inside skills
-4. **Commands are `commands/<name>.md`** - Markdown files with optional frontmatter
-5. **Agents are `agents/<name>.md`** - Markdown files with frontmatter
+4. **Commands are `commands/<name>.md`** - Markdown files with YAML frontmatter
+5. **Agents are `agents/<name>.md`** - Markdown files with YAML frontmatter
+6. **Skills hot-reload** - Changes in `~/.claude/skills` or `.claude/skills` take effect immediately
+7. **Skills/Commands unified** - Skills visible in `/` menu by default (v2.1.3+)
 
 ### marketplace.json Format
 
@@ -88,10 +90,27 @@ TabzBeads/
 | `backend` | Node.js, Python, databases, DevOps |
 | `visual` | Canvas, Gemini multimodal, FFmpeg |
 | `docs` | PDF, Word, PowerPoint, Excel |
-| `meta` | Plugin/skill creation, MCP builders |
-| `tools` | Debugging, code review, problem solving |
+| `meta` | Plugin/skill creation, MCP builders, validation agents |
+| `tools` | Debugging, code review, problem solving, Codex integration |
 | `tmux` | Terminal session management |
 | `specialized` | Shopify, Bubble Tea, xterm.js |
+
+### Meta Plugin Resources
+
+The `meta` plugin provides plugin development tools:
+
+| Resource | Type | Purpose |
+|----------|------|---------|
+| `/meta:create-plugin` | Command | Guided 8-phase plugin creation workflow |
+| `/meta:verify-plugin` | Command | Validate plugin structure and manifests |
+| `plugin-validator` | Agent | Autonomous plugin validation (sonnet) |
+| `skill-reviewer` | Agent | Review skill quality and best practices (sonnet) |
+| `agent-creator` | Agent | AI-assisted agent generation (sonnet) |
+| `plugin-development` | Skill | Complete plugin creation guidance |
+| `skill-creator` | Skill | Skill development patterns |
+| `agent-creator` | Skill | Agent development patterns |
+| `mcp-builder` | Skill | MCP server development |
+| `context-engineering` | Skill | Context optimization patterns |
 
 ---
 

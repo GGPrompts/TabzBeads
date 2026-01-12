@@ -200,7 +200,17 @@ Run `claude --debug` to see:
 - `references/manifest-schema.md` - Full plugin.json schema with all fields
 - `references/marketplace-schema.md` - Marketplace bundles, categories, and installation
 - `references/components.md` - Detailed specs for commands, agents, skills, hooks, MCP
-- `assets/templates/` - Template files for creating new plugins
+- `references/hooks.md` - Complete hook events, configuration, and patterns
+
+## Related Commands and Agents
+
+| Resource | Purpose |
+|----------|---------|
+| `/meta:create-plugin` | Guided 8-phase plugin creation workflow |
+| `/meta:verify-plugin` | Validate plugin structure and manifests |
+| `plugin-validator` agent | Autonomous plugin validation |
+| `skill-reviewer` agent | Review skill quality and best practices |
+| `agent-creator` agent | AI-assisted agent generation |
 
 ## Standalone vs Marketplace
 

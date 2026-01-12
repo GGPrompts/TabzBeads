@@ -105,6 +105,19 @@ my-marketplace/
 ```bash
 claude plugins add /path/to/plugin
 claude plugins add https://github.com/user/plugin
+
+# Install specific branch or tag (v2.0.28+)
+claude plugins add https://github.com/user/plugin#develop
+claude plugins add https://github.com/user/plugin#v1.0.0
+```
+
+**Team sharing:** Add to `.claude/settings.json`:
+```json
+{
+  "extraKnownMarketplaces": [
+    "https://github.com/company/plugins#stable"
+  ]
+}
 ```
 
 ## Commands (Slash Commands)
@@ -114,12 +127,34 @@ Create `commands/name.md`:
 ```markdown
 ---
 description: Brief description for autocomplete
+argument-hint: "[optional args]"
+model: sonnet
+allowed-tools:
+  - Bash
+  - Read
+context: fork
+hooks:
+  PostToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"
 ---
 
 # Command Name
 
 Instructions Claude follows when user types /name
 ```
+
+**Frontmatter fields:**
+- `description` (required) - Help text (<60 chars)
+- `argument-hint` - Document expected arguments
+- `model` - Override model (opus/sonnet/haiku)
+- `allowed-tools` - Restrict available tools (YAML list)
+- `context: fork` - Run in forked sub-agent
+- `agent` - Agent type for execution
+- `hooks` - Command-scoped hooks
+- `disable-model-invocation` - Prevent SlashCommand tool calls
 
 **Invoke:** `/plugin-name:command-name` or `/command-name`
 
@@ -130,15 +165,41 @@ Create `agents/name.md`:
 ```markdown
 ---
 name: agent-name
-description: What this agent specializes in
-model: opus|sonnet|haiku
-tools: Bash, Read, Write, Edit, Glob, Grep
+description: "What this agent specializes in. Include trigger phrases."
+model: sonnet
+tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+skills:
+  - skill-name
+permissionMode: default
+disallowedTools:
+  - WebSearch
+hooks:
+  Stop:
+    - hooks:
+        - type: prompt
+          prompt: "Verify work is complete before stopping."
 ---
 
 # Agent Name
 
 System prompt and instructions for the agent.
 ```
+
+**Frontmatter fields:**
+- `name` (required) - Agent identifier (lowercase, hyphens)
+- `description` (required) - When/why to use, include trigger phrases
+- `model` - opus/sonnet/haiku (default: inherit)
+- `tools` - Restrict available tools (YAML list, omit for all)
+- `skills` - Auto-load specific skills
+- `permissionMode` - default/acceptEdits/plan/bypassPermissions
+- `disallowedTools` - Explicitly block tools
+- `hooks` - Agent-scoped hooks (PreToolUse, PostToolUse, Stop)
 
 **Invoke:** `claude --agent plugin-name:agent-name`
 
@@ -155,12 +216,40 @@ Create `skills/name/SKILL.md`:
 ---
 name: skill-name
 description: "When to trigger this skill. Be specific about keywords and contexts."
+user-invocable: true
+model: sonnet
+context: fork
+allowed-tools:
+  - Read
+  - Write
+  - Bash
+hooks:
+  PostToolUse:
+    - matcher: "Write"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/validate.sh"
 ---
 
 # Skill Name
 
 Knowledge and instructions loaded when skill triggers.
 ```
+
+**Frontmatter fields:**
+- `name` (required) - Skill identifier (lowercase, hyphens)
+- `description` (required) - Trigger phrases and usage context
+- `user-invocable` - Show in slash command menu (default: true)
+- `model` - Override model (opus/sonnet/haiku)
+- `context: fork` - Run in forked sub-agent
+- `agent` - Agent type for execution
+- `allowed-tools` - Restrict available tools (YAML list)
+- `hooks` - Skill-scoped hooks
+
+**Key features:**
+- **Hot-reload** (v2.1.0+): Skills in `~/.claude/skills` or `.claude/skills` reload without restart
+- **Unified with commands** (v2.1.3+): Skills visible in `/` menu by default
+- **Progress display**: Tool uses shown while skill executes
 
 **Critical:** Skills must be **ONE level deep**:
 ```
@@ -182,7 +271,7 @@ skills/
 
 ## Hooks (Event Handlers)
 
-Create `hooks/hooks.json`:
+Create `hooks/hooks.json` or define in component frontmatter:
 
 ```json
 {
@@ -191,23 +280,45 @@ Create `hooks/hooks.json`:
       "matcher": "Write|Edit",
       "hooks": [{
         "type": "command",
-        "command": "/path/to/script.sh $FILE"
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh",
+        "timeout": 30000
       }]
     }],
-    "UserPromptSubmit": [{
+    "Stop": [{
       "hooks": [{
-        "type": "command",
-        "command": "/path/to/pre-prompt.sh"
+        "type": "prompt",
+        "prompt": "Verify all tests pass before stopping.",
+        "model": "haiku"
       }]
     }]
   }
 }
 ```
 
+**Hook events:**
+| Event | When | Special Features |
+|-------|------|------------------|
+| `PreToolUse` | Before tool execution | Can modify `updatedInput`, return `ask` |
+| `PostToolUse` | After tool execution | Access `tool_use_id` |
+| `PermissionRequest` | Permission dialog shown | Can auto-approve/deny |
+| `UserPromptSubmit` | User submits prompt | `additionalContext` output |
+| `Notification` | Notifications sent | Supports `matcher` values |
+| `Stop` | Claude attempts to stop | Prompt-based hooks supported |
+| `SubagentStop` | Subagent stops | `agent_id`, `agent_transcript_path` |
+| `SubagentStart` | Subagent starts | - |
+| `SessionStart` | Session begins | `agent_type` if `--agent` used |
+| `SessionEnd` | Session ends | `systemMessage` supported |
+| `PreCompact` | Before history compacted | - |
+
 **Hook types:**
-- `PreToolUse` - Before tool execution
-- `PostToolUse` - After tool execution
-- `UserPromptSubmit` - Before processing user message
+- `command` - Execute shell scripts
+- `prompt` - LLM-driven evaluation (can specify `model`)
+
+**Hook configuration:**
+- `matcher` - Tool/event pattern (regex, `*` wildcard)
+- `timeout` - Timeout in ms (default: 10 minutes)
+- `once: true` - Run only once per session
+- `model` - Model for prompt-based hooks
 
 ## MCP Server Integration
 

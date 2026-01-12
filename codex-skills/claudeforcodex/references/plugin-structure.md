@@ -60,7 +60,19 @@ Full:
 
 ```markdown
 ---
-description: Brief autocomplete description (required)
+description: Brief autocomplete description (<60 chars)
+argument-hint: "[optional args]"
+model: sonnet
+allowed-tools:
+  - Bash
+  - Read
+context: fork
+hooks:
+  PostToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"
 ---
 
 # Command Title
@@ -75,11 +87,24 @@ Describe how to use the command.
 
 1. First step
 2. Second step
-
-## Examples
-
-Show example usage.
 ```
+
+**Frontmatter fields:**
+| Field | Required | Description |
+|-------|----------|-------------|
+| `description` | Yes | Help text (<60 chars) |
+| `argument-hint` | No | Document expected arguments |
+| `model` | No | Override model (opus/sonnet/haiku) |
+| `allowed-tools` | No | Restrict tools (YAML list) |
+| `context` | No | `fork` to run in forked sub-agent |
+| `agent` | No | Agent type for execution |
+| `hooks` | No | Command-scoped hooks |
+| `disable-model-invocation` | No | Prevent SlashCommand tool |
+
+**Dynamic arguments:**
+- `$ARGUMENTS` - All arguments as string
+- `$1`, `$2`, `$3` - Positional arguments
+- `@$1` - Include file contents
 
 **Invocation:** `/plugin:my-command` or `/my-command`
 
@@ -91,8 +116,24 @@ Show example usage.
 ---
 name: my-agent
 description: "Detailed description of agent capabilities and when to use"
-model: opus|sonnet|haiku
-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, mcp:server:*
+model: sonnet
+tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+skills:
+  - skill-name
+permissionMode: default
+disallowedTools:
+  - WebSearch
+hooks:
+  Stop:
+    - hooks:
+        - type: prompt
+          prompt: "Verify work is complete."
 ---
 
 # Agent Title
@@ -110,10 +151,16 @@ Detailed instructions for the agent...
 ```
 
 **Frontmatter fields:**
-- `name` (required) - Agent identifier
-- `description` (required) - When to use this agent
-- `model` (optional) - opus, sonnet, or haiku (default: sonnet)
-- `tools` (optional) - Comma-separated tool list
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Agent identifier (lowercase, hyphens) |
+| `description` | Yes | When to use, include trigger phrases |
+| `model` | No | opus/sonnet/haiku (default: inherit) |
+| `tools` | No | YAML list of allowed tools (omit for all) |
+| `skills` | No | Auto-load specific skills |
+| `permissionMode` | No | default/acceptEdits/plan/bypassPermissions |
+| `disallowedTools` | No | Explicitly block tools |
+| `hooks` | No | Agent-scoped hooks (PreToolUse, PostToolUse, Stop) |
 
 **Tool options:**
 - `Bash` - Shell commands
@@ -135,6 +182,18 @@ Detailed instructions for the agent...
 ---
 name: my-skill
 description: "Trigger conditions. Include keywords, contexts, scenarios."
+user-invocable: true
+model: sonnet
+context: fork
+allowed-tools:
+  - Read
+  - Write
+hooks:
+  PostToolUse:
+    - matcher: "Write"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/validate.sh"
 ---
 
 # Skill Title
@@ -145,16 +204,29 @@ Core knowledge (500-1500 words recommended).
 
 Essential information.
 
-## Common Tasks
-
-How to accomplish typical tasks.
-
 ## Reference Files
 
 For detailed information:
 - `references/topic-one.md`
 - `references/topic-two.md`
 ```
+
+**Frontmatter fields:**
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Skill identifier (lowercase, hyphens) |
+| `description` | Yes | Trigger phrases and usage context |
+| `user-invocable` | No | Show in `/` menu (default: true) |
+| `model` | No | Override model (opus/sonnet/haiku) |
+| `context` | No | `fork` to run in forked sub-agent |
+| `agent` | No | Agent type for execution |
+| `allowed-tools` | No | Restrict available tools (YAML list) |
+| `hooks` | No | Skill-scoped hooks |
+
+**Key features:**
+- **Hot-reload** (v2.1.0+): Skills reload without restart
+- **Unified with commands** (v2.1.3+): Skills visible in `/` menu by default
+- **Progress display**: Tool uses shown while skill executes
 
 **Structure:**
 ```
@@ -178,20 +250,22 @@ skills/my-skill/
       "matcher": "Bash",
       "hooks": [{
         "type": "command",
-        "command": "/path/to/validate.sh"
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/validate.sh",
+        "timeout": 30000
       }]
     }],
     "PostToolUse": [{
       "matcher": "Write|Edit",
       "hooks": [{
         "type": "command",
-        "command": "/path/to/lint.sh $FILE"
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh"
       }]
     }],
-    "UserPromptSubmit": [{
+    "Stop": [{
       "hooks": [{
-        "type": "command",
-        "command": "/path/to/pre-process.sh"
+        "type": "prompt",
+        "prompt": "Verify all tests pass before stopping.",
+        "model": "haiku"
       }]
     }]
   }
@@ -199,14 +273,33 @@ skills/my-skill/
 ```
 
 **Hook events:**
-- `PreToolUse` - Before tool execution
-- `PostToolUse` - After tool execution
-- `UserPromptSubmit` - Before processing user input
+| Event | When | Special Features |
+|-------|------|------------------|
+| `PreToolUse` | Before tool execution | Can modify `updatedInput`, return `ask` |
+| `PostToolUse` | After tool execution | Access `tool_use_id` |
+| `PermissionRequest` | Permission dialog | Can auto-approve/deny |
+| `UserPromptSubmit` | User submits prompt | `additionalContext` output |
+| `Notification` | Notifications sent | Supports `matcher` values |
+| `Stop` | Claude attempts to stop | Prompt-based hooks supported |
+| `SubagentStop` | Subagent stops | `agent_id`, `agent_transcript_path` |
+| `SubagentStart` | Subagent starts | - |
+| `SessionStart` | Session begins | `agent_type` if `--agent` used |
+| `SessionEnd` | Session ends | `systemMessage` supported |
+| `PreCompact` | Before history compacted | - |
+
+**Hook types:**
+- `command` - Execute shell scripts
+- `prompt` - LLM-driven evaluation (can specify `model`)
+
+**Hook configuration:**
+- `matcher` - Tool/event pattern (regex, `*` wildcard)
+- `timeout` - Timeout in ms (default: 10 minutes)
+- `once: true` - Run only once per session
+- `model` - Model for prompt-based hooks
 
 **Variables:**
-- `$FILE` - File path (for Write/Edit)
-- `$TOOL` - Tool name
-- `$CLAUDE_PLUGIN_ROOT` - Plugin directory
+- `${CLAUDE_PLUGIN_ROOT}` - Plugin directory
+- `$CLAUDE_PROJECT_DIR` - Project root
 
 ## .mcp.json
 
