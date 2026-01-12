@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "tabz-beads",
   "version": "2.0.0",
-  "description": "Consolidated Claude Code plugins - 6 category bundles with progressive skill disclosure",
+  "description": "Claude Code orchestration plugin - multi-session workflows via beads issue tracking",
   "owner": {
     "name": "GGPrompts",
     "url": "https://github.com/GGPrompts/TabzBeads"
@@ -14,20 +14,6 @@
       "source": "./plugins/conductor",
       "category": "orchestration",
       "keywords": ["conductor", "orchestrate", "workflow", "multi-session", "parallel", "worker", "spawn", "swarm", "beads", "issues", "tabz", "browser", "visual-qa"]
-    },
-    {
-      "name": "visual",
-      "description": "Visual and media - Canvas art, Gemini multimodal AI, FFmpeg video, ImageMagick images",
-      "source": "./plugins/visual",
-      "category": "media",
-      "keywords": ["visual", "canvas", "gemini", "multimodal", "ffmpeg", "imagemagick", "video", "audio", "image"]
-    },
-    {
-      "name": "tools",
-      "description": "Development tools - debugging, code review, sequential thinking, problem solving, documentation search",
-      "source": "./plugins/tools",
-      "category": "tools",
-      "keywords": ["tools", "debug", "review", "thinking", "problem", "solving", "docs", "search"]
     }
   ]
 }
