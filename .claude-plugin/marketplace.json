@@ -44,13 +44,6 @@
       "keywords": ["docs", "pdf", "word", "docx", "presentation", "spreadsheet", "excel", "report"]
     },
     {
-      "name": "meta",
-      "description": "Meta development - plugin creation, skill scaffolding, MCP servers, agents, context engineering",
-      "source": "./plugins/meta",
-      "category": "meta",
-      "keywords": ["meta", "plugin", "skill", "mcp", "agent", "context", "engineering", "scaffold"]
-    },
-    {
       "name": "tools",
       "description": "Development tools - debugging, code review, sequential thinking, problem solving, documentation search",
       "source": "./plugins/tools",
