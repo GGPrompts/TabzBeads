@@ -10,17 +10,10 @@
   "plugins": [
     {
       "name": "conductor",
-      "description": "Multi-session orchestration - beads issue tracking, parallel workers, bd-swarm, completion pipelines",
+      "description": "Multi-session orchestration - beads workflows, parallel workers, visual QA via tabz-manager, completion pipelines",
       "source": "./plugins/conductor",
       "category": "orchestration",
-      "keywords": ["conductor", "orchestrate", "workflow", "multi-session", "parallel", "worker", "spawn", "swarm", "beads", "issues"]
-    },
-    {
-      "name": "tabz",
-      "description": "Browser automation via TabzChrome - 71 MCP tools for screenshots, clicks, forms, downloads, TTS, network capture",
-      "source": "./plugins/tabz",
-      "category": "browser",
-      "keywords": ["tabz", "browser", "chrome", "mcp", "screenshot", "automation", "tts", "download", "network", "tabs"]
+      "keywords": ["conductor", "orchestrate", "workflow", "multi-session", "parallel", "worker", "spawn", "swarm", "beads", "issues", "tabz", "browser", "visual-qa"]
     },
     {
       "name": "frontend",

@@ -204,16 +204,20 @@ flowchart LR
         AG3["prompt-enhancer"]
         AG4["skill-picker"]
         AG5["tabz-artist"]
+        AG6["tabz-manager"]
     end
 
-    conductor["Conductor"] --> AG1 & AG2 & AG3 & AG4 & AG5
+    conductor["Conductor"] --> AG1 & AG2 & AG3 & AG4 & AG5 & AG6
 
     click AG1 "agents/code-reviewer.md"
     click AG2 "agents/docs-updater.md"
     click AG3 "agents/prompt-enhancer.md"
     click AG4 "agents/skill-picker.md"
     click AG5 "agents/tabz-artist.md"
+    click AG6 "agents/tabz-manager.md"
 ```
+
+**Visual QA:** The `tabz-manager` agent is spawned by `bdc-wave-done` for browser console error checking and screenshot verification after wave merges.
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
@@ -223,6 +227,7 @@ flowchart LR
 | [prompt-enhancer](agents/prompt-enhancer.md) | Haiku | Optimize worker prompts |
 | [skill-picker](agents/skill-picker.md) | Haiku | Find/install skills |
 | [tabz-artist](agents/tabz-artist.md) | Sonnet | Visual asset generation |
+| [tabz-manager](agents/tabz-manager.md) | Opus | Browser automation & Visual QA |
 | [silent-failure-hunter](agents/silent-failure-hunter.md) | Sonnet | Error handling audit |
 
 ---
@@ -270,6 +275,7 @@ plugins/conductor/
 │   ├── prompt-enhancer.md
 │   ├── skill-picker.md
 │   ├── tabz-artist.md
+│   ├── tabz-manager.md      ← Visual QA for wave-done
 │   └── silent-failure-hunter.md
 │
 └── scripts/                 ← Shell automation

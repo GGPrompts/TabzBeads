@@ -349,11 +349,11 @@ Summarize findings clearly:
 
 Exit when complete with a clear summary."
 
-    # Spawn the Visual QA agent
+    # Spawn the Visual QA agent (tabz-manager in conductor plugin)
     RESPONSE=$(curl -s -X POST http://localhost:8129/api/spawn \
       -H "Content-Type: application/json" \
       -H "X-Auth-Token: $TOKEN" \
-      -d "{\"name\": \"Visual-QA\", \"workingDir\": \"$PROJECT_DIR\", \"command\": \"claude --agent tabz:tabz-mcp --dangerously-skip-permissions\"}")
+      -d "{\"name\": \"Visual-QA\", \"workingDir\": \"$PROJECT_DIR\", \"command\": \"claude --agent conductor:tabz-manager --dangerously-skip-permissions\"}")
 
     QA_SESSION=$(echo "$RESPONSE" | jq -r ".terminal.ptyInfo.tmuxSession")
 

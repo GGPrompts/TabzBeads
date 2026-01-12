@@ -1,8 +1,0 @@
-{
-  "name": "tabz",
-  "version": "1.0.0",
-  "description": "Browser automation via TabzChrome - screenshots, clicks, forms, network capture, TTS, and 71 MCP tools",
-  "skills": [
-    "./skills/tabz-mcp"
-  ]
-}

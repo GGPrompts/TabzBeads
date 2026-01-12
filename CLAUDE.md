@@ -84,8 +84,7 @@ TabzBeads/
 
 | Plugin | Purpose |
 |--------|---------|
-| `conductor` | Multi-session orchestration, beads workflows |
-| `tabz` | Browser automation (71 MCP tools) |
+| `conductor` | Multi-session orchestration, beads workflows, visual QA (tabz-manager) |
 | `frontend` | React, TypeScript, Tailwind, shadcn/ui |
 | `backend` | Node.js, Python, databases, DevOps |
 | `visual` | Canvas, Gemini multimodal, FFmpeg |
@@ -94,6 +93,8 @@ TabzBeads/
 | `tools` | Debugging, code review, problem solving, Codex integration |
 | `tmux` | Terminal session management |
 | `specialized` | Shopify, Bubble Tea, xterm.js |
+
+> **Note:** Browser automation (tabz-manager, tabz-mcp) is now part of conductor for visual QA in workflows.
 
 ### Meta Plugin Resources
 
@@ -132,7 +133,9 @@ plugins/conductor/
 │   ├── code-reviewer.md         # Autonomous code review
 │   ├── docs-updater.md          # Update documentation
 │   ├── skill-picker.md          # Find skills for issues
-│   └── prompt-enhancer.md       # Optimize prompts
+│   ├── prompt-enhancer.md       # Optimize prompts
+│   ├── tabz-manager.md          # Browser automation & Visual QA
+│   └── tabz-artist.md           # Visual asset generation
 ├── skills/                      # Internal skills (auto-discovered, user-invocable: false)
 │   ├── bdc-*/                   # Conductor internal (orchestration)
 │   │   ├── bdc-orchestration/
