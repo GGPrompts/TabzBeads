@@ -5,7 +5,12 @@
 
 ## Prefer MCP Over CLI
 
-**Use beads MCP tools instead of `bd` CLI when available:**
+**FIRST: Set workspace context** (required for MCP to know which project):
+```bash
+mcp-cli call beads/context '{"action": "set", "workspace_root": "'$(pwd)'"}'
+```
+
+**Then use beads MCP tools instead of `bd` CLI:**
 
 ```bash
 # Preferred: MCP (structured JSON, better integration)
