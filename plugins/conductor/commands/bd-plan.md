@@ -39,6 +39,44 @@ echo ""
 
 echo "=== High-Impact Blockers (prioritize these) ==="
 bd list --all --json 2>/dev/null | jq -r '.[] | select(.blocks | length > 0) | "\(.id): blocks \(.blocks | length) issues - \(.title)"' | sort -t':' -k2 -rn | head -10
+
+echo ""
+echo "=== Priority Adjustments ==="
+
+# Auto-adjust priorities based on blocking relationships
+for ISSUE_ID in $(bd list --status=open --json 2>/dev/null | jq -r '.[].id'); do
+  ISSUE_JSON=$(bd show "$ISSUE_ID" --json 2>/dev/null)
+  BLOCKS_COUNT=$(echo "$ISSUE_JSON" | jq -r '.[0].blocks | length')
+  CURRENT_PRIORITY=$(echo "$ISSUE_JSON" | jq -r '.[0].priority // 2')
+  TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
+  TITLE_LOWER=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]')
+
+  NEW_PRIORITY=$CURRENT_PRIORITY
+  REASON=""
+
+  # Rule: Blocks 3+ issues → P1
+  if [ "$BLOCKS_COUNT" -ge 3 ] && [ "$CURRENT_PRIORITY" -gt 1 ]; then
+    NEW_PRIORITY=1
+    REASON="blocks $BLOCKS_COUNT issues"
+  # Rule: Blocks 1-2 issues → at least P2
+  elif [ "$BLOCKS_COUNT" -ge 1 ] && [ "$CURRENT_PRIORITY" -gt 2 ]; then
+    NEW_PRIORITY=2
+    REASON="blocks $BLOCKS_COUNT issue(s)"
+  # Rule: Bug in title → P1
+  elif echo "$TITLE_LOWER" | grep -qE '\bbug\b|crash|broken|fail'; then
+    if [ "$CURRENT_PRIORITY" -gt 1 ]; then
+      NEW_PRIORITY=1
+      REASON="bug/crash detected"
+    fi
+  fi
+
+  if [ "$NEW_PRIORITY" != "$CURRENT_PRIORITY" ]; then
+    bd update "$ISSUE_ID" --priority "$NEW_PRIORITY" 2>/dev/null
+    echo "↑ $ISSUE_ID: P$CURRENT_PRIORITY → P$NEW_PRIORITY ($REASON)"
+  fi
+done
+
+echo "(Priorities adjusted based on blocking relationships and keywords)"
 ```
 
 ### Step 2: Match Skills & Persist
@@ -208,6 +246,85 @@ for ISSUE_ID in $(bd ready --json 2>/dev/null | jq -r '.[].id'); do
 
   echo "| $ISSUE_ID | $TYPE | P$PRIORITY | $COMPLEXITY | $SKILLS |"
 done
+
+echo ""
+echo "## Parallelization Groups (can run simultaneously)"
+echo ""
+echo "Issues in different groups have no file overlap - safe to run in parallel workers."
+echo ""
+
+# Group by detected area based on title/skills
+declare -A FRONTEND_ISSUES=()
+declare -A BACKEND_ISSUES=()
+declare -A INFRA_ISSUES=()
+declare -A OTHER_ISSUES=()
+
+for ISSUE_ID in $(bd ready --json 2>/dev/null | jq -r '.[].id'); do
+  ISSUE_JSON=$(bd show "$ISSUE_ID" --json 2>/dev/null)
+  TITLE=$(echo "$ISSUE_JSON" | jq -r '.[0].title // ""')
+  TITLE_LOWER=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]')
+  NOTES=$(echo "$ISSUE_JSON" | jq -r '.[0].notes // ""')
+  SKILLS=$(echo "$NOTES" | grep -oP '^skills:\s*\K.*' | head -1 | tr '[:upper:]' '[:lower:]')
+
+  AREA="other"
+
+  # Detect area from title and skills
+  if echo "$TITLE_LOWER $SKILLS" | grep -qE 'frontend|react|component|ui|css|tailwind|next|page|modal|button'; then
+    AREA="frontend"
+  elif echo "$TITLE_LOWER $SKILLS" | grep -qE 'backend|api|endpoint|fastapi|django|database|sql|model|connector|etl'; then
+    AREA="backend"
+  elif echo "$TITLE_LOWER $SKILLS" | grep -qE 'docker|ci|deploy|infra|kubernetes|terraform|github|workflow'; then
+    AREA="infra"
+  fi
+
+  case "$AREA" in
+    frontend) FRONTEND_ISSUES["$ISSUE_ID"]="$TITLE" ;;
+    backend) BACKEND_ISSUES["$ISSUE_ID"]="$TITLE" ;;
+    infra) INFRA_ISSUES["$ISSUE_ID"]="$TITLE" ;;
+    *) OTHER_ISSUES["$ISSUE_ID"]="$TITLE" ;;
+  esac
+done
+
+# Output groups
+if [ ${#FRONTEND_ISSUES[@]} -gt 0 ]; then
+  echo "**Frontend** (${#FRONTEND_ISSUES[@]} issues):"
+  for ID in "${!FRONTEND_ISSUES[@]}"; do
+    echo "  - $ID: ${FRONTEND_ISSUES[$ID]}"
+  done
+  echo ""
+fi
+
+if [ ${#BACKEND_ISSUES[@]} -gt 0 ]; then
+  echo "**Backend** (${#BACKEND_ISSUES[@]} issues):"
+  for ID in "${!BACKEND_ISSUES[@]}"; do
+    echo "  - $ID: ${BACKEND_ISSUES[$ID]}"
+  done
+  echo ""
+fi
+
+if [ ${#INFRA_ISSUES[@]} -gt 0 ]; then
+  echo "**Infrastructure** (${#INFRA_ISSUES[@]} issues):"
+  for ID in "${!INFRA_ISSUES[@]}"; do
+    echo "  - $ID: ${INFRA_ISSUES[$ID]}"
+  done
+  echo ""
+fi
+
+if [ ${#OTHER_ISSUES[@]} -gt 0 ]; then
+  echo "**Other** (${#OTHER_ISSUES[@]} issues):"
+  for ID in "${!OTHER_ISSUES[@]}"; do
+    echo "  - $ID: ${OTHER_ISSUES[$ID]}"
+  done
+  echo ""
+fi
+
+TOTAL_GROUPS=0
+[ ${#FRONTEND_ISSUES[@]} -gt 0 ] && ((TOTAL_GROUPS++))
+[ ${#BACKEND_ISSUES[@]} -gt 0 ] && ((TOTAL_GROUPS++))
+[ ${#INFRA_ISSUES[@]} -gt 0 ] && ((TOTAL_GROUPS++))
+[ ${#OTHER_ISSUES[@]} -gt 0 ] && ((TOTAL_GROUPS++))
+
+echo "→ Can spawn up to $TOTAL_GROUPS parallel workers (one per group)"
 
 echo ""
 echo "## Wave 2+ (After Dependencies Resolve)"
