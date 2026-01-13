@@ -293,6 +293,8 @@ These are in `skills/` with `user-invocable: false`. Still invoked via `/conduct
 | `docs/conductor-workflows.md` | Complete workflow reference + proposals |
 | `docs/PRIME-template.md` | Template for project PRIME.md |
 
+**PRIME.md note:** Most projects symlink to `~/.beads/PRIME.md`. When updating workflows, update `~/.beads/PRIME.md` (the source) and `docs/PRIME-template.md` (the template).
+
 ---
 
 ## Installation
