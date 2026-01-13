@@ -14,12 +14,14 @@ Orchestrate multiple Claude Code sessions, spawn workers, and coordinate paralle
 Vanilla Claude Session (you)
 ├── Task tool -> can spawn subagents
 │   ├── conductor:code-reviewer (sonnet) - autonomous review
-│   ├── conductor:skill-picker (haiku) - find/install skills
-│   └── conductor:docs-updater (opus) - update docs after merges
-├── Skills for guidance (loaded into context)
-│   └── bdc-prompt-enhancer - enhance prompts for workers
-├── Worktree setup via scripts/setup-worktree.sh
-├── Monitoring via beads agent tracking
+│   ├── conductor:silent-failure-hunter (sonnet) - error handling audit
+│   └── conductor:skill-picker (haiku) - search/install from skillsmp.com
+├── Commands for execution (invoked directly)
+│   ├── /conductor:bdw-code-review - code review workflow
+│   ├── /conductor:bdw-update-docs - update README/CHANGELOG/CLAUDE.md
+│   └── /conductor:bdc-prompt-enhancer - enhance prompts for workers
+├── Worktree setup via bd worktree create
+├── Monitoring via beads agent tracking (bd agent, bd slot)
 └── Terminal Workers via TabzChrome spawn API
     └── Each has full Task tool, can spawn own subagents
 ```
@@ -32,17 +34,19 @@ Task(
 )
 ```
 
-### When to Use Main Session vs Subagents
+### When to Use Main Session vs Subagents vs Commands
 
-| Task Type | Run In | Why |
+| Task Type | Run As | Why |
 |-----------|--------|-----|
 | **Orchestration** (wave-done, bd-conduct) | Main session | Needs conversation context, coordinates multiple steps |
 | **Interactive** (bd-start, bd-plan) | Main session | User interaction, decisions, back-and-forth |
-| **Code review** | Subagent | Isolated: "review this diff" - doesn't need wave context |
-| **Docs update** | Subagent | Isolated: "update these docs" - self-contained |
-| **Visual QA** | Subagent | Isolated: "check this UI" - separate browser session |
+| **Code review** | Command `/bdw-code-review` | Runs in context, spawns code-reviewer subagent internally |
+| **Docs update** | Command `/bdw-update-docs` | Runs in context, self-contained with anti-bloat rules |
+| **Visual QA** | Subagent `tabz-expert` | Isolated: separate browser session, returns findings |
+| **Skill search** | Subagent `skill-picker` | Isolated: searches skillsmp.com, installs to project |
+| **Error audit** | Subagent `silent-failure-hunter` | Isolated: scans for swallowed errors |
 
-**Key insight:** Orchestration commands maintain context and spawn subagents for isolated work. Subagents receive explicit context in their prompt, not conversation history.
+**Key insight:** Commands run in your session (fast, maintains context). Subagents are for truly isolated tasks that benefit from fresh context.
 
 ---
 
@@ -273,7 +277,7 @@ After a wave of parallel workers finishes, use `/conductor:bdc-wave-done` to orc
 | 2 | Kill worker sessions | No |
 | 3 | Merge branches to main | Yes - stop on conflicts |
 | 4 | Build verification | Yes |
-| 5 | Unified code review | Yes - uses Task(conductor:code-reviewer) |
+| 5 | Unified code review | Yes - via /bdw-code-review command |
 | 6 | Cleanup worktrees/branches | No |
 | 7 | Visual QA (if UI changes) | Optional |
 | 8 | Sync and push | Yes |
@@ -286,12 +290,12 @@ After a wave of parallel workers finishes, use `/conductor:bdc-wave-done` to orc
 
 | Subagent | Model | Purpose |
 |----------|-------|---------|
-| `conductor:code-reviewer` | sonnet | Autonomous review, quality gate |
-| `conductor:skill-picker` | haiku | Search/install skills |
-| `conductor:docs-updater` | opus | Update docs after merges |
-| `tabz-expert` | opus | Browser automation (70 MCP tools) - user-scope plugin |
+| `conductor:code-reviewer` | sonnet | Autonomous review when spawned as subagent |
+| `conductor:silent-failure-hunter` | sonnet | Scan for swallowed errors, empty catch blocks |
+| `conductor:skill-picker` | haiku | Search/install skills from skillsmp.com (28k+ skills) |
+| `tabz-expert` | opus | Browser automation (70+ MCP tools) - user-scope plugin |
 
-> **Note:** Prompt enhancement is now a skill (`bdc-prompt-enhancer`) loaded into context, not a spawnable agent.
+> **Note:** Most review/docs tasks now use **commands** (bdw-code-review, bdw-update-docs) which run faster in your session. Use subagents only when you need truly isolated execution.
 
 ### Visual QA Between Waves
 
@@ -357,9 +361,12 @@ tmux send-keys -t "$SESSION" C-m
 | `/conductor:bd-start` | Single-session workflow (YOU do the work) |
 | `/conductor:bd-plan` | Prepare backlog (refine, enhance prompts) |
 | `/conductor:bd-conduct` | Interactive orchestration (1-4 workers) |
-| `/conductor:bdc-swarm-auto` | Fully autonomous parallel execution |
+| `/conductor:bd-auto` | Fully autonomous (all ready, no prompts) |
+| `/conductor:bdc-swarm-auto` | Internal: autonomous wave execution |
 | `/conductor:bdc-wave-done` | Complete a wave of parallel workers |
 | `/conductor:bdc-visual-qa` | Visual QA check (spawns tabz-expert) |
+| `/conductor:bdw-code-review` | Code review command (spawns code-reviewer) |
+| `/conductor:bdw-update-docs` | Update README/CHANGELOG/CLAUDE.md |
 | `/conductor:bdw-worker-done` | Complete individual worker (auto-detects mode) |
 | `tabz-expert` | Browser automation agent (user-scope plugin) |
 
