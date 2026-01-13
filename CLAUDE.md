@@ -114,17 +114,17 @@ plugins/conductor/
 │   └── bd-new-project.md        # Project scaffolding
 ├── agents/                      # Spawnable subagents
 │   ├── conductor.md             # Main orchestrator
-│   ├── code-reviewer.md         # Autonomous code review
-│   ├── docs-updater.md          # Update documentation
+│   ├── code-reviewer.md         # Read-only code review (Sonnet)
+│   ├── docs-updater.md          # DEPRECATED - use bdw-update-docs skill
 │   ├── skill-picker.md          # Find skills for issues
-│   ├── prompt-enhancer.md       # Optimize prompts
-│   ├── tabz-manager.md          # Browser automation & Visual QA
-│   └── tabz-artist.md           # Visual asset generation
+│   ├── silent-failure-hunter.md # Error handling audit (Sonnet)
+│   └── tabz-manager.md          # Browser automation (70 MCP tools)
 ├── skills/                      # Internal skills (auto-discovered, user-invocable: false)
 │   ├── bdc-*/                   # Conductor internal (orchestration)
 │   │   ├── bdc-orchestration/
 │   │   ├── bdc-swarm-auto/
 │   │   ├── bdc-wave-done/
+│   │   ├── bdc-visual-qa/        # Visual QA between waves (forked tabz-manager)
 │   │   ├── bdc-run-wave/
 │   │   └── bdc-analyze-transcripts/
 │   ├── bdw-*/                   # Worker steps (execution pipeline)
@@ -138,9 +138,9 @@ plugins/conductor/
 │   │   ├── bdw-update-docs/
 │   │   ├── bdw-worker-init/
 │   │   └── bdw-worker-done/
-│   ├── tabz-artist/             # Visual asset generation
-│   ├── tabz-mcp/                # Browser automation
-│   └── terminal-tools/          # TUI tool control
+│   ├── tabz-artist/             # Visual asset generation (runs in tabz-manager context)
+│   ├── tabz-mcp/                # Browser automation reference
+│   └── terminal-tools/          # TUI tool control reference
 └── scripts/                     # Shell automation
     ├── setup-worktree.sh        # Git worktree creation
     ├── match-skills.sh          # Issue-to-skill matching
@@ -258,6 +258,7 @@ These are in `skills/` with `user-invocable: false`. Still invoked via `/conduct
 |-------|---------|
 | `/conductor:bdc-swarm-auto` | Autonomous waves until backlog empty |
 | `/conductor:bdc-wave-done` | Merge branches, unified review, cleanup |
+| `/conductor:bdc-visual-qa` | Visual QA between waves (forked tabz-manager subagent) |
 | `/conductor:bdc-run-wave` | Run wave from conductor-wave template |
 | `/conductor:bdc-orchestration` | Multi-session coordination |
 | `/conductor:bdc-analyze-transcripts` | Review worker session transcripts |
@@ -265,22 +266,22 @@ These are in `skills/` with `user-invocable: false`. Still invoked via `/conduct
 #### Worker Steps (bdw-*)
 | Skill | Purpose |
 |-------|---------|
-| `/conductor:bdw-verify-build` | Run build, report errors |
-| `/conductor:bdw-run-tests` | Run tests if available |
-| `/conductor:bdw-code-review` | Opus review with auto-fix |
+| `/conductor:bdw-verify-build` | Run build, report errors (CHANGE_TYPE=code) |
+| `/conductor:bdw-run-tests` | Run tests if available (CHANGE_TYPE=code) |
+| `/conductor:bdw-code-review` | Sonnet review, worker applies fixes |
 | `/conductor:bdw-codex-review` | Cost-effective Codex review (read-only) |
 | `/conductor:bdw-commit-changes` | Stage + commit |
 | `/conductor:bdw-close-issue` | Close beads issue |
 | `/conductor:bdw-create-followups` | Create follow-up beads issues |
-| `/conductor:bdw-update-docs` | Check and update documentation |
+| `/conductor:bdw-update-docs` | Verify beads + update docs (README, CHANGELOG, CLAUDE.md) |
 | `/conductor:bdw-worker-init` | Initialize worker context |
-| `/conductor:bdw-worker-done` | Full completion pipeline |
+| `/conductor:bdw-worker-done` | Full completion pipeline (detects CHANGE_TYPE) |
 
 ### Additional Skills
 | Skill | Purpose |
 |-------|---------|
-| `/conductor:tabz-artist` | Generate images via DALL-E and videos via Sora |
-| `/conductor:tabz-mcp` | Browser automation MCP tool discovery |
+| `/conductor:tabz-artist` | Generate images/videos (runs in tabz-manager context) |
+| `/conductor:tabz-mcp` | Browser automation MCP reference (70 tools) |
 | `/conductor:terminal-tools` | Reference for tmux and TUI tool control |
 
 ---

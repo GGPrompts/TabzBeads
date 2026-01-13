@@ -2,7 +2,7 @@
 
 This document maps all conductor plugin workflows, their components, and relationships. Use this to understand how the orchestration system works.
 
-**Last Updated**: 2026-01-11 (commands/skills reorganization)
+**Last Updated**: 2026-01-12 (code-reviewer → Sonnet, CHANGE_TYPE detection, visual QA)
 
 ---
 
@@ -397,7 +397,7 @@ The pipeline **auto-detects execution mode**:
                               ▼
                     ┌─────────────────┐
                     │ Step 4:         │⛔
-                    │ UNIFIED review  │◀──── All changes together
+                    │ UNIFIED review  │◀──── Sonnet review, worker applies fixes
                     └─────────────────┘
                               │
                               ▼
@@ -409,11 +409,23 @@ The pipeline **auto-detects execution mode**:
                               │
                               ▼
                     ┌─────────────────┐
-                    │ Step 6: Push    │⛔
+                    │ Step 6:         │⛔
+                    │ bdc-visual-qa   │◀──── Forked tabz-manager (if UI changes)
+                    │ --mode=quick    │      Console errors, DOM check
+                    └─────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │ Step 7: Push    │⛔
                     │ bd sync &&      │
                     │ git push        │
                     └─────────────────┘
 ```
+
+**Visual QA modes:**
+- `--visual-qa=quick` (default): Console + DOM error checks
+- `--visual-qa=full`: Screenshots + interactive review
+- `--visual-qa=skip`: Skip entirely (backend-only waves)
 
 ---
 
@@ -423,23 +435,29 @@ The pipeline **auto-detects execution mode**:
 
 | Skill | Purpose | Blocking? |
 |-------|---------|-----------|
-| `/conductor:bdw-verify-build` | Run build, check errors | ⛔ Yes |
-| `/conductor:bdw-run-tests` | Run test suite | ⛔ Yes |
-| `/conductor:bdw-code-review` | Opus review (auto-fix) | ⛔ Yes |
+| `/conductor:bdw-verify-build` | Run build (CHANGE_TYPE=code) | ⛔ Yes |
+| `/conductor:bdw-run-tests` | Run tests (CHANGE_TYPE=code) | ⛔ Yes |
+| `/conductor:bdw-code-review` | Sonnet review (worker applies fixes) | ⛔ Yes |
 | `/conductor:bdw-codex-review` | Cheaper Codex review | ⛔ Yes |
 | `/conductor:bdw-commit-changes` | Stage + commit | ⛔ Yes |
 | `/conductor:bdw-create-followups` | Create beads issues | No |
-| `/conductor:bdw-update-docs` | Check/update docs | No |
+| `/conductor:bdw-update-docs` | Verify beads + update docs | No |
 | `/conductor:bdw-close-issue` | Close beads issue | ⛔ Yes |
-| `/conductor:bdw-worker-done` | Full completion pipeline | ⛔ Yes |
+| `/conductor:bdw-worker-done` | Full pipeline (detects CHANGE_TYPE) | ⛔ Yes |
 | `/conductor:bdw-worker-init` | Initialize worker context | No |
+
+**CHANGE_TYPE detection:** `bdw-worker-done` detects change types:
+- `code` → Run build + tests
+- `plugin` → Run plugin-validator (markdown, plugin.json, etc.)
+- `none` → Skip to commit
 
 ### Conductor Skills (bdc-*)
 
 | Skill | Purpose | Blocking? |
 |-------|---------|-----------|
 | `/conductor:bdc-swarm-auto` | Autonomous wave execution | ⛔ Yes |
-| `/conductor:bdc-wave-done` | Merge + unified review | ⛔ Yes |
+| `/conductor:bdc-wave-done` | Merge + unified review + visual QA | ⛔ Yes |
+| `/conductor:bdc-visual-qa` | Visual QA (forked tabz-manager subagent) | ⛔ Yes |
 | `/conductor:bdc-run-wave` | Run wave from template | ⛔ Yes |
 | `/conductor:bdc-orchestration` | Multi-session coordination | ⛔ Yes |
 | `/conductor:bdc-analyze-transcripts` | Review worker sessions | No |
@@ -451,12 +469,13 @@ The pipeline **auto-detects execution mode**:
 | Agent | Purpose | Model |
 |-------|---------|-------|
 | `conductor:conductor` | Orchestrate workflows | opus |
-| `conductor:code-reviewer` | Autonomous review | opus |
+| `conductor:code-reviewer` | Read-only review (worker applies fixes) | sonnet |
 | `conductor:skill-picker` | Find skills | haiku |
-| `conductor:docs-updater` | Update documentation | opus |
-| `conductor:prompt-enhancer` | Optimize prompts | haiku |
-| `conductor:tui-expert` | TUI tool control | opus |
-| `conductor:tabz-artist` | Visual asset generation | opus |
+| `conductor:docs-updater` | DEPRECATED - use bdw-update-docs | haiku |
+| `conductor:silent-failure-hunter` | Error handling audit | sonnet |
+| `conductor:tabz-manager` | Browser automation (70 MCP tools) | opus |
+
+**Note:** `tabz-artist` is now a skill that runs in tabz-manager context, not a standalone agent.
 
 ---
 
