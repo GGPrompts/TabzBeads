@@ -369,7 +369,7 @@ echo "Pushed to main"
 ```bash
 echo "=== Step 9: Summary ==="
 
-# Run the comprehensive summary script
+# Run the comprehensive summary script (uses HTTP API for TTS)
 ${CLAUDE_PLUGIN_ROOT}/scripts/wave-summary.sh "$ISSUES" --audio
 ```
 
@@ -378,6 +378,15 @@ This generates a detailed summary including:
 - Wave statistics (branches merged, files changed, lines added/removed)
 - Next steps (remaining ready issues or backlog status)
 - Audio notification of completion
+
+**Alternative: If MCP not available**, ask tabz-manager to announce:
+
+```
+Task(subagent_type="conductor:tabz-manager",
+     prompt="Announce wave complete: $ISSUE_COUNT issues merged. $NEXT_READY ready for next wave.")
+```
+
+The script uses HTTP API directly (`localhost:8129/api/audio/speak`), but spawning tabz-manager is cleaner if you're already in a Claude session without MCP access.
 
 ---
 
