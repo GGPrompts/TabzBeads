@@ -1,6 +1,6 @@
 ---
 name: bdw-code-review
-description: "Code review with confidence-based filtering. Modes: quick (lint+types), standard (Opus), thorough (parallel agents). Auto-fixes >=95% confidence issues."
+description: "Code review with confidence-based filtering. Modes: quick (lint+types), standard (Sonnet), thorough (parallel agents). Worker applies fixes from review findings."
 user-invocable: false
 ---
 
@@ -8,12 +8,12 @@ user-invocable: false
 
 Automated code review with confidence-based filtering and test coverage assessment.
 
-> **Runs in main session.** This skill runs in your current session (NOT forked) to maintain conversation context about what's being reviewed and why. It explicitly spawns subagents (like `conductor:code-reviewer`) for isolated review tasks.
+> **Pattern:** Sonnet reviewers identify issues → Worker (Opus) applies fixes. This is cheaper than having Opus do both review and fix.
 
 ## Invocation
 
 ```bash
-/conductor:bdw-code-review                    # Standard review (Opus)
+/conductor:bdw-code-review                    # Standard review (Sonnet)
 /conductor:bdw-code-review --quick            # Fast: lint + types + secrets only
 /conductor:bdw-code-review --thorough         # Deep: parallel specialized reviewers
 /conductor:bdw-code-review <issue-id>         # Review for specific issue
@@ -31,8 +31,9 @@ Reviews code with precision scoring to minimize false positives:
 | 25 | Might be real, can't verify | Skip |
 | 50 | Real but minor nitpick | Skip |
 | 75 | Likely real but uncertain | Skip |
-| **80-94** | Verified issue | **Flag** |
-| **95-100** | Certain bug or rule violation | **Auto-fix** |
+| **80-100** | Verified issue | **Report to worker** |
+
+**Reviewers are read-only.** They report issues with suggestions. The calling worker (Opus) applies fixes.
 
 ### 2. Test Coverage Assessment
 
@@ -82,18 +83,18 @@ The reviewer evaluates whether changes warrant test coverage based on:
 | `optional` | Simple changes, low risk | Note but don't block |
 | `skip` | Docs, config, formatting, existing test coverage | No tests needed |
 
-### 3. Auto-Fix Protocol
+### 3. Worker Applies Fixes
 
-For issues with >=95% confidence:
+When the review returns issues, the worker (Opus) should:
 
-1. Make minimal changes - only fix the issue
-2. Preserve existing formatting
-3. Run linter after fix
-4. Verify build still works
+1. Read the `issues` array from the review output
+2. Apply suggested fixes for high-confidence issues (≥95%)
+3. Consider fixes for medium-confidence issues (80-94%)
+4. Re-run build/lint to verify fixes
 
-**Safe to auto-fix:** Unused imports, console.log statements, formatting, typos
+**Safe to fix:** Unused imports, console.log statements, formatting, typos
 
-**Never auto-fix:** Logic changes, security issues, test coverage gaps
+**Require human review:** Logic changes, security issues, architectural decisions
 
 ---
 
@@ -109,12 +110,12 @@ Fast checks for trivial changes:
 
 ### Standard Mode (default)
 
-Spawns `conductor:code-reviewer` agent (Opus):
+Spawns `conductor:code-reviewer` agent (Sonnet):
 - Reads CLAUDE.md files
 - Reviews against project conventions
 - Confidence-based filtering
 - **Full test assessment**
-- Auto-fixes high-confidence issues
+- Reports issues for worker to fix
 
 ### Thorough Mode (`--thorough`)
 
@@ -133,13 +134,11 @@ Parallel specialized reviewers:
 {
   "passed": true,
   "mode": "standard",
-  "summary": "Reviewed 5 files. Auto-fixed 2 issues. No blockers.",
+  "summary": "Reviewed 5 files. Found 2 issues. No blockers.",
   "claude_md_checked": ["CLAUDE.md"],
-  "auto_fixed": [
-    {"file": "src/utils.ts", "line": 45, "issue": "Unused import", "confidence": 98}
-  ],
-  "flagged": [
-    {"severity": "important", "file": "src/api.ts", "line": 23, "issue": "Missing error handling", "confidence": 85}
+  "issues": [
+    {"severity": "high", "file": "src/utils.ts", "line": 45, "issue": "Unused import", "confidence": 98, "suggestion": "Remove unused import"},
+    {"severity": "important", "file": "src/api.ts", "line": 23, "issue": "Missing error handling", "confidence": 85, "suggestion": "Add try-catch"}
   ],
   "blockers": [],
   "needs_tests": true,
