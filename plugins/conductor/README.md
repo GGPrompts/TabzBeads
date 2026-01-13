@@ -24,41 +24,51 @@ Or add to your `.claude/plugins/` symlink path.
 
 ## Commands
 
+Commands are workflow steps invoked with `/conductor:*` prefix.
+
+### User Entry Points (bd-*)
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bd-plan` | Prepare backlog: refine, enhance prompts, match skills |
-| `/conductor:bd-start` | Work directly on an issue (no spawn) |
-| `/conductor:bd-status` | View issue state (open, blocked, ready) |
-| `/conductor:bd-conduct` | Interactive orchestration: select issues, terminals (1-4), mode |
-| `/conductor:bd-auto` | Fully autonomous: all ready issues, no prompts |
-| `/conductor:bd-new-project` | Template-based project scaffolding |
+| `bd-plan` | Prepare backlog: refine, enhance prompts, match skills |
+| `bd-start` | Work directly on an issue (no spawn) |
+| `bd-status` | View issue state (open, blocked, ready) |
+| `bd-conduct` | Interactive orchestration: select issues, terminals (1-4), mode |
+| `bd-auto` | Fully autonomous: all ready issues, no prompts |
+| `bd-new-project` | Template-based project scaffolding |
+
+### Conductor Internal (bdc-*)
+| Command | Purpose |
+|---------|---------|
+| `bdc-orchestration` | Multi-session coordination |
+| `bdc-swarm-auto` | Autonomous waves until backlog empty |
+| `bdc-wave-done` | Merge branches, unified review, cleanup |
+| `bdc-visual-qa` | Visual QA between waves |
+| `bdc-run-wave` | Run wave from template |
+| `bdc-prompt-enhancer` | Enhance issue prompts with context |
+| `bdc-analyze-transcripts` | Review worker session transcripts |
+
+### Worker Steps (bdw-*)
+| Command | Purpose |
+|---------|---------|
+| `bdw-verify-build` | Run build and report errors |
+| `bdw-run-tests` | Run tests if available |
+| `bdw-code-review` | Sonnet review, worker applies fixes |
+| `bdw-codex-review` | Cost-effective read-only review via OpenAI Codex |
+| `bdw-commit-changes` | Stage + commit with conventional format |
+| `bdw-close-issue` | Close a beads issue |
+| `bdw-create-followups` | Create follow-up beads issues |
+| `bdw-update-docs` | Update README, CHANGELOG, CLAUDE.md |
+| `bdw-worker-init` | Initialize worker context |
+| `bdw-worker-done` | Full completion pipeline |
 
 ## Skills
 
-### Conductor Internal (bdc-*)
-- `bdc-orchestration` - Multi-session coordination
-- `bdc-swarm-auto` - Autonomous waves until backlog empty
-- `bdc-wave-done` - Merge branches, unified review, cleanup
-- `bdc-visual-qa` - Visual QA between waves
-- `bdc-run-wave` - Run wave from template
-- `bdc-prompt-enhancer` - Enhance issue prompts with skills
-- `bdc-analyze-transcripts` - Review worker session transcripts
+Skills provide reference knowledge (naturally invoked, no prefix needed).
 
-### Worker Steps (bdw-*)
-- `bdw-verify-build` - Run build and report errors
-- `bdw-run-tests` - Run tests if available
-- `bdw-code-review` - Sonnet review, worker applies fixes
-- `bdw-codex-review` - Cost-effective read-only review via OpenAI Codex
-- `bdw-commit-changes` - Stage + commit with conventional format
-- `bdw-close-issue` - Close a beads issue
-- `bdw-create-followups` - Create follow-up beads issues
-- `bdw-update-docs` - Update README, CHANGELOG, CLAUDE.md
-- `bdw-worker-init` - Initialize worker context
-- `bdw-worker-done` - Full completion pipeline
-
-### Reference Skills
-- `tabz-mcp` - Browser automation MCP reference (70 tools)
-- `terminal-tools` - tmux and TUI tool control reference
+| Skill | Purpose |
+|-------|---------|
+| `tabz-mcp` | Browser automation MCP reference (70 tools) |
+| `terminal-tools` | tmux and TUI tool control reference |
 
 ## Agents
 
