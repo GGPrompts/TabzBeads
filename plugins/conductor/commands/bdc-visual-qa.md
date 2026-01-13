@@ -1,7 +1,5 @@
 ---
-name: bdc-visual-qa
 description: "Visual QA check between waves - runs as forked tabz-expert subagent to screenshot changes and check for browser errors. Avoids spawn overhead."
-user-invocable: false
 agent: tabz-expert
 context: fork
 ---

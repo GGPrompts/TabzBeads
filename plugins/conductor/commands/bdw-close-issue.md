@@ -1,6 +1,4 @@
 ---
-name: "bdw-close-issue"
-user-invocable: false
 description: "Close a beads issue with completion reason."
 ---
 

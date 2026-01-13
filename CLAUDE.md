@@ -106,41 +106,44 @@ The conductor plugin orchestrates multi-session Claude workflows:
 ```
 plugins/conductor/
 ├── plugin.json
-├── commands/                    # User entry points (bd-*)
-│   ├── bd-plan.md               # Prepare backlog
-│   ├── bd-start.md              # YOU work directly (no spawn)
-│   ├── bd-status.md             # View issue state
-│   ├── bd-conduct.md            # Interactive orchestration (1-4 workers)
-│   └── bd-new-project.md        # Project scaffolding
+├── commands/                    # All invokable commands (get conductor: prefix)
+│   ├── bd-plan.md               # User: Prepare backlog
+│   ├── bd-start.md              # User: YOU work directly (no spawn)
+│   ├── bd-status.md             # User: View issue state
+│   ├── bd-conduct.md            # User: Interactive orchestration (1-4 workers)
+│   ├── bd-new-project.md        # User: Project scaffolding
+│   ├── bdc-*.md                 # Conductor internal (orchestration)
+│   │   ├── bdc-orchestration.md
+│   │   ├── bdc-swarm-auto.md
+│   │   ├── bdc-wave-done.md
+│   │   ├── bdc-visual-qa.md
+│   │   ├── bdc-run-wave.md
+│   │   ├── bdc-prompt-enhancer.md
+│   │   └── bdc-analyze-transcripts.md
+│   └── bdw-*.md                 # Worker steps (execution pipeline)
+│       ├── bdw-verify-build.md
+│       ├── bdw-run-tests.md
+│       ├── bdw-code-review.md
+│       ├── bdw-codex-review.md
+│       ├── bdw-commit-changes.md
+│       ├── bdw-close-issue.md
+│       ├── bdw-create-followups.md
+│       ├── bdw-update-docs.md
+│       ├── bdw-worker-init.md
+│       └── bdw-worker-done.md
 ├── agents/                      # Spawnable subagents
 │   ├── conductor.md             # Main orchestrator
 │   ├── code-reviewer.md         # Read-only code review (Sonnet)
-│   ├── docs-updater.md          # DEPRECATED - use bdw-update-docs skill
 │   ├── skill-picker.md          # Find skills for issues
 │   └── silent-failure-hunter.md # Error handling audit (Sonnet)
 │   # tabz-expert is now in TabzChrome/plugins/tabz
-├── skills/                      # Internal skills (auto-discovered, user-invocable: false)
-│   ├── bdc-*/                   # Conductor internal (orchestration)
-│   │   ├── bdc-orchestration/
-│   │   ├── bdc-swarm-auto/
-│   │   ├── bdc-wave-done/
-│   │   ├── bdc-visual-qa/        # Visual QA between waves (forked tabz-expert)
-│   │   ├── bdc-run-wave/
-│   │   └── bdc-analyze-transcripts/
-│   ├── bdw-*/                   # Worker steps (execution pipeline)
-│   │   ├── bdw-verify-build/
-│   │   ├── bdw-run-tests/
-│   │   ├── bdw-code-review/
-│   │   ├── bdw-codex-review/
-│   │   ├── bdw-commit-changes/
-│   │   ├── bdw-close-issue/
-│   │   ├── bdw-create-followups/
-│   │   ├── bdw-update-docs/
-│   │   ├── bdw-worker-init/
-│   │   └── bdw-worker-done/
-│   ├── tabz-artist/             # ARCHIVED - now in TabzChrome/plugins/tabz
+├── skills/                      # Reference knowledge (no prefix)
 │   ├── tabz-mcp/                # Browser automation reference
 │   └── terminal-tools/          # TUI tool control reference
+├── references/                  # Supporting documentation
+│   ├── bdc-orchestration/
+│   ├── bdc-swarm-auto/
+│   └── bdw-worker-done/
 └── scripts/                     # Shell automation
     ├── setup-worktree.sh        # Git worktree creation
     ├── match-skills.sh          # Issue-to-skill matching
@@ -249,23 +252,24 @@ These are user entry points in `commands/`. Invoke with `/conductor:bd-*`.
 | `/conductor:bd-conduct` | Interactive orchestration: select issues, terminals (1-4), mode |
 | `/conductor:bd-new-project` | Multi-phase project scaffolding |
 
-### Internal Skills (bdc-*, bdw-*)
+### Internal Commands (bdc-*, bdw-*)
 
-These are in `skills/` with `user-invocable: false`. Still invoked via `/conductor:*` but not shown in slash command menu.
+These are in `commands/` and get the `/conductor:*` prefix. They're invokable workflow steps.
 
 #### Conductor Internal (bdc-*)
-| Skill | Purpose |
-|-------|---------|
+| Command | Purpose |
+|---------|---------|
 | `/conductor:bdc-swarm-auto` | Autonomous waves until backlog empty |
 | `/conductor:bdc-wave-done` | Merge branches, unified review, cleanup |
 | `/conductor:bdc-visual-qa` | Visual QA between waves (forked tabz-expert subagent) |
 | `/conductor:bdc-run-wave` | Run wave from conductor-wave template |
 | `/conductor:bdc-orchestration` | Multi-session coordination |
+| `/conductor:bdc-prompt-enhancer` | Enhance issue prompts with skills and files |
 | `/conductor:bdc-analyze-transcripts` | Review worker session transcripts |
 
 #### Worker Steps (bdw-*)
-| Skill | Purpose |
-|-------|---------|
+| Command | Purpose |
+|---------|---------|
 | `/conductor:bdw-verify-build` | Run build, report errors (CHANGE_TYPE=code) |
 | `/conductor:bdw-run-tests` | Run tests if available (CHANGE_TYPE=code) |
 | `/conductor:bdw-code-review` | Sonnet review, worker applies fixes |
@@ -277,12 +281,11 @@ These are in `skills/` with `user-invocable: false`. Still invoked via `/conduct
 | `/conductor:bdw-worker-init` | Initialize worker context |
 | `/conductor:bdw-worker-done` | Full completion pipeline (detects CHANGE_TYPE) |
 
-### Additional Skills
+### Reference Skills
 | Skill | Purpose |
 |-------|---------|
-| `/conductor:tabz-mcp` | Browser automation MCP reference (70 tools) |
-| `/conductor:terminal-tools` | Reference for tmux and TUI tool control |
-| `tabz-artist` | ARCHIVED - now in TabzChrome/plugins/tabz |
+| `tabz-mcp` | Browser automation MCP reference (70 tools) |
+| `terminal-tools` | Reference for tmux and TUI tool control |
 
 ---
 

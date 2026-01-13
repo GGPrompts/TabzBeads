@@ -1,7 +1,5 @@
 ---
-name: bdc-orchestration
 description: "Multi-session Claude workflow orchestration. Spawn workers via TabzChrome, coordinate parallel tasks, use subagents for monitoring/exploration, manage beads issues. Use this skill when coordinating multiple Claude sessions or managing complex multi-step workflows."
-user-invocable: false
 ---
 
 # Orchestration Skill - Multi-Session Workflows

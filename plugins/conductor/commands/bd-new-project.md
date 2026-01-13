@@ -92,6 +92,22 @@ Special handling:
 - `CLAUDE.md.tmpl` → `CLAUDE.md`
 - `issues.jsonl.tmpl` → `.beads/issues.jsonl`
 
+### Phase 4.5: PRIME.md Symlink
+
+Create a symlink to the canonical PRIME.md for consistent workflow documentation:
+
+```bash
+# Symlink to canonical PRIME.md (single source of truth)
+ln -sf ~/.beads/PRIME.md /path/to/project/PRIME.md
+```
+
+**Why symlink instead of copy?**
+- PRIME.md contains workflow instructions that should be consistent across all beads projects
+- Updates to `~/.beads/PRIME.md` automatically apply to all projects
+- Avoids template drift and maintenance burden
+
+**IMPORTANT:** Always verify the symlink was created successfully.
+
 ### Phase 5: Generate Issue Prefix
 
 Create a unique prefix for beads issues based on project name:
@@ -192,6 +208,7 @@ When this command is invoked:
 3. Otherwise → prompt for starter selection
 4. Collect all variables from manifest
 5. Create project directory
-6. Process templates
-7. Initialize beads
-8. Show summary with next steps
+6. Process templates (CLAUDE.md, issues.jsonl, etc.)
+7. **Create PRIME.md symlink** → `ln -sf ~/.beads/PRIME.md /path/to/project/PRIME.md`
+8. Initialize beads (`bd sync` to import issues)
+9. Show summary with next steps

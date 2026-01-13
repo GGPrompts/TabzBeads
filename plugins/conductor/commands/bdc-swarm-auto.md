@@ -1,7 +1,5 @@
 ---
-name: bdc-swarm-auto
 description: "Fully autonomous backlog completion. Runs waves until `bd ready` is empty. Self-resumable after /wipe. Use when you want hands-off parallel issue processing."
-user-invocable: false
 ---
 
 # BD Swarm Auto - Autonomous Backlog Completion

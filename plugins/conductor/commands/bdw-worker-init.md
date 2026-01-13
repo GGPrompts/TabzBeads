@@ -1,6 +1,4 @@
 ---
-name: "bdw-worker-init"
-user-invocable: false
 description: "Self-optimize worker context by analyzing issue, identifying skills, and restarting with enhanced prompt"
 ---
 

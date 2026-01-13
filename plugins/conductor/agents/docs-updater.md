@@ -1,22 +1,22 @@
 ---
 name: docs-updater
-description: "DEPRECATED - Use /conductor:bdw-update-docs skill instead. Kept for backwards compatibility."
+description: "DEPRECATED - Use /conductor:bdw-update-docs command instead. Kept for backwards compatibility."
 model: haiku
 ---
 
 # Docs Updater - DEPRECATED
 
-**This agent is deprecated.** Use the `/conductor:bdw-update-docs` skill instead.
+**This agent is deprecated.** Use the `/conductor:bdw-update-docs` command instead.
 
 ## Migration
 
-| Old (agent) | New (skill) |
-|-------------|-------------|
+| Old (agent) | New (command) |
+|-------------|---------------|
 | `Task(subagent_type="conductor:docs-updater", ...)` | `/conductor:bdw-update-docs` |
 
 ## Why Deprecated?
 
-The skill:
+The command:
 - Runs in forked context (no spawn overhead)
 - Includes beads metadata verification
 - Enforces anti-bloat rules

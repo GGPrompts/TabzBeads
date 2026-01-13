@@ -1,6 +1,4 @@
 ---
-name: "bdw-update-docs"
-user-invocable: false
 description: "Verify beads metadata and update core documentation (README.md, CHANGELOG.md, CLAUDE.md). Creates missing docs, enforces line limits."
 ---
 

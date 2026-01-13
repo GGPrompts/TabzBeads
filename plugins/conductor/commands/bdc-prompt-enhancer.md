@@ -1,6 +1,4 @@
 ---
-name: bdc-prompt-enhancer
-user-invocable: false
 description: "Enhance beads issue prompts with skill hints, key files, and structured context. Used by bd-plan's Enhance Prompts activity to prepare issues for workers."
 ---
 

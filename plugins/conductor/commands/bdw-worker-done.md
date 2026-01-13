@@ -1,7 +1,5 @@
 ---
-name: bdw-worker-done
 description: "Complete worker task: verify build, run tests, commit, and close issue. Code review happens at conductor level after merge. Invoke with /conductor:bdw-worker-done <issue-id>"
-user-invocable: false
 ---
 
 # Worker Done - Task Completion Orchestrator

@@ -1,6 +1,4 @@
 ---
-name: "bdw-codex-review"
-user-invocable: false
 description: "Run Codex code review (read-only, cheaper). Uses GPT model for analysis."
 ---
 

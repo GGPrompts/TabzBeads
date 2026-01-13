@@ -1,6 +1,4 @@
 ---
-name: "bdw-verify-build"
-user-invocable: false
 description: "Run build and report errors. Standalone command for build verification."
 ---
 

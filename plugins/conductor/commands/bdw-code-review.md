@@ -1,7 +1,5 @@
 ---
-name: bdw-code-review
 description: "Code review with confidence-based filtering. Modes: quick (lint+types), standard (Sonnet), thorough (parallel agents). Worker applies fixes from review findings."
-user-invocable: false
 ---
 
 # Code Review Skill

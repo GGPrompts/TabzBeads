@@ -1,7 +1,5 @@
 ---
-name: bdc-wave-done
 description: "Complete a wave of parallel workers: verify all workers finished, merge branches, run unified review, cleanup worktrees. Invoke with /conductor:bdc-wave-done <issue-ids>"
-user-invocable: false
 ---
 
 # Wave Done - Wave Completion Orchestrator

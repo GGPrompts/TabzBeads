@@ -1,6 +1,4 @@
 ---
-name: "bdw-create-followups"
-user-invocable: false
 description: "Analyze work and create follow-up beads issues if needed."
 ---
 
