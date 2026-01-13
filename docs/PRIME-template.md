@@ -13,10 +13,10 @@
 ```bash
 /conductor:bdw-verify-build      # Build and check for errors
 /conductor:bdw-run-tests         # Run tests if available
-/conductor:bdw-code-review       # Opus review with auto-fix (high confidence)
+/conductor:bdw-code-review       # Sonnet review (you apply fixes)
 /conductor:bdw-commit-changes    # Stage + commit with conventional format
 /conductor:bdw-close-issue <id>  # Close the beads issue
-bd sync && git push          # Push everything
+bd sync && git push              # Push everything
 ```
 
 ### Quick Completion (skip review, for trivial changes)
@@ -36,9 +36,9 @@ bd sync && git push
 bd sync && git push
 ```
 
-## BD-Swarm Worker (spawned by /conductor:bd-swarm)
+## BD-Conduct Worker (spawned by /conductor:bd-conduct)
 
-If you were spawned by `/conductor:bd-swarm`, use worker-done and DO NOT push:
+If you were spawned by `/conductor:bd-conduct`, use worker-done and DO NOT push:
 ```bash
 /conductor:bdw-worker-done <id>  # Runs: verify → test → commit → close → NOTIFY
 # STOP HERE - conductor handles merge, review, and push
@@ -117,29 +117,30 @@ bd create --title="Write tests for X" --type=task
 bd dep add beads-yyy beads-xxx  # Tests depend on Feature (Feature blocks tests)
 ```
 
-## Unified Conductor Commands
+## Conductor Commands
 
-These skills provide high-level orchestration for development workflows:
-
-### Entry Points
+### Entry Points (bd-*)
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bd-work` | Single-session workflow - YOU implement the issue |
-| `/conductor:bd-swarm` | Spawn multiple workers in parallel to tackle issues |
-| `/conductor:bdc-swarm-auto` | Fully autonomous backlog completion - runs waves until `bd ready` is empty |
+| `/conductor:bd-start` | Single-session workflow - YOU implement the issue |
+| `/conductor:bd-conduct` | Interactive orchestration - select issues, terminals (1-4), mode |
+| `/conductor:bd-plan` | Prepare backlog: refine, enhance prompts, match skills |
+| `/conductor:bd-status` | View issue state (open, blocked, ready) |
 
-### Planning & Preparation
+### Conductor Internal (bdc-*)
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bd-plan` | Prepare backlog: refine priorities, enhance prompts with skill hints, match skills to issues |
+| `/conductor:bdc-swarm-auto` | Autonomous backlog completion until `bd ready` is empty |
+| `/conductor:bdc-wave-done` | Merge branches, unified review, visual QA, push |
 
-### Atomic Commands (used by completion pipelines)
+### Worker Steps (bdw-*)
 | Command | Purpose |
 |---------|---------|
 | `/conductor:bdw-verify-build` | Run build and report errors |
 | `/conductor:bdw-run-tests` | Run tests if available |
-| `/conductor:bdw-code-review` | Opus code review with auto-fix for high confidence issues |
-| `/conductor:bdw-codex-review` | Cost-effective read-only review via OpenAI Codex |
+| `/conductor:bdw-code-review` | Sonnet review (you apply fixes) |
+| `/conductor:bdw-codex-review` | Cheaper read-only review via OpenAI Codex |
 | `/conductor:bdw-commit-changes` | Stage + commit with conventional format |
 | `/conductor:bdw-close-issue` | Close a beads issue with completion reason |
-| `/conductor:bdw-worker-done` | Full completion pipeline: verify → test → commit → close → notify |
+| `/conductor:bdw-update-docs` | Verify beads + update docs |
+| `/conductor:bdw-worker-done` | Full pipeline: verify → test → commit → close → notify |
