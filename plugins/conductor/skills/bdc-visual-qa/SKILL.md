@@ -1,6 +1,6 @@
 ---
 name: bdc-visual-qa
-description: "Visual QA check between waves - spawns tabz-manager to screenshot changes and check for browser errors. Use after completing a wave with UI changes."
+description: "Visual QA check between waves - runs as forked tabz-manager subagent to screenshot changes and check for browser errors. Avoids spawn overhead."
 user-invocable: false
 agent: conductor:tabz-manager
 context: fork
@@ -8,22 +8,29 @@ context: fork
 
 # Visual QA Check
 
-Run visual QA after a wave with UI changes completes, before spawning the next wave.
+Run visual QA after a wave with UI changes completes. Runs as a **forked tabz-manager subagent** to avoid the context overhead of spawning a new Claude session.
 
-## What This Does
+## Why Forked Subagent?
 
-1. **Spawns tabz-manager** in a forked context with browser isolation
-2. **Screenshots changed pages** to catch glaring visual issues
-3. **Checks browser console** for JavaScript errors
-4. **Reports findings** back to the conductor
+| Approach | Context Cost |
+|----------|-------------|
+| New terminal spawn | Full init: CLAUDE.md, PRIME.md, beads context, plugin discovery |
+| Forked subagent | Inherits parent context, just adds tabz-manager tools |
+
+The conductor already has all context loaded - visual QA just needs browser automation tools.
 
 ## Usage
 
-The conductor invokes this skill between waves:
+```
+/conductor:bdc-visual-qa [--mode=quick|full] [urls...]
+```
 
-```
-/conductor:bdc-visual-qa [urls-or-components]
-```
+### Modes
+
+| Mode | Checks | Use Case |
+|------|--------|----------|
+| `quick` (default) | Console errors, DOM error patterns | Fast automated check |
+| `full` | Quick + screenshots + interactive review | Thorough visual inspection |
 
 ## Workflow
 
@@ -34,74 +41,84 @@ When invoked, tabz-manager will:
 ```bash
 SESSION_ID="QA-$(shuf -i 100-999 -n 1)"
 mcp-cli call tabz/tabz_create_group "{\"title\": \"$SESSION_ID\", \"color\": \"green\"}"
+# Save groupId for all subsequent operations
 ```
 
-### 2. For Each URL/Component
+### 2. Quick Checks (Both Modes)
 
 ```bash
-# Open the page
-mcp-cli call tabz/tabz_open_url '{"url": "URL", "newTab": true, "groupId": <groupId>}'
+# Open dev server page into YOUR group
+mcp-cli call tabz/tabz_open_url '{"url": "http://localhost:3000", "newTab": true, "groupId": <groupId>}'
 
-# Wait for load, then screenshot
-mcp-cli call tabz/tabz_screenshot '{"tabId": <tabId>}'
+# Check console for errors (explicit tabId)
+mcp-cli call tabz/tabz_get_console_logs '{"tabId": <tabId>, "level": "error"}'
 
-# Check console for errors
-mcp-cli call tabz/tabz_get_console_logs '{}'
+# Check DOM for error patterns
+mcp-cli call tabz/tabz_execute_script '{
+  "tabId": <tabId>,
+  "script": "document.body.innerText.match(/error boundary|something went wrong|uncaught|failed to/gi)"
+}'
 ```
 
-### 3. Report Findings
+### 3. Full Mode Additional Checks
+
+```bash
+# Screenshot at standard viewport
+mcp-cli call tabz/tabz_screenshot '{"tabId": <tabId>, "width": 1920, "height": 1080}'
+
+# For each additional URL provided:
+mcp-cli call tabz/tabz_open_url '{"url": "URL", "newTab": true, "groupId": <groupId>}'
+mcp-cli call tabz/tabz_screenshot '{"tabId": <new_tabId>}'
+```
+
+### 4. Cleanup and Report
+
+```bash
+# Close the QA tab group when done
+mcp-cli call tabz/tabz_update_group '{"groupId": <groupId>, "collapsed": true}'
+```
 
 Return a summary:
-- Screenshots taken (file paths)
-- Console errors found (if any)
-- Obvious visual issues spotted
-- Recommendation: proceed or investigate
+- **Errors found**: List with severity (blocking vs warning)
+- **Screenshots**: File paths (full mode only)
+- **Recommendation**: PASS / INVESTIGATE / BLOCK
 
-## Example Invocation
+## Example Invocations
 
-After a wave that modified the dashboard:
-
+### Quick check (default)
 ```
-/conductor:bdc-visual-qa http://localhost:3000/dashboard http://localhost:3000/settings
+/conductor:bdc-visual-qa http://localhost:3000
 ```
 
-tabz-manager will:
-1. Create "QA-847" tab group
-2. Screenshot both pages
-3. Check console for errors
-4. Report back with paths and any issues
-
-## When to Use
-
-- After waves that touch UI components
-- Before spawning the next wave
-- When you want quick visual sanity checks
-- To catch obvious regressions before they compound
+### Full check with multiple pages
+```
+/conductor:bdc-visual-qa --mode=full http://localhost:3000/dashboard http://localhost:3000/settings
+```
 
 ## What It Catches
 
 - JavaScript console errors
+- React error boundaries / crash states
 - Missing images or broken layouts
 - 404s and network failures
-- Obvious visual regressions
+- Obvious visual regressions (full mode)
 
 ## What It Doesn't Do
 
-- Pixel-perfect comparison (use dedicated tools for that)
-- Accessibility audits (see emulation tools for that)
+- Pixel-perfect comparison (use dedicated tools)
+- Accessibility audits (see tabz emulation tools)
 - Performance profiling (tabz-manager has tools, but not in this skill)
 
-## Integration with Wave Workflow
+## Integration with bdc-wave-done
 
-In bdc-wave-done or bdc-swarm-auto:
+The `bdc-wave-done` skill invokes this automatically in Step 7:
 
-```markdown
-## After Merge, Before Next Wave
-
-If the wave included UI changes:
-
-1. Run visual QA: `/conductor:bdc-visual-qa <changed-urls>`
-2. Review screenshots and console output
-3. If errors found, create follow-up issues before next wave
-4. If clean, proceed to next wave
 ```
+# Auto-detects UI changes, then:
+/conductor:bdc-visual-qa --mode=$VISUAL_QA_MODE [dev-server-urls]
+```
+
+Control via `--visual-qa` flag:
+- `--visual-qa=quick` (default): Run quick checks
+- `--visual-qa=full`: Run full visual inspection
+- `--visual-qa=skip`: Skip entirely (backend-only waves)

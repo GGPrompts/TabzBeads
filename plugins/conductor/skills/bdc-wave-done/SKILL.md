@@ -15,7 +15,7 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. H
 | `--visual-qa` | `quick`, `full`, `skip` | `quick` | Visual QA mode for UI waves |
 
 - **quick**: Console error check + DOM error pattern check (fast, automated)
-- **full**: Quick checks + spawn tabz-manager subagent for interactive review
+- **full**: Quick checks + screenshots + interactive review
 - **skip**: Skip visual QA entirely (for backend-only waves)
 
 ## Usage
@@ -39,7 +39,7 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. H
 | 4 | Cleanup worktrees and branches | No | MUST happen before build (Next.js includes worktrees) |
 | 5 | Build verification | Yes | Verify merged code builds (clean directory) |
 | 6 | Unified code review | Yes | Review all changes together |
-| 7 | Visual QA (--visual-qa flag) | Optional | Quick checks (default) or full subagent review |
+| 7 | Visual QA (--visual-qa flag) | Optional | Forked tabz-manager subagent via bdc-visual-qa skill |
 | 8 | Sync and push | Yes | Final push to remote |
 | 9 | Audio summary | No | Announce completion |
 
@@ -288,6 +288,8 @@ If blockers found -> **STOP**, fix issues, re-run.
 
 Automated visual sanity checks to catch compounding browser errors early during autonomous swarm execution.
 
+**Uses forked subagent instead of spawning new terminal** - avoids the context overhead of loading CLAUDE.md, PRIME.md, beads context, and plugin discovery in a new session.
+
 ```bash
 echo "=== Step 7: Visual QA ==="
 
@@ -302,12 +304,11 @@ done
 
 # Auto-detect if visual QA is relevant (unless explicitly set)
 has_ui_changes() {
-  for ISSUE in $ISSUES; do
-    BRANCH="feature/${ISSUE}"
-    if git diff main.."$BRANCH" --name-only 2>/dev/null | grep -qE "\.(tsx|jsx|css|scss|vue|svelte)$"; then
-      return 0  # Has UI changes
-    fi
-  done
+  # Check merged changes on main (post-merge)
+  MERGE_BASE=$(git merge-base HEAD~${#ISSUES[@]} HEAD 2>/dev/null || echo "HEAD~5")
+  if git diff "$MERGE_BASE"..HEAD --name-only 2>/dev/null | grep -qE "\.(tsx|jsx|css|scss|vue|svelte)$"; then
+    return 0  # Has UI changes
+  fi
   return 1  # No UI changes
 }
 
@@ -315,75 +316,27 @@ if [ "$VISUAL_QA_EXPLICIT" = "false" ] && ! has_ui_changes; then
   echo "No UI changes detected - auto-skipping visual QA"
   VISUAL_QA_MODE="skip"
 fi
-
-if [ "$VISUAL_QA_MODE" = "skip" ]; then
-  echo "Skipping visual QA (--visual-qa=skip)"
-elif [ "$VISUAL_QA_MODE" = "quick" ] || [ "$VISUAL_QA_MODE" = "full" ]; then
-  # Spawn visible tabz-mcp agent for QA checks
-  TOKEN=$(cat /tmp/tabz-auth-token 2>/dev/null)
-
-  if [ -z "$TOKEN" ]; then
-    echo "WARNING: No tabz auth token found - skipping visual QA"
-    echo "Start TabzChrome backend to enable visual QA checks"
-  else
-    PROJECT_DIR=$(pwd)
-
-    QA_PROMPT="Visual QA check after wave merge.
-
-## Mode: $VISUAL_QA_MODE
-
-## Quick Checks (always run)
-1. Check browser console for errors: use tabz_get_console_logs with level=error
-2. Check DOM for React error boundaries or error states (patterns like 'error boundary', 'something went wrong')
-3. Verify the dev server page loads without critical errors
-
-## Full Mode (if mode is 'full')
-- Take screenshots of key UI areas at 1920x1080
-- Interactive review of UI changes
-- Create beads issues for any visual bugs found
-
-## Report
-Summarize findings clearly:
-- If errors found: list them with severity
-- If no errors: confirm visual QA passed
-
-Exit when complete with a clear summary."
-
-    # Spawn the Visual QA agent (tabz-manager in conductor plugin)
-    RESPONSE=$(curl -s -X POST http://localhost:8129/api/spawn \
-      -H "Content-Type: application/json" \
-      -H "X-Auth-Token: $TOKEN" \
-      -d "{\"name\": \"Visual-QA\", \"workingDir\": \"$PROJECT_DIR\", \"command\": \"claude --agent conductor:tabz-manager --dangerously-skip-permissions\"}")
-
-    QA_SESSION=$(echo "$RESPONSE" | jq -r ".terminal.ptyInfo.tmuxSession")
-
-    if [ -n "$QA_SESSION" ] && [ "$QA_SESSION" != "null" ]; then
-      echo "Spawned Visual QA agent: $QA_SESSION"
-
-      # Wait for agent to initialize
-      sleep 6
-
-      # Send the QA prompt
-      tmux send-keys -t "$QA_SESSION" -l "$QA_PROMPT"
-      sleep 0.3
-      tmux send-keys -t "$QA_SESSION" C-m
-
-      # Wait for agent to complete (poll session existence)
-      echo "Waiting for Visual QA agent to complete..."
-      while tmux has-session -t "$QA_SESSION" 2>/dev/null; do
-        sleep 5
-      done
-      echo "Visual QA complete"
-    else
-      echo "WARNING: Failed to spawn Visual QA agent"
-      echo "Response: $RESPONSE"
-    fi
-  fi
-fi
 ```
 
+**Execute Visual QA via skill:**
+
+```
+if VISUAL_QA_MODE is "skip":
+  echo "Skipping visual QA (--visual-qa=skip)"
+elif VISUAL_QA_MODE is "quick" or "full":
+  # Invoke bdc-visual-qa skill as forked subagent
+  # The skill has: agent: conductor:tabz-manager, context: fork
+  /conductor:bdc-visual-qa --mode=$VISUAL_QA_MODE [dev-server-urls]
+```
+
+The `bdc-visual-qa` skill:
+1. Runs as a **forked tabz-manager subagent** (inherits conductor context, no spawn overhead)
+2. Creates isolated tab group with random suffix (e.g., "QA-847")
+3. Screenshots pages and checks console for errors
+4. Returns findings to conductor
+
 **Flag modes:**
-- `--visual-qa=quick` (default): Spawn agent for console + DOM error checks
+- `--visual-qa=quick` (default): Console + DOM error checks (fast, automated)
 - `--visual-qa=full`: Quick checks + screenshots + interactive review
 - `--visual-qa=skip`: Skip entirely (for backend-only waves)
 
