@@ -1,5 +1,4 @@
 ---
-name: "bd-plan"
 description: "Prepare beads backlog before work: analyze state, match skills, estimate complexity, enhance prompts. Runs full pipeline automatically."
 ---
 

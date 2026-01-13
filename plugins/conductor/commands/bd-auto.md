@@ -1,5 +1,4 @@
 ---
-name: "bd-auto"
 description: "Fully autonomous backlog completion. Runs waves until backlog empty with zero user prompts. Use when you want hands-off parallel issue processing."
 ---
 

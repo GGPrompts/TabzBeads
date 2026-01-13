@@ -1,5 +1,4 @@
 ---
-name: "bd-start"
 description: "Grab a ready issue and start working on it directly (no worker spawn)"
 ---
 
@@ -87,7 +86,7 @@ Task(
   model: "sonnet",
   run_in_background: true,
   description: "Enhance issue prompt",
-  prompt: "Enhance beads issue $ISSUE_ID following the bdc-prompt-enhancer skill.
+  prompt: "Enhance beads issue $ISSUE_ID following the bdc-prompt-enhancer command.
     1. Get issue details: bd show $ISSUE_ID
     2. Match skills using scripts/match-skills.sh
     3. Find key files (max 10)

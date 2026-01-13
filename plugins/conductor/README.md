@@ -30,6 +30,7 @@ Or add to your `.claude/plugins/` symlink path.
 | `/conductor:bd-start` | Work directly on an issue (no spawn) |
 | `/conductor:bd-status` | View issue state (open, blocked, ready) |
 | `/conductor:bd-conduct` | Interactive orchestration: select issues, terminals (1-4), mode |
+| `/conductor:bd-auto` | Fully autonomous: all ready issues, no prompts |
 | `/conductor:bd-new-project` | Template-based project scaffolding |
 
 ## Skills
@@ -46,7 +47,7 @@ Or add to your `.claude/plugins/` symlink path.
 ### Worker Steps (bdw-*)
 - `bdw-verify-build` - Run build and report errors
 - `bdw-run-tests` - Run tests if available
-- `bdw-code-review` - Opus code review with auto-fix
+- `bdw-code-review` - Sonnet review, worker applies fixes
 - `bdw-codex-review` - Cost-effective read-only review via OpenAI Codex
 - `bdw-commit-changes` - Stage + commit with conventional format
 - `bdw-close-issue` - Close a beads issue

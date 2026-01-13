@@ -37,7 +37,7 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-conduct.
 | 4 | Cleanup worktrees and branches | No | MUST happen before build (Next.js includes worktrees) |
 | 5 | Build verification | Yes | Verify merged code builds (clean directory) |
 | 6 | Unified code review | Yes | Review all changes together |
-| 7 | Visual QA (--visual-qa flag) | Optional | Forked tabz-expert subagent via bdc-visual-qa skill |
+| 7 | Visual QA (--visual-qa flag) | Optional | Forked tabz-expert subagent via bdc-visual-qa command |
 | 8 | Sync and push | Yes | Final push to remote |
 | 9 | Audio summary | No | Announce completion |
 

@@ -115,7 +115,7 @@ Return a summary:
 
 ## Integration with bdc-wave-done
 
-The `bdc-wave-done` skill invokes this automatically in Step 7:
+The `bdc-wave-done` command invokes this automatically in Step 7:
 
 ```
 # Auto-detects UI changes, then:

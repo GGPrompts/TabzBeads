@@ -27,7 +27,7 @@ bd sync && git push              # Push everything
 bd sync && git push
 ```
 
-### Cost-Effective Review (use Codex instead of Opus)
+### Cost-Effective Review (use Codex instead of Sonnet)
 ```bash
 /conductor:bdw-verify-build
 /conductor:bdw-codex-review      # Cheaper read-only review via OpenAI Codex
@@ -122,10 +122,12 @@ bd dep add beads-yyy beads-xxx  # Tests depend on Feature (Feature blocks tests)
 ### Entry Points (bd-*)
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bd-start` | Single-session workflow - YOU implement the issue |
-| `/conductor:bd-conduct` | Interactive orchestration - select issues, terminals (1-4), mode |
 | `/conductor:bd-plan` | Prepare backlog: refine, enhance prompts, match skills |
+| `/conductor:bd-start` | Single-session workflow - YOU implement the issue |
 | `/conductor:bd-status` | View issue state (open, blocked, ready) |
+| `/conductor:bd-conduct` | Interactive orchestration - select issues, terminals (1-4), mode |
+| `/conductor:bd-auto` | Fully autonomous: all ready issues, no prompts |
+| `/conductor:bd-new-project` | Template-based project scaffolding |
 
 ### Conductor Internal (bdc-*)
 | Command | Purpose |
@@ -142,5 +144,7 @@ bd dep add beads-yyy beads-xxx  # Tests depend on Feature (Feature blocks tests)
 | `/conductor:bdw-codex-review` | Cheaper read-only review via OpenAI Codex |
 | `/conductor:bdw-commit-changes` | Stage + commit with conventional format |
 | `/conductor:bdw-close-issue` | Close a beads issue with completion reason |
-| `/conductor:bdw-update-docs` | Verify beads + update docs |
+| `/conductor:bdw-create-followups` | Create follow-up beads issues from TODOs |
+| `/conductor:bdw-update-docs` | Verify beads + update docs (README, CHANGELOG, CLAUDE.md) |
+| `/conductor:bdw-worker-init` | Initialize worker context with skills and key files |
 | `/conductor:bdw-worker-done` | Full pipeline: verify → test → commit → close → notify |

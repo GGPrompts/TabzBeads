@@ -1,5 +1,4 @@
 ---
-name: "bd-new-project"
 description: "Multi-phase workflow for brainstorming, scaffolding, and setting up new projects with skill-aware configuration"
 ---
 

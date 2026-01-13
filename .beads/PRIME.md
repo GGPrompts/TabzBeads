@@ -38,7 +38,7 @@ bd close TabzBeads-xxx --reason="..."
 ```bash
 /conductor:bdw-verify-build      # Build and check for errors
 /conductor:bdw-run-tests         # Run tests if available
-/conductor:bdw-code-review       # Opus review with auto-fix (high confidence)
+/conductor:bdw-code-review       # Sonnet review (you apply fixes)
 /conductor:bdw-commit-changes    # Stage + commit with conventional format
 /conductor:bdw-close-issue <id>  # Close the beads issue
 bd sync && git push              # Push everything
@@ -52,7 +52,7 @@ bd sync && git push              # Push everything
 bd sync && git push
 ```
 
-### Cost-Effective Review (use Codex instead of Opus)
+### Cost-Effective Review (use Codex instead of Sonnet)
 ```bash
 /conductor:bdw-verify-build
 /conductor:bdw-codex-review      # Cheaper read-only review via OpenAI Codex
@@ -156,6 +156,7 @@ Commands use prefixes to indicate their purpose:
 | `/conductor:bd-start` | YOU work directly on an issue (no spawn) |
 | `/conductor:bd-status` | View issue state (open, blocked, ready) |
 | `/conductor:bd-conduct` | Interactive orchestration: select issues, terminals (1-4), mode |
+| `/conductor:bd-auto` | Fully autonomous: all ready issues, no prompts |
 | `/conductor:bd-new-project` | Template-based project scaffolding |
 
 ### Conductor Internal (bdc-)
@@ -169,10 +170,13 @@ Commands use prefixes to indicate their purpose:
 |---------|---------|
 | `/conductor:bdw-verify-build` | Run build and report errors |
 | `/conductor:bdw-run-tests` | Run tests if available |
-| `/conductor:bdw-code-review` | Opus code review with auto-fix |
+| `/conductor:bdw-code-review` | Sonnet code review (you apply fixes) |
 | `/conductor:bdw-codex-review` | Cost-effective read-only review via OpenAI Codex |
 | `/conductor:bdw-commit-changes` | Stage + commit with conventional format |
 | `/conductor:bdw-close-issue` | Close a beads issue with completion reason |
+| `/conductor:bdw-create-followups` | Create follow-up beads issues from TODOs |
+| `/conductor:bdw-update-docs` | Verify beads + update docs (README, CHANGELOG, CLAUDE.md) |
+| `/conductor:bdw-worker-init` | Initialize worker context with skills and key files |
 | `/conductor:bdw-worker-done` | Full completion pipeline: verify → test → commit → close → notify |
 
 ## Terminal Communication (for workers)

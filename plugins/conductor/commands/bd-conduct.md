@@ -1,5 +1,4 @@
 ---
-name: "bd-conduct"
 description: "Interactive multi-session orchestration. Select issues, choose terminal count (1-4), pick mode (interactive/autonomous), then spawn workers. Main entry point for spawning workers."
 ---
 
@@ -118,7 +117,7 @@ for ISSUE_ID in $UNPREPARED:
     model: "sonnet",
     run_in_background: true,
     description: "Enhance $ISSUE_ID",
-    prompt: "Enhance beads issue $ISSUE_ID following bdc-prompt-enhancer skill..."
+    prompt: "Enhance beads issue $ISSUE_ID following bdc-prompt-enhancer command..."
   )
 ```
 

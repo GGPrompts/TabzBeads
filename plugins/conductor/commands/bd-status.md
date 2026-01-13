@@ -1,5 +1,4 @@
 ---
-name: "bd-status"
 description: "Show beads issue tracker status overview"
 ---
 

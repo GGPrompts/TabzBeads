@@ -52,20 +52,20 @@ flowchart TD
     C3 --> C4
     C4 --> D1["bd sync && git push"]
 
-    click C1 "skills/bdw-verify-build/SKILL.md"
-    click C2 "skills/bdw-run-tests/SKILL.md"
-    click C3 "skills/bdw-commit-changes/SKILL.md"
-    click C4 "skills/bdw-close-issue/SKILL.md"
+    click C1 "commands/bdw-verify-build.md"
+    click C2 "commands/bdw-run-tests.md"
+    click C3 "commands/bdw-commit-changes.md"
+    click C4 "commands/bdw-close-issue.md"
 ```
 
-### Skills in this workflow
+### Commands in this workflow
 
-| Step | Skill | Purpose |
+| Step | Command | Purpose |
 |------|-------|---------|
-| Verify | [bdw-verify-build](skills/bdw-verify-build/SKILL.md) | Run build, report errors |
-| Test | [bdw-run-tests](skills/bdw-run-tests/SKILL.md) | Run tests if available |
-| Commit | [bdw-commit-changes](skills/bdw-commit-changes/SKILL.md) | Stage + conventional commit |
-| Close | [bdw-close-issue](skills/bdw-close-issue/SKILL.md) | Close beads issue |
+| Verify | [bdw-verify-build](commands/bdw-verify-build.md) | Run build, report errors |
+| Test | [bdw-run-tests](commands/bdw-run-tests.md) | Run tests if available |
+| Commit | [bdw-commit-changes](commands/bdw-commit-changes.md) | Stage + conventional commit |
+| Close | [bdw-close-issue](commands/bdw-close-issue.md) | Close beads issue |
 
 ---
 
@@ -105,20 +105,20 @@ flowchart TD
     A6 --> A7
     A7 --> D1["Merge + Review + Push"]
 
-    click A7 "skills/bdc-wave-done/SKILL.md"
-    click W1C "skills/bdw-worker-done/SKILL.md"
-    click W2C "skills/bdw-worker-done/SKILL.md"
+    click A7 "commands/bdc-wave-done.md"
+    click W1C "commands/bdw-worker-done.md"
+    click W2C "commands/bdw-worker-done.md"
 ```
 
-### Conductor Skills (bdc-*)
+### Conductor Commands (bdc-*)
 
-| Skill | Purpose | When Used |
+| Command | Purpose | When Used |
 |-------|---------|-----------|
-| [bdc-orchestration](skills/bdc-orchestration/SKILL.md) | Multi-session coordination patterns | During spawning |
-| [bdc-swarm-auto](skills/bdc-swarm-auto/SKILL.md) | Autonomous waves until backlog empty | Auto mode |
-| [bdc-wave-done](skills/bdc-wave-done/SKILL.md) | Merge branches, unified review, cleanup | After all workers complete |
-| [bdc-run-wave](skills/bdc-run-wave/SKILL.md) | Run wave from molecule template | Template-based execution |
-| [bdc-analyze-transcripts](skills/bdc-analyze-transcripts/SKILL.md) | Review worker session transcripts | Post-mortem |
+| [bdc-orchestration](commands/bdc-orchestration.md) | Multi-session coordination patterns | During spawning |
+| [bdc-swarm-auto](commands/bdc-swarm-auto.md) | Autonomous waves until backlog empty | Auto mode |
+| [bdc-wave-done](commands/bdc-wave-done.md) | Merge branches, unified review, cleanup | After all workers complete |
+| [bdc-run-wave](commands/bdc-run-wave.md) | Run wave from molecule template | Template-based execution |
+| [bdc-analyze-transcripts](commands/bdc-analyze-transcripts.md) | Review worker session transcripts | Post-mortem |
 
 ---
 
@@ -145,26 +145,26 @@ flowchart TD
     S3 --> S4
     S4 --> S5
 
-    click S1 "skills/bdw-verify-build/SKILL.md"
-    click S2 "skills/bdw-run-tests/SKILL.md"
-    click S3 "skills/bdw-commit-changes/SKILL.md"
-    click S4 "skills/bdw-close-issue/SKILL.md"
+    click S1 "commands/bdw-verify-build.md"
+    click S2 "commands/bdw-run-tests.md"
+    click S3 "commands/bdw-commit-changes.md"
+    click S4 "commands/bdw-close-issue.md"
 ```
 
-### Worker Skills (bdw-*)
+### Worker Commands (bdw-*)
 
-| Skill | Purpose | Atomic? |
+| Command | Purpose | Atomic? |
 |-------|---------|---------|
-| [bdw-worker-init](skills/bdw-worker-init/SKILL.md) | Initialize worker context | No |
-| [bdw-worker-done](skills/bdw-worker-done/SKILL.md) | Full completion pipeline | No (orchestrator) |
-| [bdw-verify-build](skills/bdw-verify-build/SKILL.md) | Run build, report errors | Yes |
-| [bdw-run-tests](skills/bdw-run-tests/SKILL.md) | Run tests if available | Yes |
-| [bdw-code-review](skills/bdw-code-review/SKILL.md) | Opus review with auto-fix | Yes |
-| [bdw-codex-review](skills/bdw-codex-review/SKILL.md) | Cost-effective GPT review | Yes |
-| [bdw-commit-changes](skills/bdw-commit-changes/SKILL.md) | Stage + commit | Yes |
-| [bdw-close-issue](skills/bdw-close-issue/SKILL.md) | Close beads issue | Yes |
-| [bdw-create-followups](skills/bdw-create-followups/SKILL.md) | Create follow-up issues | Yes |
-| [bdw-update-docs](skills/bdw-update-docs/SKILL.md) | Update documentation | Yes |
+| [bdw-worker-init](commands/bdw-worker-init.md) | Initialize worker context | No |
+| [bdw-worker-done](commands/bdw-worker-done.md) | Full completion pipeline | No (orchestrator) |
+| [bdw-verify-build](commands/bdw-verify-build.md) | Run build, report errors | Yes |
+| [bdw-run-tests](commands/bdw-run-tests.md) | Run tests if available | Yes |
+| [bdw-code-review](commands/bdw-code-review.md) | Sonnet review, worker applies fixes | Yes |
+| [bdw-codex-review](commands/bdw-codex-review.md) | Cost-effective GPT review | Yes |
+| [bdw-commit-changes](commands/bdw-commit-changes.md) | Stage + commit | Yes |
+| [bdw-close-issue](commands/bdw-close-issue.md) | Close beads issue | Yes |
+| [bdw-create-followups](commands/bdw-create-followups.md) | Create follow-up issues | Yes |
+| [bdw-update-docs](commands/bdw-update-docs.md) | Update documentation | Yes |
 
 ---
 
