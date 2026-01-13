@@ -4,7 +4,7 @@ description: "Complete a wave of parallel workers: verify all workers finished, 
 
 # Wave Done - Wave Completion Orchestrator
 
-Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. Handles merge, review, cleanup, and push.
+Orchestrates the completion of a wave of parallel workers spawned by bd-conduct. Handles merge, review, cleanup, and push.
 
 ## CLI Flags
 
@@ -22,7 +22,7 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. H
 # Complete a wave with specific issues
 /conductor:bdc-wave-done TabzChrome-abc TabzChrome-def TabzChrome-ghi
 
-# Or use environment variable set by bd-swarm
+# Or use environment variable set by bd-conduct
 /conductor:bdc-wave-done $WAVE_ISSUES
 ```
 
@@ -144,7 +144,7 @@ capture_and_kill() {
   tmux kill-session -t "$SESSION" 2>/dev/null && echo "Killed: $SESSION"
 }
 
-# Option A: From saved session list (if bd-swarm saved it)
+# Option A: From saved session list (if bd-conduct saved it)
 if [ -f /tmp/swarm-sessions.txt ]; then
   while read -r SESSION; do
     [[ "$SESSION" =~ ^[a-zA-Z0-9_-]+$ ]] || continue
@@ -458,7 +458,7 @@ NEXT_COUNT=$(bd ready --json | jq 'length')
 
 if [ "$NEXT_COUNT" -gt 0 ]; then
   echo "$NEXT_COUNT issues ready for next wave"
-  # Run /conductor:bd-swarm for next wave
+  # Run /conductor:bd-conduct for next wave
 else
   echo "Backlog complete!"
 fi

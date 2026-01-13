@@ -1,6 +1,6 @@
 # Worker Architecture
 
-This document describes the unified worker architecture for parallel issue processing with bd-swarm.
+This document describes the unified worker architecture for parallel issue processing with bd-conduct.
 
 ## Overview
 
@@ -150,7 +150,7 @@ The hook handles activation - just include relevant keywords in the prompt conte
 
 | File | Purpose |
 |------|---------|
-| `commands/bd-swarm.md` | Main swarm workflow |
+| `commands/bd-conduct.md` | Main orchestration workflow |
 | `skills/bdc-swarm-auto/SKILL.md` | Autonomous backlog processing |
 | `commands/bd-plan.md` | Sprint planning with skill matching |
 | `scripts/completion-pipeline.sh` | Cleanup after workers complete |

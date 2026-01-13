@@ -301,7 +301,7 @@ When `/conductor:bdw-worker-done` succeeds:
 **The conductor then:**
 - Merges the feature branch to main
 - Kills this worker's tmux session
-- Removes the worktree (if bd-swarm)
+- Removes the worktree (if bd-conduct)
 - Deletes the feature branch
 
 Workers do NOT kill their own session - the conductor handles cleanup after receiving the notification.

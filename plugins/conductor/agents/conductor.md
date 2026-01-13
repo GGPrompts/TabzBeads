@@ -179,52 +179,59 @@ tmux ls | grep "^ctt-" | cut -d: -f1 | xargs -I {} tmux kill-session -t {}
 
 ## Crafting Skill-Aware Prompts
 
-Workers need explicit skill triggers to activate capabilities.
+See `references/worker-prompt-guidelines.md` for full details. Key principles:
 
-### Prompt Template
+### 1. Always Start with a Role
 
 ```markdown
-## Task: ISSUE-ID - Title
-
-[Explicit, actionable description - what exactly to do, not just "fix the bug"]
-
-## Context
-[WHY this matters - helps Claude generalize and make good decisions]
-
-## Key Files
-- path/to/file.ts (focus on lines X-Y)
-- path/to/other.ts
-
-## Guidance
-Use the `/skill-name` skill for [specific aspect].
-Follow the pattern in [existing-file.ts] for consistency.
-
-## When Done
-Run `/conductor:bdw-worker-done ISSUE-ID`
+You are a frontend developer working on a React dashboard with shadcn/ui.
 ```
 
-### Skill Triggers
+### 2. Use Natural Skill Triggers
+
+**Wrong:** `Load these skills: /frontend:ui-styling`
+
+**Right:** "Use the ui-styling skill to ensure components match our design system."
+
+### 3. Complete Prompt Example
+
+```markdown
+You are a terminal integration developer working with xterm.js.
+
+## Task: TabzChrome-456 - Fix terminal resize on window change
+
+The terminal doesn't resize when the browser window changes size.
+
+## Why This Matters
+
+Users resize their browser frequently, and a fixed-size terminal creates
+a poor experience with wasted space or content overflow.
+
+## Key Files
+
+- src/components/Terminal.tsx - resize handler lives here
+- src/hooks/useTerminalSize.ts - dimension calculations
+
+## Guidance
+
+Use the xterm-js skill for resize and FitAddon patterns.
+Follow the debounce pattern in useWindowSize.ts.
+
+If the resize flow is unclear, use subagents in parallel to trace
+through the component tree.
+
+When you're done, run `/conductor:bdw-worker-done TabzChrome-456`
+```
+
+### Quick Reference: Natural Triggers
 
 | Need | Trigger Phrase |
-|------|---------------|
-| Terminal UI | "use the xterm-js skill" |
-| UI components | "use the shadcn-ui skill" |
-| Complex reasoning | "use the sequential-thinking skill" |
-| Exploration | "use subagents in parallel to explore" |
-| Deep thinking | Prepend `ultrathink` |
-| Code review | Run `/conductor:bdw-code-review` |
-| Build verification | Run `/conductor:bdw-verify-build` |
-
-### Prompt Guidelines
-
-See [references/worker-prompt-guidelines.md](../references/worker-prompt-guidelines.md) for detailed best practices.
-
-**Quick reference:**
-- Be explicit ("Fix X on line Y" not "fix the bug")
-- Add context (explain WHY)
-- Avoid ALL CAPS (causes overtriggering)
-- File paths as text (workers read on-demand)
-- Always end with `/conductor:bdw-worker-done ISSUE-ID`
+|------|----------------|
+| UI styling | "Use the ui-styling skill to match our design patterns" |
+| Terminal | "Use the xterm-js skill for resize handling" |
+| Plugin dev | "Use the plugin-dev skill to validate the manifest" |
+| Exploration | "Use subagents in parallel to find related files" |
+| Deep thinking | Prepend "ultrathink" or "think step by step" |
 
 ---
 
@@ -470,9 +477,9 @@ tmux send-keys -t "$SESSION" C-m
 
 | Resource | Purpose |
 |----------|---------|
-| `/conductor:bd-work` | Single-session workflow (YOU do the work) |
+| `/conductor:bd-start` | Single-session workflow (YOU do the work) |
 | `/conductor:bd-plan` | Prepare backlog (refine, enhance prompts) |
-| `/conductor:bd-swarm` | Spawn parallel workers |
+| `/conductor:bd-conduct` | Interactive orchestration (1-4 workers) |
 | `/conductor:bdc-swarm-auto` | Fully autonomous parallel execution |
 | `/conductor:bdc-wave-done` | Complete a wave of parallel workers |
 | `/conductor:bdw-worker-done` | Complete individual worker (auto-detects mode) |

@@ -36,8 +36,8 @@ Task(
 
 | Task Type | Run In | Why |
 |-----------|--------|-----|
-| **Orchestration** (wave-done, bd-swarm) | Main session | Needs conversation context, coordinates multiple steps |
-| **Interactive** (bd-work, bd-plan) | Main session | User interaction, decisions, back-and-forth |
+| **Orchestration** (wave-done, bd-conduct) | Main session | Needs conversation context, coordinates multiple steps |
+| **Interactive** (bd-start, bd-plan) | Main session | User interaction, decisions, back-and-forth |
 | **Code review** | Subagent | Isolated: "review this diff" - doesn't need wave context |
 | **Docs update** | Subagent | Isolated: "update these docs" - self-contained |
 | **Visual QA** | Subagent | Isolated: "check this UI" - separate browser session |
@@ -138,55 +138,71 @@ tmux ls | grep "^ctt-" | cut -d: -f1 | xargs -I {} tmux kill-session -t {}
 
 ## Crafting Skill-Aware Prompts
 
-Workers need explicit skill triggers to activate capabilities.
+See `references/worker-prompt-guidelines.md` for full details. Key principles:
 
-### Prompt Template
+### 1. Always Start with a Role
+
+Prime Claude for the task domain:
 
 ```markdown
-## Task: ISSUE-ID - Title
-
-[Explicit, actionable description - what exactly to do, not just "fix the bug"]
-
-## Context
-[WHY this matters - helps Claude generalize and make good decisions]
-
-## Key Files
-- path/to/file.ts (focus on lines X-Y)
-- path/to/other.ts
-
-## Guidance
-Use the `/skill-name` skill for [specific aspect].
-Follow the pattern in [existing-file.ts] for consistency.
-
-## When Done
-Run `/conductor:bdw-worker-done ISSUE-ID`
-
-**CRITICAL: Always use the pipeline - do NOT commit directly.**
-The pipeline sends notifications to the conductor via tmux.
+You are a frontend developer working on a React dashboard with shadcn/ui.
 ```
 
-### Skill Triggers
+### 2. Use Natural Skill Triggers
+
+**Wrong:** Prescriptive skill loading
+```markdown
+Load these skills:
+- /frontend:ui-styling
+```
+
+**Right:** Natural trigger phrases
+```markdown
+Use the ui-styling skill to ensure components match our design system.
+If the scope is unclear, use subagents in parallel to explore first.
+```
+
+### 3. Complete Prompt Example
+
+```markdown
+You are a plugin developer creating Claude Code skills and agents.
+
+## Task: TabzBeads-789 - Add validation to skill manifest
+
+Add JSON schema validation for SKILL.md frontmatter.
+
+## Why This Matters
+
+Invalid manifests cause silent failures during skill loading. Validation
+catches errors early and provides helpful error messages.
+
+## Key Files
+
+- src/skills/loader.ts - add validation here
+- src/schemas/skill.json - schema definition
+- tests/skills/validation.test.ts - add test cases
+
+## Guidance
+
+Use the plugin-dev skill to understand manifest requirements.
+Follow the existing validation pattern in agents/loader.ts.
+
+If you need to understand the full skill loading flow, use subagents
+in parallel to trace through the codebase.
+
+When you're done, run `/conductor:bdw-worker-done TabzBeads-789`
+```
+
+### Quick Reference: Natural Triggers
 
 | Need | Trigger Phrase |
-|------|---------------|
-| Terminal UI | "use the xterm-js skill" |
-| UI components | "use the shadcn-ui skill" |
-| Complex reasoning | "use the sequential-thinking skill" |
-| Exploration | "use subagents in parallel to explore" |
-| Deep thinking | Prepend `ultrathink` |
-| Code review | Run `/conductor:bdw-code-review` |
-| Build verification | Run `/conductor:bdw-verify-build` |
-
-### Prompt Guidelines
-
-See [../../references/worker-prompt-guidelines.md](../../references/worker-prompt-guidelines.md) for detailed best practices.
-
-**Quick reference:**
-- Be explicit ("Fix X on line Y" not "fix the bug")
-- Add context (explain WHY)
-- Avoid ALL CAPS (causes overtriggering)
-- File paths as text (workers read on-demand)
-- Always end with `/conductor:bdw-worker-done ISSUE-ID`
+|------|----------------|
+| UI styling | "Use the ui-styling skill to match our design patterns" |
+| Plugin dev | "Use the plugin-dev skill to validate the manifest" |
+| Terminal | "Use the xterm-js skill for terminal integration" |
+| Exploration | "Use subagents in parallel to find related files" |
+| Deep thinking | Prepend "ultrathink" or "think step by step" |
+| Complex tasks | "If the scope is unclear, explore the codebase first" |
 
 ---
 
@@ -338,9 +354,9 @@ tmux send-keys -t "$SESSION" C-m
 
 | Command | Purpose |
 |---------|---------|
-| `/conductor:bd-work` | Single-session workflow (YOU do the work) |
+| `/conductor:bd-start` | Single-session workflow (YOU do the work) |
 | `/conductor:bd-plan` | Prepare backlog (refine, enhance prompts) |
-| `/conductor:bd-swarm` | Spawn parallel workers |
+| `/conductor:bd-conduct` | Interactive orchestration (1-4 workers) |
 | `/conductor:bdc-swarm-auto` | Fully autonomous parallel execution |
 | `/conductor:bdc-wave-done` | Complete a wave of parallel workers |
 | `/conductor:bdc-visual-qa` | Visual QA check (spawns tabz-expert) |

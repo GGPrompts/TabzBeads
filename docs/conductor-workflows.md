@@ -11,7 +11,7 @@ This document maps all conductor plugin workflows, their components, and relatio
 1. [Architecture Overview](#architecture-overview)
 2. [Prefix Taxonomy](#prefix-taxonomy)
 3. [Entry Points](#entry-points)
-4. [Single-Session Workflow (bd-work)](#single-session-workflow-bd-work)
+4. [Single-Session Workflow (bd-start)](#single-session-workflow-bd-start)
 5. [Multi-Session Workflow (bdc-swarm-auto)](#multi-session-workflow-bdc-swarm-auto)
 6. [Worker Pipeline](#worker-pipeline)
 7. [bdw-worker-done Pipeline](#bdw-worker-done-pipeline)
@@ -33,8 +33,9 @@ This document maps all conductor plugin workflows, their components, and relatio
 │  Entry Points (bd-*):                                                │
 │    /conductor:bd-plan      - Prepare backlog                        │
 │    /conductor:bd-start     - YOU work directly (no spawn)           │
-│    /conductor:bd-status    - View issue state                       │
 │    /conductor:bd-conduct   - Interactive orchestration (1-4 workers)│
+│    /conductor:bd-auto      - Fully autonomous (all ready, no prompts)│
+│    /conductor:bd-status    - View issue state                       │
 └─────────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -75,7 +76,7 @@ Prefixes indicate purpose and component type:
 
 | Prefix | Type | Purpose | Example |
 |--------|------|---------|---------|
-| `bd-` | Command | User entry points (visible in menu) | bd-work, bd-plan, bd-swarm |
+| `bd-` | Command | User entry points (visible in menu) | bd-start, bd-plan, bd-conduct |
 | `bdc-` | Skill | Conductor internal (orchestration) | bdc-swarm-auto, bdc-wave-done |
 | `bdw-` | Skill | Worker steps (execution pipeline) | bdw-verify-build, bdw-commit-changes |
 
@@ -98,12 +99,16 @@ Skills have `user-invocable: false` so they don't appear in the slash command me
 │       Single session - YOU do the work directly (no spawn)          │
 │       Full pipeline: build → test → commit → push                   │
 │                                                                     │
-│  /conductor:bd-status                                               │
-│       View issue state (open, blocked, ready, in-progress)          │
-│                                                                     │
 │  /conductor:bd-conduct                                              │
 │       Interactive multi-session orchestration                       │
 │       Select issues, terminal count (1-4), execution mode           │
+│                                                                     │
+│  /conductor:bd-auto                                                 │
+│       Fully autonomous - all ready issues, no prompts               │
+│       Runs waves until backlog empty                                │
+│                                                                     │
+│  /conductor:bd-status                                               │
+│       View issue state (open, blocked, ready, in-progress)          │
 │                                                                     │
 │  /conductor:bd-new-project                                          │
 │       Template-based project scaffolding                            │
@@ -117,8 +122,9 @@ Skills have `user-invocable: false` so they don't appear in the slash command me
 |-------------|----------|------------|----------------|
 | `bd-plan` | Prepare before execution | You (prep only) | N/A |
 | `bd-start` | Single issue, you working | You | You (optional) |
+| `bd-conduct` | Spawn 1-4 workers (interactive) | Spawned workers | Conductor (unified) |
+| `bd-auto` | All ready issues (hands-off) | Spawned workers | Conductor (unified) |
 | `bd-status` | Check project state | N/A | N/A |
-| `bd-conduct` | Spawn 1-4 workers | Spawned workers | Conductor (unified) |
 | `bd-new-project` | Create new project | You | N/A |
 
 ---

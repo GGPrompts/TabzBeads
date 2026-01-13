@@ -75,64 +75,70 @@ CONDUCTOR_ROOT=$(find_conductor_root)
 # The hook (meta plugin UserPromptSubmit) tells Claude to evaluate and activate skills.
 # Keywords in prompts help Claude identify WHICH skills are relevant to the task.
 # This approach works WITH the hook instead of duplicating explicit invocation.
+#
+# FORMAT: pattern|skill_name|keyword_phrase|trigger_phrase
+# - pattern: regex to match against input text
+# - skill_name: the skill ID for natural triggers (e.g., "xterm-js")
+# - keyword_phrase: keywords for skill-eval hook activation
+# - trigger_phrase: natural language trigger for prompts (e.g., "terminal resize handling")
 
 SKILL_MAPPINGS=(
   # Terminal / TabzChrome
-  "terminal|xterm|pty|resize|buffer|fitaddon|websocket.*terminal|xterm.js terminal, resize handling, FitAddon, WebSocket PTY"
+  "terminal|xterm|pty|resize|buffer|fitaddon|websocket.*terminal|xterm-js|xterm.js terminal, resize handling, FitAddon, WebSocket PTY|terminal integration and resize handling"
 
   # UI / Frontend - shadcn/ui patterns
-  "ui|component|modal|dashboard|styling|tailwind|shadcn|form|button|shadcn/ui components, Tailwind CSS styling, Radix UI primitives"
+  "ui|component|modal|dashboard|styling|tailwind|shadcn|form|button|ui-styling|shadcn/ui components, Tailwind CSS styling, Radix UI primitives|UI components and styling patterns"
 
   # Frontend frameworks
-  "react|next|vue|svelte|frontend|React, TypeScript, modern frontend patterns, component architecture"
+  "react|next|vue|svelte|frontend|frontend-development|React, TypeScript, modern frontend patterns, component architecture|React and frontend architecture"
 
   # Backend / API
-  "backend|api|server|database|endpoint|express|websocket.*server|backend development, REST API, Node.js, Python FastAPI, database patterns"
+  "backend|api|server|endpoint|express|websocket.*server|backend-development|backend development, REST API, Node.js, Python FastAPI|backend APIs and server patterns"
 
   # Browser automation / MCP
-  "browser|screenshot|click|mcp|tabz_|automation|browser automation, MCP tools, screenshots, DOM interaction"
+  "browser|screenshot|click|mcp|tabz_|automation|tabz-mcp|browser automation, MCP tools, screenshots, DOM interaction|browser automation via MCP"
 
   # Visual QA / UI review
-  "visual|qa|regression|console.*error|ui.*test|screenshot.*test|visual QA, UI testing, screenshot comparison, console error detection"
+  "visual|qa|regression|console.*error|ui.*test|screenshot.*test|visual-qa|visual QA, UI testing, screenshot comparison, console error detection|visual QA and UI testing"
 
   # Visual asset generation
-  "hero.*image|team.*photo|icon.*generat|poster|dall-e|sora|video.*generat|DALL-E image generation, Sora video, visual assets, poster design"
+  "hero.*image|team.*photo|icon.*generat|poster|dall-e|sora|video.*generat|tabz-artist|DALL-E image generation, Sora video, visual assets, poster design|visual asset generation"
 
   # Authentication
-  "auth|login|oauth|session|token|jwt|Better Auth, authentication, OAuth, session management, JWT tokens"
+  "auth|login|oauth|session|token|jwt|backend-development|Better Auth, authentication, OAuth, session management, JWT tokens|authentication patterns"
 
   # Plugin development
-  "plugin|skill|agent|hook|command|frontmatter|Claude Code plugin development, skill creation, agent patterns, hooks"
+  "plugin|skill|agent|hook|command|frontmatter|plugin-dev|Claude Code plugin development, skill creation, agent patterns, hooks|plugin and skill development"
 
   # Conductor / orchestration
-  "prompt|worker|swarm|conductor|orchestrat|multi-session orchestration, worker coordination, parallel execution"
+  "prompt|worker|swarm|conductor|orchestrat|bdc-orchestration|multi-session orchestration, worker coordination, parallel execution|multi-session orchestration"
 
   # Audio / TTS / Multimodal
-  "audio|tts|speech|sound|voice|speak|gemini|audio processing, TTS speech synthesis, Gemini multimodal"
+  "audio|tts|speech|sound|voice|speak|gemini|media-processing|audio processing, TTS speech synthesis, Gemini multimodal|audio and TTS processing"
 
   # Media processing
-  "image|video|media|ffmpeg|imagemagick|FFmpeg video processing, ImageMagick, media manipulation"
+  "image|video|media|ffmpeg|imagemagick|media-processing|FFmpeg video processing, ImageMagick, media manipulation|media processing and conversion"
 
   # 3D / Three.js (reference, not skill)
-  "3d|three|scene|focus.*mode|webgl|Three.js 3D rendering, WebGL, scene management"
+  "3d|three|scene|focus.*mode|webgl|frontend-development|Three.js 3D rendering, WebGL, scene management|3D rendering with Three.js"
 
   # Chrome extension
-  "chrome|extension|manifest|sidepanel|background|service.*worker|Chrome extension development, manifest v3, service workers"
+  "chrome|extension|manifest|sidepanel|background|service.*worker|plugin-dev|Chrome extension development, manifest v3, service workers|Chrome extension development"
 
   # Databases
-  "postgres|mongodb|redis|sql|database|query|PostgreSQL, MongoDB, Redis, database queries, schema design"
+  "postgres|mongodb|redis|sql|database|query|database-design|PostgreSQL, MongoDB, Redis, database queries, schema design|database design and queries"
 
   # Documentation discovery
-  "docs|documentation|llms.txt|repomix|documentation, llms.txt, repomix context generation"
+  "docs|documentation|llms.txt|repomix|docs-seeker|documentation, llms.txt, repomix context generation|documentation discovery"
 
   # Code review
-  "review|pr|pull.*request|lint|code review, pull request analysis, linting, quality checks"
+  "review|pr|pull.*request|lint|code-review|code review, pull request analysis, linting, quality checks|code review and quality checks"
 
   # Web frameworks
-  "nextjs|express|fastapi|django|nest|Next.js, Express, FastAPI, Django, NestJS web frameworks"
+  "nextjs|express|fastapi|django|nest|backend-development|Next.js, Express, FastAPI, Django, NestJS web frameworks|web framework patterns"
 
   # Testing (general guidance)
-  "test|jest|vitest|spec|coverage|testing patterns, Jest, Vitest, test coverage"
+  "test|jest|vitest|spec|coverage|debugging|testing patterns, Jest, Vitest, test coverage|testing and test coverage"
 )
 
 # ============================================================================
@@ -251,10 +257,15 @@ is_skill_available() {
 # ============================================================================
 # MATCH FUNCTION
 # ============================================================================
+# FORMAT: pattern|skill_name|keyword_phrase|trigger_phrase
+# Output modes:
+#   text (default): keyword phrases for skill-eval hook
+#   json: structured output with all fields
+#   triggers: natural language triggers for prompts ("Use the X skill to Y")
 
 match_skills() {
   local INPUT_TEXT="$1"
-  local OUTPUT_FORMAT="${2:-text}"  # text or json
+  local OUTPUT_FORMAT="${2:-text}"  # text, json, or triggers
 
   if [ -z "$INPUT_TEXT" ]; then
     return 0
@@ -263,36 +274,64 @@ match_skills() {
   # Normalize: lowercase, collapse whitespace
   local NORMALIZED=$(echo "$INPUT_TEXT" | tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' ')
 
-  local MATCHED_SKILLS=""
+  local MATCHED_KEYWORDS=""
+  local MATCHED_TRIGGERS=""
   local MATCHED_JSON="[]"
 
   for mapping in "${SKILL_MAPPINGS[@]}"; do
-    # Split on last |
-    local PATTERN="${mapping%|*}"
-    local TRIGGER="${mapping##*|}"
+    # Parse 4-field format: pattern|skill_name|keyword_phrase|trigger_phrase
+    # Pattern contains | for regex alternation, so parse from the right
+    local TRIGGER_PHRASE="${mapping##*|}"
+    local WITHOUT_TRIGGER="${mapping%|*}"
+    local KEYWORDS="${WITHOUT_TRIGGER##*|}"
+    local WITHOUT_KEYWORDS="${WITHOUT_TRIGGER%|*}"
+    local SKILL_NAME="${WITHOUT_KEYWORDS##*|}"
+    local PATTERN="${WITHOUT_KEYWORDS%|*}"
 
-    # Convert | to regex alternation
-    local REGEX_PATTERN=$(echo "$PATTERN" | sed 's/|/\\|/g')
+    # Validate we have all fields (if skill_name looks like pattern, it's old format)
+    if [ "$SKILL_NAME" = "$PATTERN" ] || [ -z "$SKILL_NAME" ]; then
+      # Old 2-field format (backward compatibility): pattern|keywords
+      PATTERN="${mapping%|*}"
+      KEYWORDS="${mapping##*|}"
+      SKILL_NAME="general"
+      TRIGGER_PHRASE="$KEYWORDS"
+    fi
 
     # Check if any keyword matches
     if echo "$NORMALIZED" | grep -qE "$PATTERN"; then
-      if [ -n "$MATCHED_SKILLS" ]; then
-        MATCHED_SKILLS="$MATCHED_SKILLS "
+      # Keywords output (for skill-eval hook)
+      if [ -n "$MATCHED_KEYWORDS" ]; then
+        MATCHED_KEYWORDS="$MATCHED_KEYWORDS "
       fi
-      MATCHED_SKILLS="$MATCHED_SKILLS$TRIGGER"
+      MATCHED_KEYWORDS="$MATCHED_KEYWORDS$KEYWORDS"
 
-      # For JSON output
-      local SKILL_NAME=$(echo "$TRIGGER" | grep -oE '[a-z]+-[a-z]+' | head -1)
-      [ -z "$SKILL_NAME" ] && SKILL_NAME="general"
-      MATCHED_JSON=$(echo "$MATCHED_JSON" | jq --arg skill "$SKILL_NAME" --arg trigger "$TRIGGER" '. + [{"skill": $skill, "trigger": $trigger}]')
+      # Natural triggers output (for prompts)
+      if [ -n "$MATCHED_TRIGGERS" ]; then
+        MATCHED_TRIGGERS="$MATCHED_TRIGGERS
+"
+      fi
+      MATCHED_TRIGGERS="${MATCHED_TRIGGERS}Use the ${SKILL_NAME} skill for ${TRIGGER_PHRASE}."
+
+      # JSON output
+      MATCHED_JSON=$(echo "$MATCHED_JSON" | jq \
+        --arg skill "$SKILL_NAME" \
+        --arg keywords "$KEYWORDS" \
+        --arg trigger "Use the ${SKILL_NAME} skill for ${TRIGGER_PHRASE}." \
+        '. + [{"skill": $skill, "keywords": $keywords, "trigger": $trigger}]')
     fi
   done
 
-  if [ "$OUTPUT_FORMAT" = "json" ]; then
-    echo "$MATCHED_JSON"
-  else
-    echo "$MATCHED_SKILLS"
-  fi
+  case "$OUTPUT_FORMAT" in
+    json)
+      echo "$MATCHED_JSON"
+      ;;
+    triggers)
+      echo "$MATCHED_TRIGGERS"
+      ;;
+    *)
+      echo "$MATCHED_KEYWORDS"
+      ;;
+  esac
 }
 
 # ============================================================================
@@ -746,7 +785,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       echo "Usage: match-skills.sh [OPTIONS] 'text to match'"
       echo ""
       echo "Options:"
-      echo "  --json            Output as JSON array"
+      echo "  --json            Output as JSON array with skill, keywords, and trigger"
+      echo "  --triggers        Output natural trigger phrases for prompts"
+      echo "                    (e.g., 'Use the xterm-js skill for terminal handling.')"
       echo "  --issue ID        Match from beads issue ID"
       echo "  --verify          Match AND verify skills are available (runtime check)"
       echo "  --available       List all currently available skill IDs"
@@ -777,6 +818,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       echo ""
       echo "Examples:"
       echo "  match-skills.sh 'fix terminal resize bug'"
+      echo "  match-skills.sh --triggers 'add React dashboard component'"
+      echo "  match-skills.sh --json 'create Claude Code plugin'"
       echo "  match-skills.sh --verify 'add dashboard component'"
       echo "  match-skills.sh --issue TabzChrome-abc"
       echo "  match-skills.sh --available-full"
@@ -789,6 +832,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     --json)
       shift
       match_skills "$*" "json"
+      ;;
+    --triggers)
+      shift
+      match_skills "$*" "triggers"
       ;;
     --verify)
       shift

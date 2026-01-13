@@ -24,14 +24,114 @@ GOOD: 3-4 terminals with focused prompts -> smooth execution
 | Step | Action | Reference |
 |------|--------|-----------|
 | 1 | Get ready issues | `bd ready --json` |
-| 2 | Calculate workers | Max 4, distribute issues |
-| 3 | Create worktrees | Parallel, wait for all |
-| 4 | Spawn workers | TabzChrome API |
-| 5 | Send prompts | Skill-aware prompts with issue context |
-| 6 | Poll status | Every 2 min, check context |
-| 7 | Merge & cleanup | Kill sessions first |
-| 8 | Visual QA | tabz-expert for UI waves |
-| 9 | Next wave | Loop until empty |
+| 2 | Check/prepare prompts | Use prepared or explore |
+| 3 | Calculate workers | Max 4, distribute issues |
+| 4 | Create worktrees | Parallel, wait for all |
+| 5 | Spawn workers | TabzChrome API |
+| 6 | Send prompts | Skill-aware prompts with issue context |
+| 7 | Poll status | Every 2 min, check context |
+| 8 | Merge & cleanup | Kill sessions first |
+| 9 | Visual QA | tabz-expert for UI waves |
+| 10 | Next wave | Loop until empty |
+
+---
+
+## Phase: Prepare Prompts
+
+Before spawning workers, ensure each issue has a quality prompt. This is critical for worker success.
+
+### Check for Prepared Prompts
+
+```bash
+for ISSUE_ID in $READY; do
+  NOTES=$(bd show "$ISSUE_ID" --json | jq -r '.[0].notes // ""')
+  if echo "$NOTES" | grep -q "prepared.prompt:"; then
+    echo "$ISSUE_ID: Using prepared prompt"
+    PREPARED_ISSUES="$PREPARED_ISSUES $ISSUE_ID"
+  else
+    echo "$ISSUE_ID: Needs exploration"
+    UNPREPARED_ISSUES="$UNPREPARED_ISSUES $ISSUE_ID"
+  fi
+done
+```
+
+### For Unprepared Issues: Quick Exploration
+
+Spawn parallel Explore agents (haiku, fast) to gather context before crafting prompts:
+
+```
+for ISSUE_ID in $UNPREPARED_ISSUES:
+  ISSUE_TITLE=$(bd show "$ISSUE_ID" --json | jq -r '.[0].title')
+  ISSUE_DESC=$(bd show "$ISSUE_ID" --json | jq -r '.[0].description // ""')
+
+  Task(
+    subagent_type: "Explore",
+    model: "haiku",
+    run_in_background: true,
+    description: "Explore for $ISSUE_ID",
+    prompt: "Find relevant files and context for this issue:
+      Title: $ISSUE_TITLE
+      Description: $ISSUE_DESC
+
+      Return:
+      1. Key files (max 5) with brief explanation
+      2. Related patterns or existing code to follow
+      3. Skill keywords that apply (e.g., 'shadcn/ui', 'xterm.js', 'FastAPI')
+
+      Be concise - this feeds into a worker prompt."
+  )
+```
+
+Wait for all Explore agents to complete, then use their findings to craft prompts.
+
+### Craft Prompt from Exploration
+
+For each unprepared issue, build a prompt using the explore results.
+
+**Start with a role** based on the domain detected:
+
+```markdown
+You are a [role based on exploration findings] working on [project context].
+
+## Task: ISSUE-ID - Title
+
+[Explicit description of what to do, 2-3 sentences]
+
+## Why This Matters
+
+[Issue description with motivation]
+
+## Key Files
+
+- path/to/file.ts - [what to focus on here]
+- path/to/related.ts - [why this is relevant]
+
+## Guidance
+
+Use the [matched-skill] skill to [specific purpose].
+[Additional guidance based on patterns found]
+
+If this task is complex, use subagents in parallel to explore further.
+
+When you're done, run `/conductor:bdw-worker-done ISSUE-ID`
+```
+
+**Role examples by domain:**
+- Frontend: "You are a frontend developer working on a React app with shadcn/ui"
+- Backend: "You are a backend engineer implementing APIs with FastAPI"
+- Plugin: "You are a Claude Code plugin developer creating skills and agents"
+- Terminal: "You are a developer working on terminal integration with xterm.js"
+
+### Use Prepared Prompt
+
+For issues with `prepared.prompt` in notes, extract and use directly:
+
+```bash
+PROMPT=$(bd show "$ISSUE_ID" --json | jq -r '.[0].notes' | \
+  sed -n '/prepared.prompt:/,/^[a-z_]*\.:/p' | sed '1d;$d')
+```
+
+The prepared prompt already contains skill keywords, key files, and approach from `/conductor:bd-plan`.
 
 ---
 
@@ -81,54 +181,64 @@ NEXT=$(bd ready --json | jq 'length')
 
 ---
 
-## Worker Prompt Template
+## Worker Prompt Best Practices
+
+See `references/worker-prompt-guidelines.md` for full details. Key points:
+
+### 1. Always Start with a Role
 
 ```markdown
-## Task: ISSUE-ID - Title
+You are a frontend developer working on a React dashboard with shadcn/ui.
+```
 
-## Context
-[WHY this matters - helps Claude generalize and make good decisions]
-This task involves [domain keywords from match-skills.sh, e.g., "React components with shadcn/ui and Tailwind CSS styling"]
+### 2. Use Natural Skill Triggers
+
+**Wrong:** `Load these skills: /frontend:ui-styling`
+
+**Right:** "Use the ui-styling skill to ensure components match our design system."
+
+### 3. Suggest Subagents for Complex Tasks
+
+"If the scope is unclear, use subagents in parallel to explore the codebase first."
+
+### 4. Example Complete Prompt
+
+```markdown
+You are a backend engineer implementing APIs with FastAPI.
+
+## Task: TabzBeads-456 - Add user preferences endpoint
+
+Create a GET/PUT endpoint for user preferences at /api/preferences.
+
+## Why This Matters
+
+Users need to persist settings like theme and notification preferences
+across sessions. This enables the frontend dark mode toggle.
 
 ## Key Files
-- path/to/file.ts (focus on lines X-Y)
-- path/to/other.ts
 
-## Approach
-[Implementation guidance - what to do]
+- src/api/routes/users.py - add the new route here
+- src/models/user.py - preferences schema
+- src/api/routes/settings.py - similar pattern to follow
 
-## When Done
-Run `/conductor:bdw-worker-done ISSUE-ID`
+## Guidance
 
-**CRITICAL: Always use the pipeline - do NOT commit directly.**
-The pipeline sends notifications to the conductor via tmux.
+Use the backend-development skill for FastAPI patterns.
+Follow the existing route structure in users.py.
+Include Pydantic validation for the preferences payload.
+
+When you're done, run `/conductor:bdw-worker-done TabzBeads-456`
 ```
 
-**KEYWORD-BASED SKILL ACTIVATION:** The skill-eval hook automatically detects domain keywords and activates relevant skills. Include keywords naturally in the Context section.
+### Quick Reference: Skill Triggers
 
-To get keyword phrases for an issue, run:
-```bash
-./plugins/conductor/scripts/match-skills.sh --issue ISSUE-ID
-# Or match from text:
-./plugins/conductor/scripts/match-skills.sh "backend api terminal"
-```
-
-| Domain | Keywords to Include |
-|--------|---------------------|
-| UI/Frontend | shadcn/ui components, Tailwind CSS styling, Radix UI |
-| Terminal | xterm.js terminal, resize handling, FitAddon |
-| Backend | backend development, REST API, Node.js, FastAPI |
-| Auth | Better Auth, OAuth, JWT, session management |
-| Browser | browser automation, MCP tools, screenshots |
-
-**Prompt Guidelines:**
-- **Use keywords naturally** - "This involves xterm.js terminal patterns" not "/xterm-js:xterm-js"
-- **Be explicit** - "Fix null reference on line 45" not "fix the bug"
-- **Add context** - Explain WHY to help Claude make good decisions
-- **Reference patterns** - Point to existing code for consistency
-- **File paths as text** - Workers read files on-demand, avoids bloat
-
-**Full guidelines:** `references/worker-architecture.md`
+| Need | Natural Trigger |
+|------|-----------------|
+| UI styling | "Use the ui-styling skill to match our design patterns" |
+| Plugin dev | "Use the plugin-dev skill to validate the manifest" |
+| Terminal | "Use the xterm-js skill for resize handling" |
+| Exploration | "Use subagents in parallel to find related files" |
+| Deep thinking | Prepend "ultrathink" or "think step by step" |
 
 ---
 

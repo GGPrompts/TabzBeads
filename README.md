@@ -13,11 +13,11 @@ A collection of plugins for development workflows, browser automation, and multi
 
 ```bash
 # User entry points (commands)
-/conductor:bd-work [issue-id]   # Single-session: you do the work
+/conductor:bd-start [issue-id]  # Single-session: you do the work (no spawn)
 /conductor:bd-plan              # Prepare backlog
-/conductor:bd-swarm             # Spawn parallel workers (multi-select)
+/conductor:bd-conduct           # Interactive orchestration (1-4 workers)
+/conductor:bd-auto              # Fully autonomous (all ready, no prompts)
 /conductor:bd-status            # View issue state
-/conductor:bd-conduct           # Interactive orchestration
 /conductor:bd-new-project       # Project scaffolding
 ```
 

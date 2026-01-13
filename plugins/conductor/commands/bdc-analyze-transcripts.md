@@ -201,7 +201,7 @@ Based on analysis, update:
 | Skills not invoked | Update prompt template to be more explicit |
 | Same errors repeated | Add to worker-done error handling |
 | Follow-ups missed | Strengthen create-followups step |
-| Confusion on X | Add guidance to bd-swarm prompts |
+| Confusion on X | Add guidance to bd-conduct prompts |
 
 ## Related
 

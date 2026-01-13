@@ -337,7 +337,7 @@ done
 - [ ] Update `worker-done` skill to push branch and create PR
 - [ ] Add PR number extraction to code-reviewer
 - [ ] Implement `gh pr review` commands in code-reviewer
-- [ ] Update bd-swarm completion pipeline for PR merges
+- [ ] Update bd-conduct completion pipeline for PR merges
 - [ ] Add flag for direct-merge vs PR mode (`--no-pr` or `--pr`)
 - [ ] Handle merge conflicts in PR workflow
 - [ ] Add GitHub Actions workflow for automated checks

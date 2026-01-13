@@ -1,97 +1,181 @@
 # Worker Prompt Guidelines
 
-Extracted from [Anthropic Claude 4.x Prompting Best Practices](../../references/anthropic-prompting-guide.md).
+Best practices for crafting effective worker prompts that activate skills naturally.
+
+## The Golden Rule: Role First
+
+Always start with a role definition. This primes Claude for the task domain:
+
+```markdown
+You are a frontend developer working on a React application with shadcn/ui components.
+```
+
+or
+
+```markdown
+You are a backend engineer implementing API endpoints with FastAPI.
+```
+
+## Prompt Structure
+
+```markdown
+You are a [role] working on [context].
+
+## Task: ISSUE-ID - Title
+
+[What to do - explicit, actionable, 2-3 sentences]
+
+## Why This Matters
+
+[Background motivation - helps Claude make good decisions]
+
+## Key Files
+
+- path/to/main-file.ts - [what to focus on]
+- path/to/related.ts - [why it's relevant]
+
+## Guidance
+
+[Natural language guidance with skill triggers woven in]
+
+When you're done, run `/conductor:bdw-worker-done ISSUE-ID`
+```
+
+## Skill Activation: Natural Triggers
+
+**Wrong:** Prescriptive skill loading
+```markdown
+Load these skills:
+- /frontend:ui-styling
+- /plugin-development:plugin-dev
+```
+
+**Right:** Natural trigger phrases
+```markdown
+Use the ui-styling skill to ensure the components follow our design system.
+Use the plugin-dev skill to help structure the manifest correctly.
+If the task is complex, use subagents in parallel to explore the codebase first.
+```
+
+### Trigger Phrase Examples
+
+| Domain | Natural Trigger |
+|--------|-----------------|
+| UI Components | "Use the ui-styling skill to match our design patterns" |
+| Plugin Development | "Use the plugin-dev skill to validate the manifest" |
+| Terminal/xterm.js | "Use the xterm-js skill for terminal resize handling" |
+| Complex Exploration | "Use subagents in parallel to find all related files" |
+| Deep Reasoning | "Think through this step by step" or prepend "ultrathink" |
+| Code Review | "Run a code review before committing" |
+| Backend APIs | "Use the backend-development skill for API patterns" |
+
+### Keywords That Activate Skills
+
+The skill-eval hook detects domain keywords. Include them naturally in context:
+
+| Domain | Keywords to Weave In |
+|--------|----------------------|
+| Frontend | shadcn/ui, Tailwind CSS, Radix UI, React components |
+| Terminal | xterm.js, PTY, WebSocket, FitAddon, terminal resize |
+| Backend | FastAPI, REST API, Node.js, database, authentication |
+| Plugin | Claude Code plugin, skill, agent, manifest, SKILL.md |
+| Browser | browser automation, MCP tools, screenshots, DOM |
+
+**Example:** "This task involves building React components with shadcn/ui and Tailwind CSS styling."
 
 ## Core Principles
 
 ### 1. Be Explicit
 
-Claude 4.x follows instructions **precisely**. If you say "suggest changes," it will suggest—not implement.
+Claude follows instructions precisely. "Suggest changes" means suggest, not implement.
 
-| Less Effective | More Effective |
-|----------------|----------------|
-| Fix the bug | Fix the null reference error on line 45 of Terminal.tsx |
-| Can you suggest improvements? | Make these improvements to the code |
-| Improve the UI | Add loading state to the button with disabled styling |
+| Vague | Explicit |
+|-------|----------|
+| Fix the bug | Fix the null reference on line 45 of Terminal.tsx |
+| Improve the UI | Add a loading spinner to the submit button |
+| Make it better | Refactor to use the existing useTerminal hook |
 
-### 2. Add Context (Explain WHY)
+### 2. Explain Why
 
-Claude generalizes from explanations. Provide motivation:
+Context helps Claude make good judgment calls:
 
-```text
-# Less effective
-Add error handling
+```markdown
+# Without why
+Add error handling to the WebSocket connection.
 
-# More effective
+# With why
 Add try-catch around the WebSocket connection to gracefully handle
-backend disconnections. Currently users see a cryptic error.
+backend disconnections. Currently users see a cryptic error when
+the server restarts.
 ```
 
 ### 3. Reference Existing Patterns
 
-Point workers to existing code for consistency:
+Point to code for consistency:
 
-```text
-Follow the same error handling pattern used in useTerminalSessions.ts
-(lines 45-60) for consistency.
+```markdown
+Follow the same validation pattern used in RegisterForm.tsx (lines 30-45).
 ```
 
-### 4. Soften Aggressive Language
-
-Claude 4.x may overtrigger on aggressive phrasing:
-
-| Avoid | Use Instead |
-|-------|-------------|
-| CRITICAL: You MUST use this tool | Use this tool when... |
-| NEVER do X | Prefer Y over X because... |
-| ALWAYS do Y | Default to Y for... |
-
-### 5. Use Positive Framing
+### 4. Use Positive Framing
 
 Tell Claude what TO DO, not what NOT to do:
 
-- Instead of: "Do not use markdown"
-- Try: "Write in smoothly flowing prose paragraphs"
+| Negative | Positive |
+|----------|----------|
+| Don't use any external libraries | Use only built-in Node.js modules |
+| Never commit without tests | Include tests for new functionality |
+| Don't break existing behavior | Maintain backward compatibility |
 
-## Worker Prompt Structure
+### 5. Soften Aggressive Language
 
-```markdown
-## Task: ISSUE-ID - Title
-[What to do - explicit, actionable]
+Claude 4.x overtriggers on aggressive phrasing:
 
-## Context
-[Background, WHY this matters]
-This task involves [domain keywords for skill activation]
-
-## Key Files
-[File paths as text - workers read on-demand]
-
-## Approach
-[Implementation guidance with domain keywords]
-
-## When Done
-Run `/conductor:bdw-worker-done ISSUE-ID`
-```
+| Aggressive | Calm |
+|------------|------|
+| CRITICAL: You MUST do X | Do X when... |
+| NEVER do Y | Prefer Z over Y because... |
+| ALWAYS use X | Default to X for... |
 
 ## Anti-Patterns
 
-| Anti-Pattern | Why It Fails | Better Approach |
-|--------------|--------------|-----------------|
-| ALL CAPS INSTRUCTIONS | Reads as shouting, overtriggers | Normal case with clear structure |
-| "Don't do X" | Negative framing harder to follow | "Do Y instead" (positive framing) |
-| Vague adjectives ("good", "proper") | Undefined, varies by interpretation | Specific criteria or examples |
-| Full file contents in prompt | Bloats prompt, may be stale | File paths as text, read on-demand |
+| Anti-Pattern | Problem | Fix |
+|--------------|---------|-----|
+| `Load these skills: [list]` | Too mechanical, doesn't explain when/why | "Use the X skill to help with Y" |
+| ALL CAPS INSTRUCTIONS | Reads as shouting, overtriggers | Normal case, clear structure |
+| Full file contents | Bloats prompt, may be stale | File paths only, read on-demand |
+| "Don't do X" | Negative framing harder to follow | "Do Y instead" |
+| No role definition | Claude doesn't know the context | Start with "You are a..." |
+| Vague adjectives | "Good", "proper" are undefined | Specific criteria or examples |
 
-## Skill Activation via Keywords
+## Complete Example
 
-Include domain-specific keywords to help skill identification:
+```markdown
+You are a frontend developer working on a React dashboard with shadcn/ui components and Tailwind CSS.
 
-| Domain | Keywords to Include |
-|--------|---------------------|
-| UI/Frontend | shadcn/ui components, Tailwind CSS, Radix UI |
-| Terminal | xterm.js, resize handling, FitAddon, WebSocket PTY |
-| Backend | FastAPI, REST API, Node.js, database patterns |
-| Plugin dev | Claude Code plugin, skill creation, agent patterns |
-| Browser | MCP tools, screenshots, browser automation |
+## Task: TabzBeads-123 - Add dark mode toggle
 
-The skill-eval hook handles activation automatically based on keywords.
+Add a dark mode toggle to the settings page that persists the user's preference.
+
+## Why This Matters
+
+Users have requested dark mode for late-night coding sessions. The toggle should
+feel native to our existing UI and persist across browser sessions.
+
+## Key Files
+
+- src/components/Settings.tsx - add the toggle here
+- src/contexts/ThemeContext.tsx - theme state lives here
+- src/components/ui/switch.tsx - use this shadcn component
+
+## Guidance
+
+Use the ui-styling skill to ensure the toggle matches our design system.
+Follow the pattern in Settings.tsx for other preference toggles.
+Store the preference in localStorage for persistence.
+
+If you need to explore how theming works across the app, use subagents
+in parallel to find all theme-related files first.
+
+When you're done, run `/conductor:bdw-worker-done TabzBeads-123`
+```

@@ -45,7 +45,7 @@ else
   if [ "$UNPREPARED" -gt 0 ]; then
     echo "Tip: Run 'Enhance Prompts' to prepare $UNPREPARED issues for workers"
   else
-    echo "All ready issues have prepared prompts - ready for /conductor:bd-swarm"
+    echo "All ready issues have prepared prompts - ready for /conductor:bd-conduct"
   fi
 fi
 echo ""
@@ -262,12 +262,12 @@ for ISSUE_ID in $(bd ready --json | jq -r '.[].id'); do
 done
 
 echo ""
-echo "Skills persisted to issue notes. bd-swarm will read them automatically."
+echo "Skills persisted to issue notes. bd-conduct will read them automatically."
 ```
 
 ### Why Persist?
 
-Skills are matched once during planning and stored in issue notes. When bd-swarm spawns workers, it reads from notes instead of re-matching - ensuring consistency across the workflow.
+Skills are matched once during planning and stored in issue notes. When bd-conduct spawns workers, it reads from notes instead of re-matching - ensuring consistency across the workflow.
 
 ---
 
@@ -338,7 +338,7 @@ After estimation:
 - **Medium (M)**: One issue per worker session
 - **Large (L)**: Dedicated worker with full context, no batching
 
-Workers spawned by `/conductor:bd-swarm` can read `complexity` from notes to adjust execution strategy.
+Workers spawned by `/conductor:bd-conduct` can read `complexity` from notes to adjust execution strategy.
 
 ---
 
@@ -608,7 +608,7 @@ bd ready --json | jq -r '.[] | "[\(.priority)] \(.id): \(.title)"' | sort -n
 ### Next Steps
 
 After reviewing:
-- Run `/conductor:bd-work <issue-id>` for single issue (YOU do the work)
+- Run `/conductor:bd-start <issue-id>` for single issue (YOU do the work)
 - Run `/conductor:bdc-swarm-auto` for autonomous parallel work
 - Run `/conductor:bd-plan` again with "Enhance Prompts" to prepare prompts
 
@@ -730,7 +730,7 @@ For optimal batching:
 
 | Resource | Purpose |
 |----------|---------|
-| `/conductor:bd-work` | Single-session workflow (YOU do the work) |
+| `/conductor:bd-start` | Single-session workflow (YOU do the work) |
 | `/conductor:bdc-swarm-auto` | Autonomous parallel execution |
 | `bd ready` | List issues ready to work |
 | `bd blocked` | List blocked issues |

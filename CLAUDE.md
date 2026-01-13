@@ -160,7 +160,7 @@ plugins/conductor/
 
 ### Phase 1: Consolidation ✅
 - Prefix-based taxonomy: `bd-` (user), `bdc-` (conductor), `bdw-` (worker)
-- User entry points: bd-plan, bd-start, bd-status, bd-conduct, bd-new-project
+- User entry points: bd-plan, bd-start, bd-conduct, bd-auto, bd-status, bd-new-project
 - Internal steps clearly namespaced (no hiding needed during testing)
 
 ### Phase 2: Beads-Native Integration
@@ -248,8 +248,9 @@ These are user entry points in `commands/`. Invoke with `/conductor:bd-*`.
 |---------|---------|
 | `/conductor:bd-plan` | Prepare backlog: refine, enhance, match skills |
 | `/conductor:bd-start` | YOU work directly on an issue (no spawn) |
-| `/conductor:bd-status` | View issue state (open, blocked, ready) |
 | `/conductor:bd-conduct` | Interactive orchestration: select issues, terminals (1-4), mode |
+| `/conductor:bd-auto` | Fully autonomous: all ready issues, no prompts |
+| `/conductor:bd-status` | View issue state (open, blocked, ready) |
 | `/conductor:bd-new-project` | Multi-phase project scaffolding |
 
 ### Internal Commands (bdc-*, bdw-*)
