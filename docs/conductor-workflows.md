@@ -410,7 +410,7 @@ The pipeline **auto-detects execution mode**:
                               ▼
                     ┌─────────────────┐
                     │ Step 6:         │⛔
-                    │ bdc-visual-qa   │◀──── Forked tabz-manager (if UI changes)
+                    │ bdc-visual-qa   │◀──── Forked tabz-expert (if UI changes)
                     │ --mode=quick    │      Console errors, DOM check
                     └─────────────────┘
                               │
@@ -457,7 +457,7 @@ The pipeline **auto-detects execution mode**:
 |-------|---------|-----------|
 | `/conductor:bdc-swarm-auto` | Autonomous wave execution | ⛔ Yes |
 | `/conductor:bdc-wave-done` | Merge + unified review + visual QA | ⛔ Yes |
-| `/conductor:bdc-visual-qa` | Visual QA (forked tabz-manager subagent) | ⛔ Yes |
+| `/conductor:bdc-visual-qa` | Visual QA (forked tabz-expert subagent) | ⛔ Yes |
 | `/conductor:bdc-run-wave` | Run wave from template | ⛔ Yes |
 | `/conductor:bdc-orchestration` | Multi-session coordination | ⛔ Yes |
 | `/conductor:bdc-analyze-transcripts` | Review worker sessions | No |
@@ -473,9 +473,9 @@ The pipeline **auto-detects execution mode**:
 | `conductor:skill-picker` | Find skills | haiku |
 | `conductor:docs-updater` | DEPRECATED - use bdw-update-docs | haiku |
 | `conductor:silent-failure-hunter` | Error handling audit | sonnet |
-| `conductor:tabz-manager` | Browser automation (70 MCP tools) | opus |
+| `tabz-expert` | Browser automation (70 MCP tools) | opus |
 
-**Note:** `tabz-artist` is now a skill that runs in tabz-manager context, not a standalone agent.
+**Note:** `tabz-expert` is a user-scope plugin from TabzChrome. Spawn with `--agent tabz-expert`.
 
 ---
 

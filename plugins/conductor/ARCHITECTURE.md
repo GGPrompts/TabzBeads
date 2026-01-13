@@ -202,20 +202,17 @@ flowchart LR
         AG1["code-reviewer"]
         AG2["docs-updater"]
         AG3["skill-picker"]
-        AG4["tabz-artist"]
-        AG5["tabz-manager"]
+        AG4["tabz-expert"]
     end
 
-    conductor["Conductor"] --> AG1 & AG2 & AG3 & AG4 & AG5
+    conductor["Conductor"] --> AG1 & AG2 & AG3 & AG4
 
     click AG1 "agents/code-reviewer.md"
     click AG2 "agents/docs-updater.md"
     click AG3 "agents/skill-picker.md"
-    click AG4 "agents/tabz-artist.md"
-    click AG5 "agents/tabz-manager.md"
 ```
 
-**Visual QA:** The `tabz-manager` agent is spawned by `bdc-wave-done` for browser console error checking and screenshot verification after wave merges.
+**Visual QA:** The `tabz-expert` agent (user-scope plugin) is spawned by `bdc-wave-done` for browser console error checking and screenshot verification after wave merges.
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
@@ -223,9 +220,8 @@ flowchart LR
 | [code-reviewer](agents/code-reviewer.md) | Sonnet | Autonomous code review |
 | [docs-updater](agents/docs-updater.md) | Opus | Update documentation |
 | [skill-picker](agents/skill-picker.md) | Haiku | Find/install skills |
-| [tabz-artist](agents/tabz-artist.md) | Sonnet | Visual asset generation |
-| [tabz-manager](agents/tabz-manager.md) | Opus | Browser automation & Visual QA |
 | [silent-failure-hunter](agents/silent-failure-hunter.md) | Sonnet | Error handling audit |
+| tabz-expert | Opus | Browser automation & Visual QA (user-scope plugin) |
 
 > **Note:** Prompt enhancement is now a skill (`bdc-prompt-enhancer`) loaded into context, not a spawnable agent.
 
@@ -273,9 +269,8 @@ plugins/conductor/
 │   ├── code-reviewer.md
 │   ├── docs-updater.md
 │   ├── skill-picker.md
-│   ├── tabz-artist.md
-│   ├── tabz-manager.md      ← Visual QA for wave-done
 │   └── silent-failure-hunter.md
+│   # Note: tabz-expert (Visual QA) is now in TabzChrome/plugins/tabz
 │
 └── scripts/                 ← Shell automation
     ├── setup-worktree.sh

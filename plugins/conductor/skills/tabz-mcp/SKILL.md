@@ -200,5 +200,5 @@ For detailed information:
 
 | Resource | Purpose |
 |----------|---------|
-| `tabz:tabz-manager` agent | Spawn as specialist for complex browser work |
-| `/conductor:tabz-artist` | Generate images (DALL-E) and videos (Sora) |
+| `tabz-expert` agent | Spawn for complex browser work (user-scope plugin) |
+| `tabz-artist` skill | Generate images (DALL-E) and videos (Sora) - now in TabzChrome |

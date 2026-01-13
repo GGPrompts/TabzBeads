@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "conductor",
-      "description": "Multi-session orchestration - beads workflows, parallel workers, visual QA via tabz-manager, completion pipelines",
+      "description": "Multi-session orchestration - beads workflows, parallel workers, visual QA via tabz-expert, completion pipelines",
       "source": "./plugins/conductor",
       "category": "orchestration",
       "keywords": ["conductor", "orchestrate", "workflow", "multi-session", "parallel", "worker", "spawn", "swarm", "beads", "issues", "tabz", "browser", "visual-qa"]

@@ -32,7 +32,7 @@ GOOD: 3-4 terminals with focused prompts -> smooth execution
 | 5 | Send prompts | Skill-aware prompts with issue context |
 | 6 | Poll status | Every 2 min, check context |
 | 7 | Merge & cleanup | Kill sessions first |
-| 8 | Visual QA | tabz-manager for UI waves |
+| 8 | Visual QA | tabz-expert for UI waves |
 | 9 | Next wave | Loop until empty |
 
 ---
@@ -78,7 +78,7 @@ NEXT=$(bd ready --json | jq 'length')
 3. **SKILL-AWARE PROMPTS** - Include skill hints in worker prompts
 4. **YOU MUST POLL** - Check issue status every 2 minutes
 5. **LOOP UNTIL EMPTY** - Keep running waves until `bd ready` is empty
-6. **VISUAL QA** - Spawn tabz-manager after UI waves
+6. **VISUAL QA** - Spawn tabz-expert after UI waves
 7. **MONITOR CONTEXT** - At 70%+, trigger `/restart` (NOT /wipe - needs hooks)
 
 ---
@@ -134,18 +134,18 @@ To get keyword phrases for an issue, run:
 
 ---
 
-## Visual QA with tabz-manager
+## Visual QA with tabz-expert
 
-After completing a wave with UI changes, spawn tabz-manager in a **separate terminal** for visual QA:
+After completing a wave with UI changes, spawn tabz-expert in a **separate terminal** for visual QA:
 
 ```bash
 # Via TabzChrome API
 curl -X POST http://localhost:8129/api/spawn \
   -H "X-Auth-Token: $(cat /tmp/tabz-auth-token)" \
-  -d '{"name": "Visual QA", "command": "claude --agent conductor:tabz-manager --dangerously-skip-permissions"}'
+  -d '{"name": "Visual QA", "command": "claude --agent tabz-expert --dangerously-skip-permissions"}'
 ```
 
-tabz-manager can take screenshots, click elements, and verify UI changes work correctly.
+tabz-expert can take screenshots, click elements, and verify UI changes work correctly.
 
 ---
 

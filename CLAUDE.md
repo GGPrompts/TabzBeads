@@ -84,7 +84,7 @@ TabzBeads/
 
 | Plugin | Purpose |
 |--------|---------|
-| `conductor` | Multi-session orchestration, beads workflows, visual QA (tabz-manager) |
+| `conductor` | Multi-session orchestration, beads workflows, visual QA via tabz-expert |
 | `frontend` | React, TypeScript, Tailwind, shadcn/ui |
 | `backend` | Node.js, Python, databases, DevOps |
 | `visual` | Canvas, Gemini multimodal, FFmpeg |
@@ -93,7 +93,7 @@ TabzBeads/
 | `tmux` | Terminal session management |
 | `specialized` | Shopify, Bubble Tea, xterm.js |
 
-> **Note:** Browser automation (tabz-manager, tabz-mcp) is now part of conductor for visual QA in workflows.
+> **Note:** Browser automation is via `tabz-expert` agent (user-scope plugin from TabzChrome).
 
 > **Note:** Meta development skills (plugin-development, skill-creator, agent-creator, mcp-builder, claude-code, context-engineering) have been migrated to my-plugins as granular plugins.
 
@@ -117,14 +117,14 @@ plugins/conductor/
 │   ├── code-reviewer.md         # Read-only code review (Sonnet)
 │   ├── docs-updater.md          # DEPRECATED - use bdw-update-docs skill
 │   ├── skill-picker.md          # Find skills for issues
-│   ├── silent-failure-hunter.md # Error handling audit (Sonnet)
-│   └── tabz-manager.md          # Browser automation (70 MCP tools)
+│   └── silent-failure-hunter.md # Error handling audit (Sonnet)
+│   # tabz-expert is now in TabzChrome/plugins/tabz
 ├── skills/                      # Internal skills (auto-discovered, user-invocable: false)
 │   ├── bdc-*/                   # Conductor internal (orchestration)
 │   │   ├── bdc-orchestration/
 │   │   ├── bdc-swarm-auto/
 │   │   ├── bdc-wave-done/
-│   │   ├── bdc-visual-qa/        # Visual QA between waves (forked tabz-manager)
+│   │   ├── bdc-visual-qa/        # Visual QA between waves (forked tabz-expert)
 │   │   ├── bdc-run-wave/
 │   │   └── bdc-analyze-transcripts/
 │   ├── bdw-*/                   # Worker steps (execution pipeline)
@@ -138,7 +138,7 @@ plugins/conductor/
 │   │   ├── bdw-update-docs/
 │   │   ├── bdw-worker-init/
 │   │   └── bdw-worker-done/
-│   ├── tabz-artist/             # Visual asset generation (runs in tabz-manager context)
+│   ├── tabz-artist/             # ARCHIVED - now in TabzChrome/plugins/tabz
 │   ├── tabz-mcp/                # Browser automation reference
 │   └── terminal-tools/          # TUI tool control reference
 └── scripts/                     # Shell automation
@@ -258,7 +258,7 @@ These are in `skills/` with `user-invocable: false`. Still invoked via `/conduct
 |-------|---------|
 | `/conductor:bdc-swarm-auto` | Autonomous waves until backlog empty |
 | `/conductor:bdc-wave-done` | Merge branches, unified review, cleanup |
-| `/conductor:bdc-visual-qa` | Visual QA between waves (forked tabz-manager subagent) |
+| `/conductor:bdc-visual-qa` | Visual QA between waves (forked tabz-expert subagent) |
 | `/conductor:bdc-run-wave` | Run wave from conductor-wave template |
 | `/conductor:bdc-orchestration` | Multi-session coordination |
 | `/conductor:bdc-analyze-transcripts` | Review worker session transcripts |
@@ -280,9 +280,9 @@ These are in `skills/` with `user-invocable: false`. Still invoked via `/conduct
 ### Additional Skills
 | Skill | Purpose |
 |-------|---------|
-| `/conductor:tabz-artist` | Generate images/videos (runs in tabz-manager context) |
 | `/conductor:tabz-mcp` | Browser automation MCP reference (70 tools) |
 | `/conductor:terminal-tools` | Reference for tmux and TUI tool control |
+| `tabz-artist` | ARCHIVED - now in TabzChrome/plugins/tabz |
 
 ---
 

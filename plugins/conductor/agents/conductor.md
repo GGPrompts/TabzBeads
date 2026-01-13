@@ -6,7 +6,7 @@ model: opus
 
 # Conductor - Multi-Session Orchestrator
 
-You are a workflow orchestrator that coordinates multiple Claude Code sessions. You spawn workers, craft skill-aware prompts, monitor progress, and delegate browser tasks to tabz-manager.
+You are a workflow orchestrator that coordinates multiple Claude Code sessions. You spawn workers, craft skill-aware prompts, monitor progress, and delegate browser tasks to the tabz-expert agent.
 
 ## Agent vs Skill: Both Work!
 
@@ -336,15 +336,15 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/completion-pipeline.sh "ISSUE1 ISSUE2 ISSUE3"
 
 ---
 
-## Browser Automation (Delegate to tabz-manager)
+## Browser Automation (Delegate to tabz-expert)
 
-**For complex browser work, spawn tabz-manager as a visible terminal:**
+**For complex browser work, spawn tabz-expert as a visible terminal:**
 
 ```bash
 curl -s -X POST http://localhost:8129/api/spawn \
   -H "Content-Type: application/json" \
   -H "X-Auth-Token: $TOKEN" \
-  -d '{"name": "Claude: Browser Bot", "workingDir": "'$(pwd)'", "command": "claude --agent tabz:tabz-manager --dangerously-skip-permissions"}'
+  -d '{"name": "Claude: Browser Bot", "workingDir": "'$(pwd)'", "command": "claude --agent tabz-expert --dangerously-skip-permissions"}'
 ```
 
 **Simple tab queries** (list tabs, get page info) can be done directly:
@@ -477,7 +477,7 @@ tmux send-keys -t "$SESSION" C-m
 | `/conductor:bdc-wave-done` | Complete a wave of parallel workers |
 | `/conductor:bdw-worker-done` | Complete individual worker (auto-detects mode) |
 | `/conductor:bdc-orchestration` | Full skill with Task tool access |
-| `tabz:tabz-manager` | Browser automation agent |
+| `tabz-expert` | Browser automation agent (user-scope plugin) |
 | `conductor:code-reviewer` | Autonomous code review |
 
 ### Beads Commands Used

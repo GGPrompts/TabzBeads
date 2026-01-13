@@ -39,7 +39,7 @@ Orchestrates the completion of a wave of parallel workers spawned by bd-swarm. H
 | 4 | Cleanup worktrees and branches | No | MUST happen before build (Next.js includes worktrees) |
 | 5 | Build verification | Yes | Verify merged code builds (clean directory) |
 | 6 | Unified code review | Yes | Review all changes together |
-| 7 | Visual QA (--visual-qa flag) | Optional | Forked tabz-manager subagent via bdc-visual-qa skill |
+| 7 | Visual QA (--visual-qa flag) | Optional | Forked tabz-expert subagent via bdc-visual-qa skill |
 | 8 | Sync and push | Yes | Final push to remote |
 | 9 | Audio summary | No | Announce completion |
 
@@ -288,7 +288,7 @@ If blockers found -> **STOP**, fix issues, re-run.
 
 Automated visual sanity checks to catch compounding browser errors early during autonomous swarm execution.
 
-**Uses forked subagent instead of spawning new terminal** - avoids the context overhead of loading CLAUDE.md, PRIME.md, beads context, and plugin discovery in a new session.
+**Uses forked tabz-expert subagent instead of spawning new terminal** - avoids the context overhead of loading CLAUDE.md, PRIME.md, beads context, and plugin discovery in a new session.
 
 ```bash
 echo "=== Step 7: Visual QA ==="
@@ -325,12 +325,12 @@ if VISUAL_QA_MODE is "skip":
   echo "Skipping visual QA (--visual-qa=skip)"
 elif VISUAL_QA_MODE is "quick" or "full":
   # Invoke bdc-visual-qa skill as forked subagent
-  # The skill has: agent: conductor:tabz-manager, context: fork
+  # The skill has: agent: tabz-expert, context: fork
   /conductor:bdc-visual-qa --mode=$VISUAL_QA_MODE [dev-server-urls]
 ```
 
 The `bdc-visual-qa` skill:
-1. Runs as a **forked tabz-manager subagent** (inherits conductor context, no spawn overhead)
+1. Runs as a **forked tabz-expert subagent** (inherits conductor context, no spawn overhead)
 2. Creates isolated tab group with random suffix (e.g., "QA-847")
 3. Screenshots pages and checks console for errors
 4. Returns findings to conductor
@@ -379,14 +379,14 @@ This generates a detailed summary including:
 - Next steps (remaining ready issues or backlog status)
 - Audio notification of completion
 
-**Alternative: If MCP not available**, ask tabz-manager to announce:
+**Alternative: If MCP not available**, ask tabz-expert to announce:
 
 ```
-Task(subagent_type="conductor:tabz-manager",
+Task(subagent_type="tabz-expert",
      prompt="Announce wave complete: $ISSUE_COUNT issues merged. $NEXT_READY ready for next wave.")
 ```
 
-The script uses HTTP API directly (`localhost:8129/api/audio/speak`), but spawning tabz-manager is cleaner if you're already in a Claude session without MCP access.
+The script uses HTTP API directly (`localhost:8129/api/audio/speak`), but spawning tabz-expert via Task is cleaner if you're already in a Claude session without MCP access.
 
 ---
 

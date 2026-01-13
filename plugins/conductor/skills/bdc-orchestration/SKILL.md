@@ -275,7 +275,7 @@ After a wave of parallel workers finishes, use `/conductor:bdc-wave-done` to orc
 | `conductor:code-reviewer` | sonnet | Autonomous review, quality gate |
 | `conductor:skill-picker` | haiku | Search/install skills |
 | `conductor:docs-updater` | opus | Update docs after merges |
-| `conductor:tabz-manager` | opus | Browser automation (70 MCP tools) |
+| `tabz-expert` | opus | Browser automation (70 MCP tools) - user-scope plugin |
 
 > **Note:** Prompt enhancement is now a skill (`bdc-prompt-enhancer`) loaded into context, not a spawnable agent.
 
@@ -287,7 +287,7 @@ For UI changes, run visual QA before the next wave:
 /conductor:bdc-visual-qa http://localhost:3000/dashboard http://localhost:3000/settings
 ```
 
-This spawns `tabz-manager` in a forked context to:
+This spawns `tabz-expert` in a forked context to:
 - Screenshot changed pages
 - Check browser console for errors
 - Report findings before proceeding
@@ -345,9 +345,9 @@ tmux send-keys -t "$SESSION" C-m
 | `/conductor:bd-swarm` | Spawn parallel workers |
 | `/conductor:bdc-swarm-auto` | Fully autonomous parallel execution |
 | `/conductor:bdc-wave-done` | Complete a wave of parallel workers |
-| `/conductor:bdc-visual-qa` | Visual QA check (spawns tabz-manager) |
+| `/conductor:bdc-visual-qa` | Visual QA check (spawns tabz-expert) |
 | `/conductor:bdw-worker-done` | Complete individual worker (auto-detects mode) |
-| `conductor:tabz-manager` | Browser automation agent (70 MCP tools) |
+| `tabz-expert` | Browser automation agent (user-scope plugin) |
 
 ### Beads Commands Used
 

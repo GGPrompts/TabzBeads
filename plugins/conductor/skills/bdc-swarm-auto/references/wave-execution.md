@@ -206,10 +206,10 @@ curl -s -X POST http://localhost:8129/api/audio/speak \
 
 ## Step 8: Visual QA (After UI Waves)
 
-If wave included UI changes, spawn tabz-manager subagent:
+If wave included UI changes, spawn tabz-expert subagent:
 
 ```
-Task(subagent_type="conductor:tabz-manager",
+Task(subagent_type="tabz-expert",
      prompt="Visual QA after wave completion.
        1. Start dev server: npm run dev
        2. Screenshot at 1920x1080

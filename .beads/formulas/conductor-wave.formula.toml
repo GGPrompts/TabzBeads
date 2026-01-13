@@ -598,10 +598,10 @@ skip_if = "{{skip_visual_qa}}"
 description = """
 Visual verification for UI changes.
 
-Spawn tabz-manager subagent:
+Spawn tabz-expert subagent:
 
 ```
-Task(subagent_type="tabz:tabz-manager",
+Task(subagent_type="tabz-expert",
      prompt="Visual QA after wave merge.
        1. Start dev server if needed
        2. Screenshot key UI areas at 1920x1080

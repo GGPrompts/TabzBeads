@@ -1,21 +1,21 @@
 ---
 name: bdc-visual-qa
-description: "Visual QA check between waves - runs as forked tabz-manager subagent to screenshot changes and check for browser errors. Avoids spawn overhead."
+description: "Visual QA check between waves - runs as forked tabz-expert subagent to screenshot changes and check for browser errors. Avoids spawn overhead."
 user-invocable: false
-agent: conductor:tabz-manager
+agent: tabz-expert
 context: fork
 ---
 
 # Visual QA Check
 
-Run visual QA after a wave with UI changes completes. Runs as a **forked tabz-manager subagent** to avoid the context overhead of spawning a new Claude session.
+Run visual QA after a wave with UI changes completes. Runs as a **forked tabz-expert subagent** to avoid the context overhead of spawning a new Claude session.
 
 ## Why Forked Subagent?
 
 | Approach | Context Cost |
 |----------|-------------|
 | New terminal spawn | Full init: CLAUDE.md, PRIME.md, beads context, plugin discovery |
-| Forked subagent | Inherits parent context, just adds tabz-manager tools |
+| Forked subagent | Inherits parent context, just adds tabz-expert tools |
 
 The conductor already has all context loaded - visual QA just needs browser automation tools.
 
@@ -34,7 +34,7 @@ The conductor already has all context loaded - visual QA just needs browser auto
 
 ## Workflow
 
-When invoked, tabz-manager will:
+When invoked, tabz-expert will:
 
 ### 1. Create Isolated Tab Group
 
@@ -107,7 +107,7 @@ Return a summary:
 
 - Pixel-perfect comparison (use dedicated tools)
 - Accessibility audits (see tabz emulation tools)
-- Performance profiling (tabz-manager has tools, but not in this skill)
+- Performance profiling (tabz-expert has tools, but not in this skill)
 
 ## Integration with bdc-wave-done
 
