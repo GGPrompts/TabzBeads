@@ -1,21 +1,27 @@
 ---
-description: "Visual QA check between waves - runs as forked tabz-expert subagent to screenshot changes and check for browser errors. Avoids spawn overhead."
+description: "Visual QA check between waves - runs as tabz-expert subagent to screenshot changes and check for browser errors."
 agent: tabz-expert
-context: fork
 ---
 
 # Visual QA Check
 
-Run visual QA after a wave with UI changes completes. Runs as a **forked tabz-expert subagent** to avoid the context overhead of spawning a new Claude session.
+Run visual QA after a wave with UI changes completes. Runs as a **tabz-expert subagent** for browser automation.
 
-## Why Forked Subagent?
+## Execution Context
 
-| Approach | Context Cost |
-|----------|-------------|
-| New terminal spawn | Full init: CLAUDE.md, PRIME.md, beads context, plugin discovery |
-| Forked subagent | Inherits parent context, just adds tabz-expert tools |
+| Running As | How It Executes |
+|------------|-----------------|
+| `--agent conductor` | Fork context - inherits parent context, adds tabz-expert tools |
+| Regular Claude | Task tool spawns tabz-expert subagent |
 
-The conductor already has all context loaded - visual QA just needs browser automation tools.
+**Without `--agent` flag:** The conductor should invoke via Task tool:
+```
+Task(
+  subagent_type="tabz:tabz-expert",
+  description="Visual QA check",
+  prompt="Run visual QA on [urls]. Create isolated tab group, check console errors, cleanup when done."
+)
+```
 
 ## Usage
 

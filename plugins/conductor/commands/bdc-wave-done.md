@@ -316,22 +316,38 @@ if [ "$VISUAL_QA_EXPLICIT" = "false" ] && ! has_ui_changes; then
 fi
 ```
 
-**Execute Visual QA via skill:**
+**Execute Visual QA via Task tool:**
 
-```
-if VISUAL_QA_MODE is "skip":
-  echo "Skipping visual QA (--visual-qa=skip)"
-elif VISUAL_QA_MODE is "quick" or "full":
-  # Invoke bdc-visual-qa skill as forked subagent
-  # The skill has: agent: tabz-expert, context: fork
-  /conductor:bdc-visual-qa --mode=$VISUAL_QA_MODE [dev-server-urls]
+```python
+if VISUAL_QA_MODE == "skip":
+  print("Skipping visual QA (--visual-qa=skip)")
+else:
+  # Spawn tabz-expert subagent for visual QA
+  Task(
+    subagent_type="tabz:tabz-expert",
+    description="Visual QA check",
+    prompt=f"""Run visual QA on the following URLs: {DEV_SERVER_URLS}
+
+Mode: {VISUAL_QA_MODE}
+
+Steps:
+1. Create isolated tab group: tabz_create_group with title "QA-XXX" and color "green"
+2. Open each URL into that group (use groupId parameter)
+3. For each page:
+   - Check console for errors: tabz_get_console_logs with level="error"
+   - Check DOM for error patterns: tabz_execute_script looking for "error boundary", "something went wrong", etc.
+   - If full mode: tabz_screenshot
+4. Cleanup: Collapse or close the tab group
+5. Return summary: PASS / INVESTIGATE / BLOCK with any errors found
+"""
+  )
 ```
 
-The `bdc-visual-qa` skill:
-1. Runs as a **forked tabz-expert subagent** (inherits conductor context, no spawn overhead)
-2. Creates isolated tab group with random suffix (e.g., "QA-847")
-3. Screenshots pages and checks console for errors
-4. Returns findings to conductor
+The tabz-expert subagent will:
+1. Create isolated tab group with random suffix (e.g., "QA-847")
+2. Check console errors and DOM patterns for each URL
+3. Take screenshots (full mode only)
+4. Clean up tabs and return findings
 
 **Flag modes:**
 - `--visual-qa=quick` (default): Console + DOM error checks (fast, automated)
