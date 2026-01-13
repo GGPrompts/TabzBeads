@@ -1,38 +1,39 @@
 ---
-name: TabzArtist
-description: Generate images via DALL-E and videos via Sora using browser automation. This skill should be used when a project needs visual assets like hero images, team photos, feature icons, or product demo videos. Spawnable as a conductor agent during bd-swarm-auto for parallel asset generation.
+name: tabz-artist
+description: "Generate images via DALL-E and videos via Sora using browser automation. Use when a project needs visual assets like hero images, team photos, feature icons, or product demo videos."
+agent: conductor:tabz-manager
+context: fork
 ---
 
 # TabzArtist - AI Asset Generation via Browser Automation
 
 Generate images (DALL-E) and videos (Sora) for projects using TabzChrome MCP tools.
 
+> **Runs in tabz-manager context** - This skill automatically spawns as a tabz-manager subagent with isolated tab group.
+
 ## When to Use
 
 - Building landing pages, apps, or websites that need visual assets
 - Creating hero images, team photos, feature icons, product screenshots
 - Generating product demo videos or background ambient videos
-- Running as parallel asset generation during bd-swarm-auto builds
 
 ## Quick Start
 
 ```
-Generate assets for a [industry] landing page:
+/conductor:tabz-artist Generate assets for a [industry] landing page:
 - Hero image: [description]
-- Team photos: [description]
 - Feature icons: [description]
 - Product video: [description]
 ```
 
-## Workflow Overview
+## Tab Group Isolation
 
-```
-1. Plan assets based on project description
-2. Generate images via DALL-E (batch if possible)
-3. Generate videos via Sora
-4. Wait for generation (poll with screenshots)
-5. Download all assets to project folder
-6. Return list of downloaded files
+tabz-manager automatically creates an isolated tab group before browser work:
+
+```bash
+SESSION_ID="Artist-$(shuf -i 100-999 -n 1)"
+mcp-cli call tabz/tabz_create_group "{\"title\": \"$SESSION_ID\", \"color\": \"purple\"}"
+# All subsequent URLs opened into this group with explicit groupId
 ```
 
 ## DALL-E Image Generation
@@ -46,20 +47,20 @@ Generate assets for a [industry] landing page:
 ### Workflow
 
 ```bash
-# 1. Open DALL-E
-mcp-cli call tabz/tabz_open_url '{"url": "https://chatgpt.com/g/g-iLoR8U3iA-dall-e3"}'
+# 1. Open DALL-E (into your tab group)
+mcp-cli call tabz/tabz_open_url '{"url": "https://chatgpt.com/g/g-iLoR8U3iA-dall-e3", "groupId": <your_groupId>}'
 
 # 2. Fill prompt (wait 2-3s for page load)
-mcp-cli call tabz/tabz_fill '{"selector": "#prompt-textarea", "value": "PROMPT_HERE"}'
+mcp-cli call tabz/tabz_fill '{"selector": "#prompt-textarea", "value": "PROMPT_HERE", "tabId": <your_tabId>}'
 
 # 3. Submit
-mcp-cli call tabz/tabz_click '{"selector": "#composer-submit-button"}'
+mcp-cli call tabz/tabz_click '{"selector": "#composer-submit-button", "tabId": <your_tabId>}'
 
 # 4. Wait 15-30s, poll with screenshots until image appears
-mcp-cli call tabz/tabz_screenshot '{}'
+mcp-cli call tabz/tabz_screenshot '{"tabId": <your_tabId>}'
 
 # 5. Extract image URL
-mcp-cli call tabz/tabz_get_element '{"selector": "img[alt=\"Generated image\"]", "includeStyles": false, "response_format": "json"}'
+mcp-cli call tabz/tabz_get_element '{"selector": "img[alt=\"Generated image\"]", "tabId": <your_tabId>}'
 # Look for: attributes.src
 
 # 6. Download
@@ -95,23 +96,23 @@ mcp-cli call tabz/tabz_click '{"selector": "div.flex.w-full > div.flex:nth-of-ty
 ### Workflow
 
 ```bash
-# 1. Open Sora drafts
-mcp-cli call tabz/tabz_open_url '{"url": "https://sora.chatgpt.com/drafts"}'
+# 1. Open Sora drafts (into your tab group)
+mcp-cli call tabz/tabz_open_url '{"url": "https://sora.chatgpt.com/drafts", "groupId": <your_groupId>}'
 
 # 2. Fill prompt (wait 2-3s for page load)
-mcp-cli call tabz/tabz_fill '{"selector": "textarea", "value": "PROMPT_HERE"}'
+mcp-cli call tabz/tabz_fill '{"selector": "textarea", "value": "PROMPT_HERE", "tabId": <your_tabId>}'
 
 # 3. Submit
-mcp-cli call tabz/tabz_click '{"selector": "div.flex.items-center.justify-between > div:last-child > button:last-child"}'
+mcp-cli call tabz/tabz_click '{"selector": "div.flex.items-center.justify-between > div:last-child > button:last-child", "tabId": <your_tabId>}'
 
 # 4. Wait 60-120s, poll with screenshots until video thumbnail appears
-mcp-cli call tabz/tabz_screenshot '{}'
+mcp-cli call tabz/tabz_screenshot '{"tabId": <your_tabId>}'
 
 # 5. Click video to open detail view
-mcp-cli call tabz/tabz_click '{"selector": "video"}'
+mcp-cli call tabz/tabz_click '{"selector": "video", "tabId": <your_tabId>}'
 
 # 6. Extract video URL
-mcp-cli call tabz/tabz_get_element '{"selector": "video", "includeStyles": false, "response_format": "json"}'
+mcp-cli call tabz/tabz_get_element '{"selector": "video", "tabId": <your_tabId>}'
 # Look for: attributes.src
 
 # 7. Download

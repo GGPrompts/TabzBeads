@@ -48,29 +48,6 @@ Task(
 
 ---
 
-## Core Capabilities
-
-### Tabz MCP Tools (46 Tools)
-
-```bash
-mcp-cli info tabz/<tool>  # Always check schema before calling
-```
-
-| Category | Tools |
-|----------|-------|
-| **Tabs (5)** | tabz_list_tabs, tabz_switch_tab, tabz_rename_tab, tabz_get_page_info, tabz_open_url |
-| **Tab Groups (7)** | tabz_list_groups, tabz_create_group, tabz_update_group, tabz_add_to_group, tabz_ungroup_tabs, tabz_claude_group_add, tabz_claude_group_remove |
-| **Windows (7)** | tabz_list_windows, tabz_create_window, tabz_update_window, tabz_close_window, tabz_get_displays, tabz_tile_windows, tabz_popout_terminal |
-| **Screenshots (2)** | tabz_screenshot, tabz_screenshot_full |
-| **Interaction (4)** | tabz_click, tabz_fill, tabz_get_element, tabz_execute_script |
-| **DOM/Debug (4)** | tabz_get_dom_tree, tabz_get_console_logs, tabz_profile_performance, tabz_get_coverage |
-| **Network (3)** | tabz_enable_network_capture, tabz_get_network_requests, tabz_clear_network_requests |
-| **Downloads (5)** | tabz_download_image, tabz_download_file, tabz_get_downloads, tabz_cancel_download, tabz_save_page |
-| **Bookmarks (6)** | tabz_get_bookmark_tree, tabz_search_bookmarks, tabz_save_bookmark, tabz_create_folder, tabz_move_bookmark, tabz_delete_bookmark |
-| **Audio/TTS (3)** | tabz_speak, tabz_list_voices, tabz_play_audio |
-
----
-
 ## Terminal Management
 
 ### Spawning Claude Workers
@@ -298,8 +275,22 @@ After a wave of parallel workers finishes, use `/conductor:bdc-wave-done` to orc
 | `conductor:code-reviewer` | sonnet | Autonomous review, quality gate |
 | `conductor:skill-picker` | haiku | Search/install skills |
 | `conductor:docs-updater` | opus | Update docs after merges |
+| `conductor:tabz-manager` | opus | Browser automation (70 MCP tools) |
 
 > **Note:** Prompt enhancement is now a skill (`bdc-prompt-enhancer`) loaded into context, not a spawnable agent.
+
+### Visual QA Between Waves
+
+For UI changes, run visual QA before the next wave:
+
+```
+/conductor:bdc-visual-qa http://localhost:3000/dashboard http://localhost:3000/settings
+```
+
+This spawns `tabz-manager` in a forked context to:
+- Screenshot changed pages
+- Check browser console for errors
+- Report findings before proceeding
 
 **Example:**
 ```
@@ -354,8 +345,9 @@ tmux send-keys -t "$SESSION" C-m
 | `/conductor:bd-swarm` | Spawn parallel workers |
 | `/conductor:bdc-swarm-auto` | Fully autonomous parallel execution |
 | `/conductor:bdc-wave-done` | Complete a wave of parallel workers |
+| `/conductor:bdc-visual-qa` | Visual QA check (spawns tabz-manager) |
 | `/conductor:bdw-worker-done` | Complete individual worker (auto-detects mode) |
-| `tabz:tabz-manager` | Browser automation agent |
+| `conductor:tabz-manager` | Browser automation agent (70 MCP tools) |
 
 ### Beads Commands Used
 
