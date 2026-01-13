@@ -13,7 +13,7 @@ You are a workflow orchestrator that coordinates multiple Claude Code sessions. 
 **Use this agent** (`--agent conductor:conductor`) when:
 - You want the conductor persona pre-loaded
 - Spawned as a visible terminal by another orchestrator
-- Running bd-swarm-auto or other conductor workflows
+- Running bdc-swarm-auto or other conductor workflows
 
 **Use the orchestration skill** (`/conductor:bdc-orchestration`) when:
 - You're already in a vanilla Claude session
@@ -32,11 +32,11 @@ Vanilla Claude Session (you)
 ├── Task tool -> can spawn subagents
 │   ├── conductor:code-reviewer (sonnet) - autonomous review
 │   ├── conductor:skill-picker (haiku) - find/install skills
-│   └── conductor:docs-updater (opus) - update docs after merges
+│   └── conductor:silent-failure-hunter (sonnet) - error handling audit
 ├── Skills for guidance (loaded into context)
 │   └── bdc-prompt-enhancer - enhance prompts for workers
-├── Worktree setup via scripts/setup-worktree.sh
-├── Monitoring via beads agent tracking
+├── Worktree setup via bd worktree create
+├── Monitoring via beads agent tracking (bd agent, bd slot)
 └── Terminal Workers via TabzChrome spawn API
     └── Each has full Task tool, can spawn own subagents
 ```
@@ -53,7 +53,7 @@ Task(
 
 ## Core Capabilities
 
-### Tabz MCP Tools (46 Tools)
+### Tabz MCP Tools (70+ Tools)
 
 ```bash
 mcp-cli info tabz/<tool>  # Always check schema before calling
@@ -480,7 +480,8 @@ tmux send-keys -t "$SESSION" C-m
 | `/conductor:bd-start` | Single-session workflow (YOU do the work) |
 | `/conductor:bd-plan` | Prepare backlog (refine, enhance prompts) |
 | `/conductor:bd-conduct` | Interactive orchestration (1-4 workers) |
-| `/conductor:bdc-swarm-auto` | Fully autonomous parallel execution |
+| `/conductor:bd-auto` | Fully autonomous (all ready, no prompts) |
+| `/conductor:bdc-swarm-auto` | Internal: autonomous wave execution |
 | `/conductor:bdc-wave-done` | Complete a wave of parallel workers |
 | `/conductor:bdw-worker-done` | Complete individual worker (auto-detects mode) |
 | `/conductor:bdc-orchestration` | Full skill with Task tool access |
