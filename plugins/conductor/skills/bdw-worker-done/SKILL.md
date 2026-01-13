@@ -19,24 +19,24 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 
 ## Pipeline Overview
 
-| Step | Command | Blocking? | Skip if DOCS_ONLY? |
-|------|---------|-----------|-------------------|
-| 0 | Detect change types | No | - |
-| 0.5 | Detect complexity | No | Sets COMPLEXITY |
-| 1 | `/conductor:bdw-verify-build` | Yes - stop on failure | Yes |
-| 1a | `plugin-validator` agent | Yes - stop on failure | ONLY if DOCS_ONLY |
-| 2 | `/conductor:bdw-run-tests` | Yes - stop on failure | Yes |
-| 3 | `/conductor:bdw-commit-changes` | Yes - stop on failure | No |
-| 4 | `/conductor:bdw-create-followups` | No - log and continue | No |
-| 5 | `/conductor:bdw-update-docs` | No - log and continue | No |
-| 5.5 | Record completion info | No - best effort | Includes COMPLEXITY |
-| 6 | `/conductor:bdw-close-issue` | Yes - report result | No |
-| 6.5 | Complexity-aware review | No - standalone only | Standalone only |
-| 7 | Notify conductor | No - best effort | Worker only |
+| Step | Command | Blocking? | When |
+|------|---------|-----------|------|
+| 0 | Detect change types | No | Always |
+| 0.5 | Detect complexity | No | Always |
+| 1 | `/conductor:bdw-verify-build` | Yes | CHANGE_TYPE=code |
+| 1a | `plugin-validator` agent | Yes | CHANGE_TYPE=plugin |
+| 2 | `/conductor:bdw-run-tests` | Yes | CHANGE_TYPE=code |
+| 3 | `/conductor:bdw-commit-changes` | Yes | Always |
+| 4 | `/conductor:bdw-create-followups` | No | Always |
+| 5 | `/conductor:bdw-update-docs` | No | Always |
+| 5.5 | Record completion info | No | Always |
+| 6 | `/conductor:bdw-close-issue` | Yes | Always |
+| 6.5 | Complexity-aware review | No | Standalone only |
+| 7 | Notify conductor | No | Worker only |
 
 **CRITICAL: You MUST execute Step 7 after Step 6.** Workers that skip Step 7 force the conductor to poll, wasting resources.
 
-**DOCS_ONLY mode:** When all changes are markdown files (`.md`, `.markdown`), steps 1-2 are replaced with the `plugin-validator` agent. This validates markdown structure and content without running expensive build/test steps.
+**Plugin changes:** When changes are only markdown files or plugin config (`plugin.json`, `marketplace.json`, `hooks.json`), steps 1-2 are replaced with the `plugin-validator` agent. This validates plugin structure without running build/test.
 
 **Code review happens at conductor level:** Workers do NOT run code review. The conductor runs unified code review after merging all worker branches (see `/conductor:bdc-wave-done`). This prevents conflicts when multiple workers run in parallel.
 
@@ -47,34 +47,48 @@ Orchestrates the full task completion pipeline by composing atomic commands.
 ### Step 0: Detect Change Types
 ```bash
 echo "=== Step 0: Detecting Change Types ==="
-# Check if only markdown files changed (staged + unstaged)
+# Check what types of files changed (staged + unstaged)
 git diff --cached --name-only
 git diff --name-only
 ```
 
 **Detection logic:**
 1. Get list of all changed files (staged and unstaged)
-2. Check if ALL changes are markdown files (`.md`, `.markdown`)
-3. Set `DOCS_ONLY=true` if only markdown, otherwise `DOCS_ONLY=false`
+2. Categorize: docs-only, plugin-only, or code changes
+3. Set mode accordingly
+
+**File categories:**
+
+| Category | Extensions/Patterns | Validation |
+|----------|-------------------|------------|
+| Docs | `.md`, `.markdown` | plugin-validator |
+| Plugin config | `plugin.json`, `marketplace.json`, `hooks.json` | plugin-validator |
+| Plugin content | `plugins/**/*.md`, `skills/**/*.md`, `agents/**/*.md`, `commands/**/*.md` | plugin-validator |
+| Code | Everything else | build + test |
 
 ```bash
-# Detection check - if ANY file is non-markdown, run full pipeline
-if git diff --cached --name-only | grep -qvE '\.(md|markdown)$' 2>/dev/null; then
-  DOCS_ONLY=false
-elif git diff --name-only | grep -qvE '\.(md|markdown)$' 2>/dev/null; then
-  DOCS_ONLY=false
+# Get all changed files
+CHANGED_FILES=$(git diff --cached --name-only; git diff --name-only)
+
+if [ -z "$CHANGED_FILES" ]; then
+  CHANGE_TYPE="none"
+elif echo "$CHANGED_FILES" | grep -qvE '\.(md|markdown|json)$'; then
+  # Has non-doc/non-json files = code changes
+  CHANGE_TYPE="code"
+elif echo "$CHANGED_FILES" | grep -qE '\.(json)$' | grep -qvE '(plugin|marketplace|hooks)\.json$'; then
+  # Has JSON but not plugin config = code changes
+  CHANGE_TYPE="code"
 else
-  # Check if there are actually any changes at all
-  if [ -z "$(git diff --cached --name-only)$(git diff --name-only)" ]; then
-    DOCS_ONLY=false  # No changes = run normal pipeline
-  else
-    DOCS_ONLY=true
-  fi
+  # Only markdown and/or plugin config files
+  CHANGE_TYPE="plugin"
 fi
 ```
 
-If `DOCS_ONLY=true`: Run **Step 1a** (plugin-validator), then skip to **Step 3**.
-If `DOCS_ONLY=false`: Continue with full pipeline (Steps 1, 2, 3...).
+| CHANGE_TYPE | Action |
+|-------------|--------|
+| `none` | Skip to commit (no changes) |
+| `plugin` | Run **Step 1a** (plugin-validator), skip build/test |
+| `code` | Run full pipeline (Steps 1, 2, 3...) |
 
 ---
 
@@ -102,36 +116,47 @@ Workers don't run code review - conductor handles unified review after merge.
 
 ---
 
-### Step 1: Verify Build (skip if DOCS_ONLY)
+### Step 1: Verify Build (CHANGE_TYPE=code)
 ```bash
 echo "=== Step 1: Build Verification ==="
 ```
 Run `/conductor:bdw-verify-build`. If `passed: false` -> **STOP**, fix errors, re-run.
 
-### Step 1a: Plugin Validator (ONLY if DOCS_ONLY)
+### Step 1a: Plugin Validator (CHANGE_TYPE=plugin)
 
-When `DOCS_ONLY=true`, run the `plugin-validator` agent instead of build/test:
+When only plugin files changed (markdown, `plugin.json`, `marketplace.json`, `hooks.json`), run the `plugin-validator` agent instead of build/test:
 
 ```bash
-echo "=== Step 1a: Plugin Validation (markdown-only changes) ==="
+echo "=== Step 1a: Plugin Validation ==="
 ```
 
-**Invoke the plugin-validator agent** to validate the changed markdown files:
+**Invoke the plugin-validator agent:**
 
 ```
-Task(subagent_type="plugin-dev:plugin-validator", prompt="Validate the following changed markdown files: <list files from git diff>. Check for: broken links, invalid YAML frontmatter, missing required sections, and consistent formatting.")
+Task(subagent_type="plugin-development:plugin-validator", prompt="Validate the plugin changes:
+
+Changed files:
+$CHANGED_FILES
+
+Check for:
+1. YAML frontmatter syntax in skill/agent/command files
+2. Required fields present (name, description, etc.)
+3. plugin.json/marketplace.json valid JSON with required fields
+4. Correct directory structure (skills/<name>/SKILL.md pattern)
+5. No orphaned references
+")
 ```
 
-The agent will:
-1. Check YAML frontmatter syntax in skill/agent files
-2. Verify required fields are present (name, description, etc.)
-3. Check for broken internal links
-4. Validate markdown structure
+The agent validates:
+- Frontmatter syntax and required fields
+- JSON config files (plugin.json, marketplace.json)
+- Directory structure matches plugin patterns
+- Internal references are valid
 
 If validation fails -> **STOP**, fix issues, re-run.
 If validation passes -> Skip to **Step 3** (commit).
 
-### Step 2: Run Tests (skip if DOCS_ONLY)
+### Step 2: Run Tests (CHANGE_TYPE=code)
 ```bash
 echo "=== Step 2: Test Verification ==="
 ```
