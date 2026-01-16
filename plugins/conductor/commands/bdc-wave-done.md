@@ -230,23 +230,20 @@ If merge conflicts -> **STOP**. Resolve manually and re-run.
 echo "=== Step 4: Cleanup Worktrees ==="
 
 PROJECT_DIR=$(pwd)
-WORKTREE_DIR="${PROJECT_DIR}-worktrees"
+WORKTREE_BASE="$(dirname "$PROJECT_DIR")"  # Worktrees are sibling directories
 
 for ISSUE in $ISSUES; do
   [[ "$ISSUE" =~ ^[a-zA-Z0-9_-]+$ ]] || continue
 
-  # Remove worktree
-  if [ -d "${WORKTREE_DIR}/${ISSUE}" ]; then
-    git worktree remove --force "${WORKTREE_DIR}/${ISSUE}" 2>/dev/null || true
+  # Remove worktree (created as sibling: ../$ISSUE)
+  if [ -d "${WORKTREE_BASE}/${ISSUE}" ]; then
+    git worktree remove --force "${WORKTREE_BASE}/${ISSUE}" 2>/dev/null || true
     echo "Removed worktree: ${ISSUE}"
   fi
 
   # Delete feature branch
   git branch -d "feature/${ISSUE}" 2>/dev/null && echo "Deleted branch: feature/${ISSUE}" || true
 done
-
-# Remove worktrees dir if empty
-rmdir "$WORKTREE_DIR" 2>/dev/null || true
 ```
 
 ---
@@ -452,8 +449,11 @@ Verify completion:
 # No leftover worker sessions
 tmux list-sessions | grep -E "worker-|ctt-worker" && echo "WARN: Sessions remain"
 
-# No leftover worktrees
-ls ${PROJECT_DIR}-worktrees/ 2>/dev/null && echo "WARN: Worktrees remain"
+# No leftover worktrees (check sibling directories)
+WORKTREE_BASE="$(dirname "$PROJECT_DIR")"
+for ISSUE in $ISSUES; do
+  [ -d "${WORKTREE_BASE}/${ISSUE}" ] && echo "WARN: Worktree remains: ${ISSUE}"
+done
 
 # No orphaned feature branches
 git branch | grep "feature/" && echo "WARN: Branches remain"

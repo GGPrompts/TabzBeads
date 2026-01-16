@@ -122,7 +122,8 @@ fi
 ### Check for commit in worktree
 
 ```bash
-WORKTREE="${PROJECT_DIR}-worktrees/${ISSUE_ID}"
+WORKTREE_BASE="$(dirname "$PROJECT_DIR")"
+WORKTREE="${WORKTREE_BASE}/${ISSUE_ID}"  # Worktrees are sibling directories
 if git -C "$WORKTREE" log -1 --oneline | grep -qi "$ISSUE_ID"; then
   echo "COMMITTED"
 fi

@@ -150,12 +150,14 @@ Spawn workers via TabzChrome API:
 
 ```bash
 TOKEN=$(cat /tmp/tabz-auth-token)
-WORKTREE_PATH="$(pwd)-worktrees/$ISSUE_ID"
+PROJECT_DIR=$(pwd)
+WORKTREE_BASE="$(dirname "$PROJECT_DIR")"
+WORKTREE_PATH="${WORKTREE_BASE}/${ISSUE_ID}"  # Worktrees are sibling directories
 
 RESPONSE=$(curl -s -X POST http://localhost:8129/api/spawn \
   -H "Content-Type: application/json" \
   -H "X-Auth-Token: $TOKEN" \
-  -d "{\"name\": \"worker-$ISSUE_ID\", \"workingDir\": \"$WORKTREE_PATH\", \"command\": \"BD_SOCKET=/tmp/bd-worker-$ISSUE_ID.sock CONDUCTOR_SESSION='$CONDUCTOR_SESSION' claude --dangerously-skip-permissions\"}")
+  -d "{\"name\": \"worker-$ISSUE_ID\", \"workingDir\": \"$WORKTREE_PATH\", \"command\": \"CONDUCTOR_SESSION='$CONDUCTOR_SESSION' claude --dangerously-skip-permissions\"}")
 
 SESSION_NAME=$(echo "$RESPONSE" | jq -r '.terminal.ptyInfo.tmuxSession // .terminal.id')
 
@@ -163,6 +165,7 @@ SESSION_NAME=$(echo "$RESPONSE" | jq -r '.terminal.ptyInfo.tmuxSession // .termi
 bd update "$ISSUE_ID" --status in_progress
 bd update "$ISSUE_ID" --notes "conductor_session: $CONDUCTOR_SESSION
 worker_session: $SESSION_NAME
+worktree: $WORKTREE_PATH
 started_at: $(date -Iseconds)"
 ```
 

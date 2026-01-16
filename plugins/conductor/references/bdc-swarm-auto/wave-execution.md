@@ -29,45 +29,62 @@ Example for 10 issues:
 - Worker 3: SAAS-007, SAAS-008
 - Worker 4: SAAS-009, SAAS-010
 
-## Step 3: Create Worktrees
+## Step 3: Create Worktrees and Install Dependencies
 
 ```bash
 PROJECT_DIR=$(pwd)
-WORKTREE_DIR="${PROJECT_DIR}-worktrees"
-mkdir -p "$WORKTREE_DIR"
+WORKTREE_BASE="$(dirname "$PROJECT_DIR")"  # Worktrees created as siblings
 
-# For each ISSUE_ID, run in parallel:
+# Use setup-worktree.sh for each issue (parallel, handles deps and beads redirect)
 for ISSUE_ID in <all-issue-ids>; do
-  (
-    WORKTREE="${WORKTREE_DIR}/${ISSUE_ID}"
-    git worktree add "$WORKTREE" -b "feature/${ISSUE_ID}" 2>/dev/null || git worktree add "$WORKTREE" HEAD
-    echo "Created: $ISSUE_ID"
-  ) &
+  ${CLAUDE_PLUGIN_ROOT}/scripts/setup-worktree.sh "$ISSUE_ID" "$PROJECT_DIR" &
 done
 wait
 ```
+
+The script:
+1. Uses `bd worktree create` (beads-native, auto-configures beads redirect)
+2. Installs dependencies (pnpm/yarn/npm based on lockfile)
+3. Runs initial build if package.json has build script
+4. Worktrees created at `../${ISSUE_ID}` (e.g., `/home/user/projects/ISSUE-123`)
 
 **WAIT for ALL worktrees to be ready before Step 4.**
 
 ## Step 4: Spawn Terminal Workers
 
-Spawn only 3-4 terminal workers, NOT one per issue:
+Spawn only 3-4 terminal workers. Each worker runs in its worktree directory:
 
 ```bash
 TOKEN=$(cat /tmp/tabz-auth-token)
-WORKER_NUM=1  # 1, 2, 3, or 4
+CONDUCTOR_SESSION=$(tmux display-message -p '#{session_name}')
+WORKTREE_BASE="$(dirname "$PROJECT_DIR")"
 
-curl -s -X POST http://localhost:8129/api/spawn \
-  -H "Content-Type: application/json" \
-  -H "X-Auth-Token: $TOKEN" \
-  -d "$(jq -n \
-    --arg name "worker-${WORKER_NUM}" \
-    --arg dir "$PROJECT_DIR" \
-    --arg cmd "claude --dangerously-skip-permissions" \
-    '{name: $name, workingDir: $dir, command: $cmd}')"
+# For each issue, spawn a worker in its worktree
+for ISSUE_ID in <assigned-issue-ids>; do
+  WORKTREE_PATH="${WORKTREE_BASE}/${ISSUE_ID}"
+
+  RESPONSE=$(curl -s -X POST http://localhost:8129/api/spawn \
+    -H "Content-Type: application/json" \
+    -H "X-Auth-Token: $TOKEN" \
+    -d "$(jq -n \
+      --arg name "worker-${ISSUE_ID}" \
+      --arg dir "$WORKTREE_PATH" \
+      --arg cmd "CONDUCTOR_SESSION='$CONDUCTOR_SESSION' claude --dangerously-skip-permissions" \
+      '{name: $name, workingDir: $dir, command: $cmd}')")
+
+  SESSION_NAME=$(echo "$RESPONSE" | jq -r '.terminal.ptyInfo.tmuxSession // .terminal.id')
+  echo "Spawned: $ISSUE_ID -> $SESSION_NAME (at $WORKTREE_PATH)"
+
+  # Record in beads
+  bd update "$ISSUE_ID" --status in_progress
+  bd update "$ISSUE_ID" --notes "conductor_session: $CONDUCTOR_SESSION
+worker_session: $SESSION_NAME
+worktree: $WORKTREE_PATH
+started_at: $(date -Iseconds)"
+done
 ```
 
-Repeat for each worker (max 4). Save session names.
+**Note:** Max 4 terminal workers. If more than 4 issues, distribute issues across workers (2-3 per worker).
 
 ## Step 5: Send Skill-Aware Prompts
 
@@ -190,13 +207,12 @@ for ISSUE_ID in <all-issue-ids>; do
   }
 done
 
-# Cleanup
-WORKTREE_DIR="${PROJECT_DIR}-worktrees"
+# Cleanup worktrees (created as siblings to project)
+WORKTREE_BASE="$(dirname "$PROJECT_DIR")"
 for ISSUE_ID in <all-issue-ids>; do
-  git worktree remove --force "${WORKTREE_DIR}/${ISSUE_ID}" 2>/dev/null
+  git worktree remove --force "${WORKTREE_BASE}/${ISSUE_ID}" 2>/dev/null
   git branch -d "feature/${ISSUE_ID}" 2>/dev/null
 done
-rmdir "$WORKTREE_DIR" 2>/dev/null
 
 # Audio announcement
 curl -s -X POST http://localhost:8129/api/audio/speak \

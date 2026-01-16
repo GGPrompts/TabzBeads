@@ -31,7 +31,7 @@ is_docs_only() {
 
 ISSUES="$1"
 PROJECT_DIR="${2:-$(pwd)}"
-WORKTREE_DIR="${PROJECT_DIR}-worktrees"
+WORKTREE_BASE="$(dirname "$PROJECT_DIR")"  # Worktrees are sibling directories
 
 if [ -z "$ISSUES" ]; then
   echo "Usage: completion-pipeline.sh \"ISSUE1 ISSUE2 ...\" [PROJECT_DIR]"
@@ -118,15 +118,13 @@ echo "=== Step 3: Cleanup Worktrees ==="
 
 for ISSUE in $ISSUES; do
   [[ "$ISSUE" =~ ^[a-zA-Z0-9_-]+$ ]] || continue
-  if [ -d "${WORKTREE_DIR}/${ISSUE}" ]; then
-    git worktree remove --force "${WORKTREE_DIR}/${ISSUE}" 2>/dev/null || true
+  # Worktrees are sibling directories (../$ISSUE)
+  if [ -d "${WORKTREE_BASE}/${ISSUE}" ]; then
+    git worktree remove --force "${WORKTREE_BASE}/${ISSUE}" 2>/dev/null || true
     echo "Removed worktree: ${ISSUE}"
   fi
   git branch -d "feature/${ISSUE}" 2>/dev/null && echo "Deleted branch: feature/${ISSUE}" || true
 done
-
-# Remove worktrees dir if empty
-rmdir "$WORKTREE_DIR" 2>/dev/null || true
 
 echo ""
 echo "=== Step 4: Summary ==="
